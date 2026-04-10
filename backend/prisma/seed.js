@@ -283,13 +283,13 @@ async function main() {
 
   // ── 5. Checklist Master ──
   const existingCount = await prisma.checklistMaster.count({ where: { companyId: company.id } });
+  let totalItems = 0;
   if (existingCount > 0) {
     console.log(`📋 Checklist master already seeded (${existingCount} items) — skipping.`);
   } else {
     console.log('📋 Seeding checklist master (4 DISCOMs × 2 project types)...');
     const discoms = ['tpcodl', 'tpnodl', 'tpsodl', 'tpwodl'];
     const projectTypes = ['residential', 'commercial'];
-    let totalItems = 0;
 
     for (const discom of discoms) {
       for (const projectType of projectTypes) {
@@ -322,7 +322,7 @@ async function main() {
   console.log(`   Districts:        ${odishaDistricts.length}`);
   console.log(`   Companies:        1`);
   console.log(`   Admin users:      1`);
-  console.log(`   Checklist items:  ${totalItems} (${totalItems / 8} per DISCOM/type)`);
+  console.log(`   Checklist items:  ${existingCount || totalItems}`);
   console.log('─────────────────────────────────');
   console.log('\n🔑 Default Login Credentials:');
   console.log('   Email:    admin@suryamcrm.in');
