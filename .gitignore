@@ -1,0 +1,33 @@
+# ── Dependencies ──
+node_modules/
+.pnp
+.pnp.js
+
+# ── Build outputs ──
+dist/
+backend/public/
+
+# ── Environment files ──
+.env
+.env.local
+.env.production
+backend/.env
+frontend/.env
+
+# ── Logs ──
+*.log
+npm-debug.log*
+logs/
+
+# ── Uploads (local dev only — use Railway Volume in prod) ──
+backend/uploads/
+uploads/
+
+# ── OS / Editor ──
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ── Prisma ──
+backend/prisma/*.db

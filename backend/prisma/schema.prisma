@@ -1,0 +1,607 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum UserRole {
+  admin
+  operations_staff
+  field_technician
+  finance_manager
+  vendor
+}
+
+enum UserStatus {
+  pending_approval
+  active
+  inactive
+}
+
+enum Discom {
+  tpcodl
+  tpnodl
+  tpsodl
+  tpwodl
+}
+
+enum ProjectType {
+  residential
+  commercial
+}
+
+enum LeadSource {
+  walk_in
+  referral
+  online
+  camp
+  channel_partner
+  other
+}
+
+enum FinancePreference {
+  self
+  govt_bank
+  private_bank
+}
+
+enum LeadStatus {
+  new
+  in_progress
+  converted
+  closed
+}
+
+enum LeadClosureReason {
+  not_interested
+  no_roof_space
+  financial_issue
+  competitor
+  unreachable
+  other
+}
+
+enum OverpaymentRule {
+  warn
+  block
+}
+
+enum DocumentCategory {
+  kyc
+  technical
+  discom
+}
+
+enum DocumentStatus {
+  pending
+  uploaded
+}
+
+enum TransactionType {
+  customer_receipt
+  vendor_payment
+  subsidy
+}
+
+enum PaymentMethod {
+  cash
+  cheque
+  bank_transfer
+  upi
+  other
+}
+
+enum TransactionStatus {
+  pending_approval
+  approved
+  rejected
+}
+
+enum VendorType {
+  material_supplier
+  labour_installer
+  transport_logistics
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum OutcomeType {
+  contacted
+  not_reachable
+  meeting_scheduled
+  site_visit_done
+  document_collected
+  other
+}
+
+// ─────────────────────────────────────────────
+// MASTER TABLES
+// ─────────────────────────────────────────────
+
+model MasterState {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String   @unique @db.VarChar(3)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  districts  MasterDistrict[]
+  leads      Lead[]
+  applicants Applicant[]
+
+  @@map("master_states")
+}
+
+model MasterDistrict {
+  id        String      @id @default(uuid())
+  name      String      @db.VarChar(100)
+  stateId   String      @map("state_id")
+  state     MasterState @relation(fields: [stateId], references: [id])
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  leads      Lead[]
+  applicants Applicant[]
+
+  @@unique([name, stateId])
+  @@map("master_districts")
+}
+
+// ─────────────────────────────────────────────
+// COMPANIES
+// ─────────────────────────────────────────────
+
+model Company {
+  id             String   @id @default(uuid())
+  name           String   @db.VarChar(200)
+  gstin          String?  @db.VarChar(15)
+  addressHouse   String?  @map("address_house") @db.VarChar(200)
+  addressStreet  String?  @map("address_street") @db.VarChar(200)
+  addressVillage String?  @map("address_village") @db.VarChar(200)
+  addressCity    String?  @map("address_city") @db.VarChar(200)
+  addressPincode String?  @map("address_pincode") @db.VarChar(6)
+  logoKey        String?  @map("logo_key") @db.VarChar(500)
+  settingsJson   Json?    @default("{}") @map("settings_json")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  users      User[]
+  leads      Lead[]
+  applicants Applicant[]
+  vendors    Vendor[]
+
+  @@map("companies")
+}
+
+// ─────────────────────────────────────────────
+// USERS
+// ─────────────────────────────────────────────
+
+model User {
+  id               String     @id @default(uuid())
+  companyId        String     @map("company_id")
+  company          Company    @relation(fields: [companyId], references: [id])
+  name             String     @db.VarChar(200)
+  mobile           String     @db.VarChar(10)
+  email            String?    @db.VarChar(200)
+  passwordHash     String?    @map("password_hash") @db.VarChar(200)
+  role             UserRole
+  status           UserStatus @default(pending_approval)
+  permissionsJson  Json?      @default("{}") @map("permissions_json")
+  ipWhitelist      String[]   @map("ip_whitelist")
+  failedLoginCount Int        @default(0) @map("failed_login_count")
+  lockedUntil      DateTime?  @map("locked_until")
+  deletedAt        DateTime?  @map("deleted_at")
+  createdAt        DateTime   @default(now()) @map("created_at")
+
+  assignedLeads        Lead[]               @relation("AssignedLeads")
+  createdLeads         Lead[]               @relation("CreatedLeads")
+  assignedApplicants   Applicant[]          @relation("AssignedApplicants")
+  createdApplicants    Applicant[]          @relation("CreatedApplicants")
+  leadFollowups        LeadFollowup[]
+  checklistItems       ApplicantChecklist[]
+  uploadedDocuments    Document[]
+  approvedTransactions Transaction[]        @relation("ApprovedTransactions")
+  createdTransactions  Transaction[]        @relation("CreatedTransactions")
+  refreshTokens        RefreshToken[]
+  auditLogs            AuditLog[]
+
+  @@unique([companyId, mobile])
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────
+// LEADS
+// ─────────────────────────────────────────────
+
+model Lead {
+  id                   String             @id @default(uuid())
+  companyId            String             @map("company_id")
+  company              Company            @relation(fields: [companyId], references: [id])
+  leadCode             String             @map("lead_code") @db.VarChar(20)
+  customerName         String             @map("customer_name") @db.VarChar(200)
+  mobile               String             @db.VarChar(10)
+  alternateMobile      String?            @map("alternate_mobile") @db.VarChar(10)
+  email                String?            @db.VarChar(200)
+  addressHouse         String?            @map("address_house") @db.VarChar(200)
+  addressStreet        String?            @map("address_street") @db.VarChar(200)
+  addressVillage       String             @map("address_village") @db.VarChar(200)
+  addressDistrictId    String?            @map("address_district_id")
+  addressDistrict      MasterDistrict?    @relation(fields: [addressDistrictId], references: [id])
+  addressStateId       String?            @map("address_state_id")
+  addressState         MasterState?       @relation(fields: [addressStateId], references: [id])
+  addressPincode       String?            @map("address_pincode") @db.VarChar(6)
+  discom               Discom
+  projectType          ProjectType        @map("project_type")
+  estimatedCapacityKw  Decimal?           @map("estimated_capacity_kw") @db.Decimal(6, 2)
+  leadSource           LeadSource         @map("lead_source")
+  financePreference    FinancePreference? @map("finance_preference")
+  assignedStaffId      String             @map("assigned_staff_id")
+  assignedStaff        User               @relation("AssignedLeads", fields: [assignedStaffId], references: [id])
+  status               LeadStatus         @default(new)
+  closureReason        LeadClosureReason? @map("closure_reason")
+  followUpDate         DateTime?          @map("follow_up_date") @db.Date
+  convertedApplicantId String?            @map("converted_applicant_id")
+  convertedApplicant   Applicant?         @relation("ConvertedFromLead", fields: [convertedApplicantId], references: [id])
+  deletedAt            DateTime?          @map("deleted_at")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  createdById          String             @map("created_by")
+  createdBy            User               @relation("CreatedLeads", fields: [createdById], references: [id])
+
+  followups LeadFollowup[]
+
+  @@unique([companyId, leadCode])
+  @@index([companyId, status], map: "idx_leads_company_status")
+  @@index([assignedStaffId], map: "idx_leads_assigned_staff")
+  @@map("leads")
+}
+
+model LeadFollowup {
+  id           String      @id @default(uuid())
+  leadId       String      @map("lead_id")
+  lead         Lead        @relation(fields: [leadId], references: [id])
+  notes        String?     @db.Text
+  followUpDate DateTime?   @map("follow_up_date") @db.Date
+  outcomeType  OutcomeType @map("outcome_type")
+  createdById  String      @map("created_by")
+  createdBy    User        @relation(fields: [createdById], references: [id])
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  @@map("lead_followups")
+}
+
+// ─────────────────────────────────────────────
+// APPLICANTS
+// ─────────────────────────────────────────────
+
+model Applicant {
+  id                    String             @id @default(uuid())
+  companyId             String             @map("company_id")
+  company               Company            @relation(fields: [companyId], references: [id])
+  applicantCode         String             @map("applicant_code") @db.VarChar(20)
+  discomRefNo           String?            @map("discom_ref_no") @db.VarChar(100)
+  leadId                String             @map("lead_id")
+  assignedStaffId       String             @map("assigned_staff_id")
+  assignedStaff         User               @relation("AssignedApplicants", fields: [assignedStaffId], references: [id])
+  customerName          String             @map("customer_name") @db.VarChar(200)
+
+  // PII tokens
+  mobileToken           String?            @map("mobile_token") @db.VarChar(200)
+  aadhaarToken          String?            @map("aadhaar_token") @db.VarChar(200)
+  panToken              String?            @map("pan_token") @db.VarChar(200)
+  bankAccountToken      String?            @map("bank_account_token") @db.VarChar(200)
+
+  // Address
+  addressHouse          String?            @map("address_house") @db.VarChar(200)
+  addressStreet         String?            @map("address_street") @db.VarChar(200)
+  addressVillage        String?            @map("address_village") @db.VarChar(200)
+  addressDistrictId     String?            @map("address_district_id")
+  addressDistrict       MasterDistrict?    @relation(fields: [addressDistrictId], references: [id])
+  addressStateId        String?            @map("address_state_id")
+  addressState          MasterState?       @relation(fields: [addressStateId], references: [id])
+  addressPincode        String?            @map("address_pincode") @db.VarChar(6)
+  gpsLatitude           Decimal?           @map("gps_latitude") @db.Decimal(10, 7)
+  gpsLongitude          Decimal?           @map("gps_longitude") @db.Decimal(10, 7)
+
+  // Personal
+  dateOfBirth           DateTime?          @map("date_of_birth") @db.Date
+  gender                String?            @db.VarChar(10)
+  alternateMobile       String?            @map("alternate_mobile") @db.VarChar(10)
+  email                 String?            @db.VarChar(200)
+  whatsappNumber        String?            @map("whatsapp_number") @db.VarChar(10)
+
+  // Installation
+  discom                Discom
+  projectType           ProjectType        @map("project_type")
+  systemCapacityKw      Decimal?           @map("system_capacity_kw") @db.Decimal(6, 2)
+  roofType              String?            @map("roof_type") @db.VarChar(50)
+  sanctionedLoadKw      Decimal?           @map("sanctioned_load_kw") @db.Decimal(6, 2)
+  existingConsumerNo    String?            @map("existing_consumer_no") @db.VarChar(50)
+
+  // Finance
+  contractAmount        Decimal?           @map("contract_amount") @db.Decimal(12, 2)
+  financeMode           FinancePreference? @map("finance_mode")
+  bankName              String?            @map("bank_name") @db.VarChar(200)
+  loanAmount            Decimal?           @map("loan_amount") @db.Decimal(12, 2)
+  loanSanctionedDate    DateTime?          @map("loan_sanctioned_date") @db.Date
+  overpaymentRule       OverpaymentRule    @default(warn) @map("overpayment_rule")
+
+  // Survey
+  surveyDate            DateTime?          @map("survey_date") @db.Date
+  surveyedBy            String?            @map("surveyed_by") @db.VarChar(200)
+  roofAreaSqft          Decimal?           @map("roof_area_sqft") @db.Decimal(8, 2)
+  shadowAnalysis        String?            @map("shadow_analysis") @db.Text
+  recommendedCapacityKw Decimal?           @map("recommended_capacity_kw") @db.Decimal(6, 2)
+
+  // DISCOM Application
+  portalApplicationDate DateTime?          @map("portal_application_date") @db.Date
+  jeName                String?            @map("je_name") @db.VarChar(200)
+  jeContact             String?            @map("je_contact") @db.VarChar(10)
+  mrtDate               DateTime?          @map("mrt_date") @db.Date
+  inspectionDate        DateTime?          @map("inspection_date") @db.Date
+  inspectionResult      String?            @map("inspection_result") @db.VarChar(50)
+  netMeterSerialNo      String?            @map("net_meter_serial_no") @db.VarChar(100)
+
+  // Subsidy
+  expectedSubsidyAmount Decimal?           @map("expected_subsidy_amount") @db.Decimal(12, 2)
+  actualSubsidyReceived Decimal?           @map("actual_subsidy_received") @db.Decimal(12, 2)
+  subsidyReceivedDate   DateTime?          @map("subsidy_received_date") @db.Date
+  discomBankReference   String?            @map("discom_bank_reference") @db.VarChar(100)
+
+  // Stage
+  stage                 Int                @default(1)
+  stageUpdatedAt        DateTime?          @map("stage_updated_at")
+  consentGiven          Boolean            @default(false) @map("consent_given")
+  consentTimestamp      DateTime?          @map("consent_timestamp")
+
+  deletedAt             DateTime?          @map("deleted_at")
+  createdAt             DateTime           @default(now()) @map("created_at")
+  createdById           String             @map("created_by")
+  createdBy             User               @relation("CreatedApplicants", fields: [createdById], references: [id])
+
+  leadsConvertedFrom  Lead[]               @relation("ConvertedFromLead")
+  checklists          ApplicantChecklist[]
+  documents           Document[]
+  transactions        Transaction[]
+  applicantVendors    ApplicantVendor[]
+  customerUploadLinks CustomerUploadLink[]
+  piiVault            PiiVault?
+
+  @@unique([companyId, applicantCode])
+  @@index([companyId, stage], map: "idx_applicants_company_stage")
+  @@index([discom], map: "idx_applicants_discom")
+  @@map("applicants")
+}
+
+// ─────────────────────────────────────────────
+// PII VAULT
+// ─────────────────────────────────────────────
+
+model PiiVault {
+  id                   String    @id @default(uuid())
+  applicantId          String    @unique @map("applicant_id")
+  applicant            Applicant @relation(fields: [applicantId], references: [id])
+  aadhaarEncrypted     String?   @map("aadhaar_encrypted") @db.Text
+  panEncrypted         String?   @map("pan_encrypted") @db.Text
+  bankAccountEncrypted String?   @map("bank_account_encrypted") @db.Text
+  mobileEncrypted      String?   @map("mobile_encrypted") @db.Text
+  ifscCode             String?   @map("ifsc_code") @db.VarChar(11)
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  @@map("pii_vault")
+}
+
+// ─────────────────────────────────────────────
+// CHECKLIST
+// ─────────────────────────────────────────────
+
+model ChecklistMaster {
+  id          String      @id @default(uuid())
+  companyId   String      @map("company_id")
+  discom      Discom
+  projectType ProjectType @map("project_type")
+  phaseName   String      @map("phase_name") @db.VarChar(100)
+  phaseOrder  Int         @map("phase_order")
+  itemText    String      @map("item_text") @db.Text
+  itemOrder   Int         @map("item_order")
+  isMandatory Boolean     @default(false) @map("is_mandatory")
+  isActive    Boolean     @default(true) @map("is_active")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  applicantChecklists ApplicantChecklist[]
+
+  @@map("checklist_master")
+}
+
+model ApplicantChecklist {
+  id            String          @id @default(uuid())
+  applicantId   String          @map("applicant_id")
+  applicant     Applicant       @relation(fields: [applicantId], references: [id])
+  masterItemId  String          @map("master_item_id")
+  masterItem    ChecklistMaster @relation(fields: [masterItemId], references: [id])
+  isCompleted   Boolean         @default(false) @map("is_completed")
+  completedById String?         @map("completed_by")
+  completedBy   User?           @relation(fields: [completedById], references: [id])
+  completedAt   DateTime?       @map("completed_at")
+  notes         String?         @db.Text
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  @@unique([applicantId, masterItemId])
+  @@map("applicant_checklists")
+}
+
+// ─────────────────────────────────────────────
+// DOCUMENTS
+// ─────────────────────────────────────────────
+
+model Document {
+  id            String           @id @default(uuid())
+  applicantId   String           @map("applicant_id")
+  applicant     Applicant        @relation(fields: [applicantId], references: [id])
+  category      DocumentCategory
+  docName       String           @map("doc_name") @db.VarChar(200)
+  fileKey       String?          @map("file_key") @db.VarChar(500)
+  fileName      String?          @map("file_name") @db.VarChar(200)
+  fileSizeBytes Int?             @map("file_size_bytes")
+  mimeType      String?          @map("mime_type") @db.VarChar(50)
+  status        DocumentStatus   @default(pending)
+  uploadedById  String?          @map("uploaded_by")
+  uploadedBy    User?            @relation(fields: [uploadedById], references: [id])
+  uploadedAt    DateTime?        @map("uploaded_at")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  @@index([applicantId], map: "idx_documents_applicant")
+  @@map("documents")
+}
+
+// ─────────────────────────────────────────────
+// TRANSACTIONS
+// ─────────────────────────────────────────────
+
+model Transaction {
+  id              String            @id @default(uuid())
+  applicantId     String            @map("applicant_id")
+  applicant       Applicant         @relation(fields: [applicantId], references: [id])
+  type            TransactionType
+  amount          Decimal           @db.Decimal(12, 2)
+  paymentMethod   PaymentMethod     @map("payment_method")
+  transactionDate DateTime          @map("transaction_date") @db.Date
+  description     String?           @db.Text
+  referenceNumber String?           @map("reference_number") @db.VarChar(100)
+  fileKey         String?           @map("file_key") @db.VarChar(500)
+  status          TransactionStatus @default(pending_approval)
+  approvedById    String?           @map("approved_by")
+  approvedBy      User?             @relation("ApprovedTransactions", fields: [approvedById], references: [id])
+  approvedAt      DateTime?         @map("approved_at")
+  rejectionReason String?           @map("rejection_reason") @db.Text
+  vendorId        String?           @map("vendor_id")
+  vendor          Vendor?           @relation(fields: [vendorId], references: [id])
+  createdById     String            @map("created_by")
+  createdBy       User              @relation("CreatedTransactions", fields: [createdById], references: [id])
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  @@index([applicantId], map: "idx_transactions_applicant")
+  @@map("transactions")
+}
+
+// ─────────────────────────────────────────────
+// VENDORS
+// ─────────────────────────────────────────────
+
+model Vendor {
+  id               String       @id @default(uuid())
+  companyId        String       @map("company_id")
+  company          Company      @relation(fields: [companyId], references: [id])
+  businessName     String       @map("business_name") @db.VarChar(200)
+  contactPerson    String?      @map("contact_person") @db.VarChar(200)
+  mobile           String?      @db.VarChar(10)
+  email            String?      @db.VarChar(200)
+  addressHouse     String?      @map("address_house") @db.VarChar(200)
+  addressStreet    String?      @map("address_street") @db.VarChar(200)
+  addressVillage   String?      @map("address_village") @db.VarChar(200)
+  addressDistrict  String?      @map("address_district") @db.VarChar(100)
+  addressState     String?      @map("address_state") @db.VarChar(100)
+  addressPincode   String?      @map("address_pincode") @db.VarChar(6)
+  vendorTypes      VendorType[] @map("vendor_types")
+  gstin            String?      @db.VarChar(15)
+  panToken         String?      @map("pan_token") @db.VarChar(200)
+  bankAccountToken String?      @map("bank_account_token") @db.VarChar(200)
+  ifscCode         String?      @map("ifsc_code") @db.VarChar(11)
+  empanelmentDate  DateTime?    @map("empanelment_date") @db.Date
+  isActive         Boolean      @default(true) @map("is_active")
+  deletedAt        DateTime?    @map("deleted_at")
+  createdAt        DateTime     @default(now()) @map("created_at")
+
+  applicantVendors ApplicantVendor[]
+  transactions     Transaction[]
+
+  @@map("vendors")
+}
+
+model ApplicantVendor {
+  id            String    @id @default(uuid())
+  applicantId   String    @map("applicant_id")
+  applicant     Applicant @relation(fields: [applicantId], references: [id])
+  vendorId      String    @map("vendor_id")
+  vendor        Vendor    @relation(fields: [vendorId], references: [id])
+  categoryLabel String?   @map("category_label") @db.VarChar(100)
+  isPrimary     Boolean   @default(false) @map("is_primary")
+  assignedAt    DateTime  @default(now()) @map("assigned_at")
+
+  @@unique([applicantId, vendorId])
+  @@map("applicant_vendors")
+}
+
+// ─────────────────────────────────────────────
+// AUDIT LOGS
+// ─────────────────────────────────────────────
+
+model AuditLog {
+  id         String      @id @default(uuid())
+  entityType String      @map("entity_type") @db.VarChar(50)
+  entityId   String      @map("entity_id")
+  action     AuditAction
+  beforeJson Json?       @map("before_json")
+  afterJson  Json?       @map("after_json")
+  userId     String      @map("user_id")
+  user       User        @relation(fields: [userId], references: [id])
+  companyId  String      @map("company_id")
+  ipAddress  String?     @map("ip_address") @db.VarChar(45)
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  @@index([entityType, entityId], map: "idx_audit_logs_entity")
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────────
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id])
+  tokenHash String    @map("token_hash") @db.VarChar(200)
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("refresh_tokens")
+}
+
+model OtpAttempt {
+  id        String    @id @default(uuid())
+  mobile    String?   @db.VarChar(10)
+  email     String?   @db.VarChar(200)
+  otpHash   String    @map("otp_hash") @db.VarChar(200)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("otp_attempts")
+}
+
+// ─────────────────────────────────────────────
+// CUSTOMER UPLOAD LINKS
+// ─────────────────────────────────────────────
+
+model CustomerUploadLink {
+  id          String    @id @default(uuid())
+  applicantId String    @map("applicant_id")
+  applicant   Applicant @relation(fields: [applicantId], references: [id])
+  token       String    @unique @db.VarChar(200)
+  expiresAt   DateTime  @map("expires_at")
+  usedAt      DateTime? @map("used_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([expiresAt], map: "idx_upload_links_expires")
+  @@map("customer_upload_links")
+}
