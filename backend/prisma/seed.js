@@ -282,33 +282,38 @@ async function main() {
   console.log(`   ✓ Admin user: ${adminUser.email} / password: admin@123`);
 
   // ── 5. Checklist Master ──
-  console.log('📋 Seeding checklist master (4 DISCOMs × 2 project types)...');
-  const discoms = ['tpcodl', 'tpnodl', 'tpsodl', 'tpwodl'];
-  const projectTypes = ['residential', 'commercial'];
-  let totalItems = 0;
+  const existingCount = await prisma.checklistMaster.count({ where: { companyId: company.id } });
+  if (existingCount > 0) {
+    console.log(`📋 Checklist master already seeded (${existingCount} items) — skipping.`);
+  } else {
+    console.log('📋 Seeding checklist master (4 DISCOMs × 2 project types)...');
+    const discoms = ['tpcodl', 'tpnodl', 'tpsodl', 'tpwodl'];
+    const projectTypes = ['residential', 'commercial'];
+    let totalItems = 0;
 
-  for (const discom of discoms) {
-    for (const projectType of projectTypes) {
-      const items = buildChecklist(discom, projectType);
-      for (const item of items) {
-        await prisma.checklistMaster.create({
-          data: {
-            companyId: company.id,
-            discom: discom,
-            projectType: projectType,
-            phaseName: item.phase,
-            phaseOrder: item.phaseOrder,
-            itemText: item.text,
-            itemOrder: item.itemOrder,
-            isMandatory: item.mandatory,
-            isActive: true,
-          },
-        });
-        totalItems++;
+    for (const discom of discoms) {
+      for (const projectType of projectTypes) {
+        const items = buildChecklist(discom, projectType);
+        for (const item of items) {
+          await prisma.checklistMaster.create({
+            data: {
+              companyId: company.id,
+              discom: discom,
+              projectType: projectType,
+              phaseName: item.phase,
+              phaseOrder: item.phaseOrder,
+              itemText: item.text,
+              itemOrder: item.itemOrder,
+              isMandatory: item.mandatory,
+              isActive: true,
+            },
+          });
+          totalItems++;
+        }
       }
     }
+    console.log(`   ✓ ${totalItems} checklist items seeded`);
   }
-  console.log(`   ✓ ${totalItems} checklist items seeded (${totalItems / 8} items × 8 variations)`);
 
   // ── Summary ──
   console.log('\n✅ Seed completed successfully!');
