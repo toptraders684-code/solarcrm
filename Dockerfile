@@ -31,6 +31,9 @@ COPY --from=backend-builder /app/backend/node_modules ./node_modules
 COPY --from=backend-builder /app/backend/package.json ./package.json
 COPY --from=backend-builder /app/backend/prisma ./prisma
 
+# Copy Prisma 7 config (needed by prisma migrate deploy at runtime)
+COPY --from=backend-builder /app/backend/prisma.config.ts ./prisma.config.ts
+
 # Copy built frontend (served as static files by NestJS)
 COPY --from=backend-builder /app/backend/public ./public
 
