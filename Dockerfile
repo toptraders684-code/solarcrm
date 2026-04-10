@@ -42,4 +42,4 @@ RUN mkdir -p /app/backend/uploads
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]
+CMD ["sh", "-c", "echo '=== Starting migration ===' && npx prisma migrate deploy 2>&1 && echo '=== Migration done, starting server ===' && node dist/src/main 2>&1"]
