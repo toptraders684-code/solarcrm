@@ -24,7 +24,7 @@ import configuration from './config/configuration';
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'public'),
-      exclude: ['/api/v1/(.*)'],
+      exclude: ['/api/v1/*path'],
       serveStaticOptions: {
         fallthrough: true,
       },
