@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Phone, MapPin, Calendar, Zap, RefreshCw, Loader2, Plus } from 'lucide-react';
+import { ArrowLeft, Phone, MapPin, Calendar, Zap, Loader2, Plus, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
+import { useForm } from 'react-hook-form';
 import { PageWrapper } from '@/components/shared/PageWrapper';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,10 +15,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { leadsService } from '@/services/leads.service';
 import { formatDate, formatMobile, getDiscomLabel, toTitleCase } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
+
+function sv(v: any) { return v || undefined; }
 
 const OUTCOME_TYPES = [
   'contacted', 'not_reachable', 'meeting_scheduled', 'site_visit_done', 'document_collected', 'other',
@@ -29,6 +33,7 @@ export default function LeadDetailPage() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
 
+  const [editOpen, setEditOpen] = useState(false);
   const [followupOpen, setFollowupOpen] = useState(false);
   const [convertOpen, setConvertOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
@@ -36,6 +41,8 @@ export default function LeadDetailPage() {
   const [notes, setNotes] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
   const [closureReason, setClosureReason] = useState('');
+
+  const editForm = useForm<any>();
 
   const { data, isLoading } = useQuery({
     queryKey: ['lead', id],
@@ -78,6 +85,18 @@ export default function LeadDetailPage() {
     },
   });
 
+  const editMutation = useMutation({
+    mutationFn: (values: any) => leadsService.updateLead(id!, values),
+    onSuccess: () => {
+      toast.success('Lead updated');
+      queryClient.invalidateQueries({ queryKey: ['lead', id] });
+      setEditOpen(false);
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.error?.message || err?.response?.data?.message || 'Failed to update lead');
+    },
+  });
+
   const closeMutation = useMutation({
     mutationFn: () => leadsService.closeLead(id!, closureReason),
     onSuccess: () => {
@@ -117,6 +136,27 @@ export default function LeadDetailPage() {
             <ArrowLeft className="w-4 h-4 mr-1" />
             Back
           </Button>
+          {canEdit && (
+            <Button size="sm" variant="outline" onClick={() => {
+              editForm.reset({
+                customerName: lead.customerName,
+                mobile: lead.mobile,
+                alternateMobile: lead.alternateMobile ?? '',
+                email: lead.email ?? '',
+                discom: lead.discom,
+                projectType: lead.projectType,
+                leadSource: lead.leadSource,
+                estimatedCapacityKw: lead.estimatedCapacityKw ?? '',
+                financePreference: lead.financePreference ?? '',
+                addressVillage: lead.addressVillage ?? '',
+                addressPincode: lead.addressPincode ?? '',
+              });
+              setEditOpen(true);
+            }}>
+              <Pencil className="w-4 h-4 mr-1" />
+              Edit
+            </Button>
+          )}
           {canEdit && (
             <Button size="sm" variant="outline" onClick={() => setFollowupOpen(true)}>
               <Plus className="w-4 h-4 mr-1" />
@@ -218,6 +258,106 @@ export default function LeadDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Edit Lead Sheet */}
+      <Sheet open={editOpen} onOpenChange={setEditOpen}>
+        <SheetContent className="overflow-y-auto">
+          <SheetHeader className="mb-6">
+            <SheetTitle>Edit Lead</SheetTitle>
+          </SheetHeader>
+          <form onSubmit={editForm.handleSubmit((v) => {
+            const payload: any = { ...v };
+            if (payload.estimatedCapacityKw) payload.estimatedCapacityKw = parseFloat(payload.estimatedCapacityKw);
+            else delete payload.estimatedCapacityKw;
+            if (!payload.financePreference) delete payload.financePreference;
+            if (!payload.alternateMobile) delete payload.alternateMobile;
+            if (!payload.email) delete payload.email;
+            editMutation.mutate(payload);
+          })} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Customer Name *</Label>
+              <Input {...editForm.register('customerName', { required: true })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Mobile *</Label>
+                <Input maxLength={10} {...editForm.register('mobile', { required: true })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Alternate Mobile</Label>
+                <Input maxLength={10} {...editForm.register('alternateMobile')} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Email</Label>
+              <Input type="email" {...editForm.register('email')} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>DISCOM</Label>
+                <Select value={editForm.watch('discom')} onValueChange={(v) => editForm.setValue('discom', v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {['tpcodl','tpnodl','tpsodl','tpwodl'].map(d => <SelectItem key={d} value={d}>{d.toUpperCase()}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Project Type</Label>
+                <Select value={editForm.watch('projectType')} onValueChange={(v) => editForm.setValue('projectType', v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="residential">Residential</SelectItem>
+                    <SelectItem value="commercial">Commercial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Lead Source</Label>
+                <Select value={editForm.watch('leadSource')} onValueChange={(v) => editForm.setValue('leadSource', v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {['walk_in','referral','online','camp','channel_partner','other'].map(s => <SelectItem key={s} value={s}>{toTitleCase(s)}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Finance Preference</Label>
+                <Select value={sv(editForm.watch('financePreference'))} onValueChange={(v) => editForm.setValue('financePreference', v === 'none' ? '' : v)}>
+                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {['self','govt_bank','private_bank'].map(f => <SelectItem key={f} value={f}>{toTitleCase(f)}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Est. Capacity (kW)</Label>
+                <Input type="number" step="0.1" {...editForm.register('estimatedCapacityKw')} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Pincode</Label>
+                <Input maxLength={6} {...editForm.register('addressPincode')} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Village / Location</Label>
+              <Input {...editForm.register('addressVillage')} />
+            </div>
+            <div className="flex gap-3 pt-2 border-t">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setEditOpen(false)}>Cancel</Button>
+              <Button type="submit" className="flex-1" disabled={editMutation.isPending}>
+                {editMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </SheetContent>
+      </Sheet>
 
       {/* Add Followup Dialog */}
       <Dialog open={followupOpen} onOpenChange={setFollowupOpen}>
