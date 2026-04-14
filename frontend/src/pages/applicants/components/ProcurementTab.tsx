@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, ChevronRight, Loader2, Package } from 'lucide-react';
+import { Plus, Trash2, ChevronRight, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { applicantsService } from '@/services/applicants.service';
 import { vendorsService } from '@/services/vendors.service';
@@ -23,19 +20,11 @@ const VENDOR_TYPE_LABELS: Record<string, string> = {
 };
 
 const CATEGORY_LABELS = [
-  'Panel Supplier',
-  'Inverter Supplier',
-  'Cable & BOS',
-  'Structure Fabricator',
-  'Civil Work',
-  'Electrical Work',
-  'Transport',
-  'Other',
+  'Panel Supplier', 'Inverter Supplier', 'Cable & BOS', 'Structure Fabricator',
+  'Civil Work', 'Electrical Work', 'Transport', 'Other',
 ];
 
-interface ProcurementTabProps {
-  applicant: Applicant;
-}
+interface ProcurementTabProps { applicant: Applicant; }
 
 export function ProcurementTab({ applicant }: ProcurementTabProps) {
   const queryClient = useQueryClient();
@@ -64,14 +53,9 @@ export function ProcurementTab({ applicant }: ProcurementTabProps) {
     onSuccess: () => {
       toast.success('Vendor assigned');
       queryClient.invalidateQueries({ queryKey: ['applicant', applicant.id] });
-      setAssignOpen(false);
-      setSelectedVendorId('');
-      setCategoryLabel('');
-      setIsPrimary(false);
+      setAssignOpen(false); setSelectedVendorId(''); setCategoryLabel(''); setIsPrimary(false);
     },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.error?.message || 'Failed to assign vendor');
-    },
+    onError: (err: any) => toast.error(err?.response?.data?.error?.message || 'Failed to assign vendor'),
   });
 
   const removeMutation = useMutation({
@@ -81,9 +65,7 @@ export function ProcurementTab({ applicant }: ProcurementTabProps) {
       queryClient.invalidateQueries({ queryKey: ['applicant', applicant.id] });
       setRemoveTarget(null);
     },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.error?.message || 'Failed to remove vendor');
-    },
+    onError: (err: any) => toast.error(err?.response?.data?.error?.message || 'Failed to remove vendor'),
   });
 
   const advanceMutation = useMutation({
@@ -94,190 +76,149 @@ export function ProcurementTab({ applicant }: ProcurementTabProps) {
       setAdvanceOpen(false);
     },
     onError: (err: any) => {
-      const msg = err?.response?.data?.error?.message
-        || err?.response?.data?.message
-        || 'Cannot advance — check mandatory checklist items';
-      toast.error(msg);
+      toast.error(err?.response?.data?.error?.message || err?.response?.data?.message || 'Cannot advance — check mandatory checklist items');
       setAdvanceOpen(false);
     },
   });
 
   return (
     <div className="space-y-4">
-
       {/* Stage action panel for stage 8 */}
       {applicant.stage === 8 && canEdit && (
-        <Card className="border-brand-200 bg-brand-50">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <Badge variant="info" className="text-xs mb-1">Stage 8 — Material Procurement</Badge>
-                <p className="text-sm text-brand-800 font-medium">
-                  Has all material been procured and dispatched to site?
-                </p>
-                {assignedVendors.length === 0 && (
-                  <p className="text-xs text-amber-700 mt-1">⚠ No vendors assigned yet — assign at least one before advancing</p>
-                )}
-              </div>
-              <Button
-                size="sm"
-                onClick={() => setAdvanceOpen(true)}
-                disabled={advanceMutation.isPending}
-                className="shrink-0"
-              >
-                <ChevronRight className="w-4 h-4 mr-1" />
-                Mark Installation Started (→ Stage 9)
-              </Button>
+        <div className="bg-primary/5 border border-primary/20 rounded-xl p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <span className="px-2.5 py-1 bg-primary/10 text-primary rounded-lg text-xs font-bold uppercase mb-2 inline-block">
+                Stage 8 — Material Procurement
+              </span>
+              <p className="text-sm text-on-surface font-medium">Has all material been procured and dispatched to site?</p>
+              {assignedVendors.length === 0 && (
+                <p className="text-xs text-on-surface-variant/60 mt-1">No vendors assigned yet — assign at least one before advancing</p>
+              )}
             </div>
-          </CardContent>
-        </Card>
+            <Button size="sm" onClick={() => setAdvanceOpen(true)} disabled={advanceMutation.isPending} className="shrink-0">
+              <ChevronRight size={14} />Mark Installation Started (→ Stage 9)
+            </Button>
+          </div>
+        </div>
       )}
 
-      {/* Assigned Vendors card */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <CardTitle className="text-sm">Assigned Vendors / Contractors</CardTitle>
+      {/* Assigned Vendors */}
+      <div className="bg-surface-container-lowest rounded-xl p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h4 className="text-xs font-black uppercase tracking-widest text-on-surface-variant/50">Assigned Vendors / Contractors</h4>
           {canEdit && (
-            <Button size="sm" variant="outline" onClick={() => setAssignOpen(true)}>
-              <Plus className="w-3 h-3 mr-1" />
-              Assign Vendor
+            <Button size="sm" variant="secondary" onClick={() => setAssignOpen(true)}>
+              <Plus size={12} />Assign Vendor
             </Button>
           )}
-        </CardHeader>
-        <CardContent>
-          {assignedVendors.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              <Package className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              No vendors assigned yet.
-              {canEdit && <p className="mt-1">Click "Assign Vendor" to add a supplier or contractor.</p>}
+        </div>
+
+        {assignedVendors.length === 0 ? (
+          <div className="text-center py-10">
+            <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center mx-auto mb-3">
+              <Package size={22} className="text-on-surface-variant/30" />
             </div>
-          ) : (
-            <div className="space-y-3">
-              {assignedVendors.map((av) => (
-                <div key={av.id} className="flex items-start justify-between gap-3 p-3 rounded-lg border bg-white">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className="font-medium text-sm">{av.vendor.businessName}</span>
-                      {av.isPrimary && <Badge variant="success" className="text-xs">Primary</Badge>}
-                      {av.categoryLabel && <Badge variant="secondary" className="text-xs">{av.categoryLabel}</Badge>}
-                    </div>
-                    <div className="flex flex-wrap gap-1 mb-1">
-                      {av.vendor.vendorTypes?.map((t) => (
-                        <Badge key={t} variant="outline" className="text-xs">{VENDOR_TYPE_LABELS[t] ?? t}</Badge>
-                      ))}
-                    </div>
-                    {av.vendor.contactPerson && (
-                      <p className="text-xs text-muted-foreground">Contact: {av.vendor.contactPerson}</p>
-                    )}
-                    {av.vendor.mobile && (
-                      <p className="text-xs text-muted-foreground">Mobile: {av.vendor.mobile}</p>
-                    )}
+            <p className="text-sm text-on-surface-variant/50">No vendors assigned yet.</p>
+            {canEdit && <p className="text-xs text-on-surface-variant/40 mt-1">Click "Assign Vendor" to add a supplier or contractor.</p>}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {assignedVendors.map((av) => (
+              <div key={av.id} className="flex items-start justify-between gap-3 p-4 bg-surface-container-low/50 rounded-xl">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <span className="font-bold text-sm text-on-surface">{av.vendor.businessName}</span>
+                    {av.isPrimary && <span className="px-1.5 py-0.5 bg-primary/10 text-primary rounded text-[9px] font-bold uppercase">Primary</span>}
+                    {av.categoryLabel && <span className="px-1.5 py-0.5 bg-surface-container text-on-surface-variant rounded text-[9px] font-bold">{av.categoryLabel}</span>}
                   </div>
-                  {canEdit && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:text-destructive shrink-0"
-                      onClick={() => setRemoveTarget(av)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
+                  <div className="flex flex-wrap gap-1 mb-1">
+                    {av.vendor.vendorTypes?.map((t: string) => (
+                      <span key={t} className="px-1.5 py-0.5 bg-secondary-container text-on-secondary-fixed-variant rounded text-[9px] font-bold uppercase">
+                        {VENDOR_TYPE_LABELS[t] ?? t}
+                      </span>
+                    ))}
+                  </div>
+                  {av.vendor.contactPerson && <p className="text-xs text-on-surface-variant/60">Contact: {av.vendor.contactPerson}</p>}
+                  {av.vendor.mobile && <p className="text-xs text-on-surface-variant/60">Mobile: {av.vendor.mobile}</p>}
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                {canEdit && (
+                  <button
+                    onClick={() => setRemoveTarget(av)}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant/40 hover:text-error hover:bg-error/10 transition-all"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Assign Vendor Dialog */}
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Assign Vendor to Project</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Assign Vendor to Project</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Vendor *</Label>
+            <div>
+              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Vendor *</label>
               <Select value={selectedVendorId} onValueChange={setSelectedVendorId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a vendor" />
-                </SelectTrigger>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Select a vendor" /></SelectTrigger>
                 <SelectContent>
-                  {availableVendors.length === 0 && (
-                    <SelectItem value="__none" disabled>No vendors available</SelectItem>
-                  )}
+                  {availableVendors.length === 0 && <SelectItem value="__none" disabled>No vendors available</SelectItem>}
                   {availableVendors.map((v) => (
                     <SelectItem key={v.id} value={v.id}>
                       {v.businessName}
                       {v.vendorTypes?.length > 0 && (
-                        <span className="text-muted-foreground ml-1 text-xs">
-                          — {v.vendorTypes.map((t) => VENDOR_TYPE_LABELS[t] ?? t).join(', ')}
-                        </span>
+                        <span className="text-on-surface-variant ml-1 text-xs">— {v.vendorTypes.map((t: string) => VENDOR_TYPE_LABELS[t] ?? t).join(', ')}</span>
                       )}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Category / Role</Label>
+            <div>
+              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Category / Role</label>
               <Select value={categoryLabel} onValueChange={setCategoryLabel}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category (optional)" />
-                </SelectTrigger>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Select category (optional)" /></SelectTrigger>
                 <SelectContent>
-                  {CATEGORY_LABELS.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
+                  {CATEGORY_LABELS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Custom Category (if not in list)</Label>
+            <div>
+              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Custom Category (if not in list)</label>
               <Input
+                className="mt-1"
                 value={CATEGORY_LABELS.includes(categoryLabel) ? '' : categoryLabel}
                 placeholder="e.g. Rooftop Contractor"
                 onChange={(e) => setCategoryLabel(e.target.value)}
               />
             </div>
             <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isPrimary"
-                checked={isPrimary}
-                onChange={(e) => setIsPrimary(e.target.checked)}
-                className="rounded"
-              />
-              <Label htmlFor="isPrimary" className="text-sm cursor-pointer">Mark as Primary Contractor</Label>
+              <input type="checkbox" id="isPrimary" checked={isPrimary} onChange={(e) => setIsPrimary(e.target.checked)} className="rounded" />
+              <label htmlFor="isPrimary" className="text-sm cursor-pointer font-medium text-on-surface">Mark as Primary Contractor</label>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAssignOpen(false)}>Cancel</Button>
-            <Button
-              disabled={!selectedVendorId || assignMutation.isPending}
-              onClick={() => assignMutation.mutate()}
-            >
-              {assignMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Assign Vendor
-            </Button>
+            <Button variant="secondary" onClick={() => setAssignOpen(false)}>Cancel</Button>
+            <Button disabled={!selectedVendorId} loading={assignMutation.isPending} onClick={() => assignMutation.mutate()}>Assign Vendor</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Remove confirm */}
       <ConfirmDialog
         open={!!removeTarget}
         onOpenChange={(v) => { if (!v) setRemoveTarget(null); }}
         title="Remove Vendor?"
         description={`Remove ${removeTarget?.vendor.businessName} from this project?`}
         confirmLabel="Remove"
-        variant="destructive"
+        variant="danger"
         onConfirm={() => removeTarget && removeMutation.mutate(removeTarget.vendorId)}
         loading={removeMutation.isPending}
       />
 
-      {/* Advance stage confirm */}
       <ConfirmDialog
         open={advanceOpen}
         onOpenChange={setAdvanceOpen}

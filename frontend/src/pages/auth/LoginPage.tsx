@@ -3,12 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Sun, Loader2 } from 'lucide-react';
+import { Sun } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/store/authStore';
@@ -25,6 +23,11 @@ const otpRequestSchema = z.object({
 const otpVerifySchema = z.object({
   otp: z.string().length(6, 'OTP must be 6 digits'),
 });
+
+function FieldError({ msg }: { msg?: string }) {
+  if (!msg) return null;
+  return <p className="text-xs text-error mt-1">{msg}</p>;
+}
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -73,141 +76,90 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-50 to-green-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-surface flex items-center justify-center p-4">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full signature-gradient opacity-10 blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full signature-gradient opacity-10 blur-3xl" />
+      </div>
+
+      <div className="relative w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-500 rounded-2xl mb-4 shadow-lg">
-            <Sun className="w-9 h-9 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 signature-gradient rounded-2xl mb-4 shadow-lg">
+            <Sun size={32} className="text-white" />
           </div>
-          <h1 className="text-3xl font-headline font-bold text-gray-900">Suryam CRM</h1>
-          <p className="mt-1 text-muted-foreground">Solar Rooftop Installation Management</p>
+          <h1 className="text-3xl font-black text-primary tracking-tighter font-headline">Suryam CRM</h1>
+          <p className="mt-1 text-sm text-on-surface-variant/60">Solar Rooftop Installation Management</p>
         </div>
 
-        <Card className="shadow-xl border-0">
-          <CardHeader className="pb-2">
-            <CardTitle>Sign In</CardTitle>
-            <CardDescription>Access your account to continue</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="password">
-              <TabsList className="w-full mb-6">
-                <TabsTrigger value="password" className="flex-1">Email & Password</TabsTrigger>
-                <TabsTrigger value="otp" className="flex-1">Mobile OTP</TabsTrigger>
-              </TabsList>
+        <div className="bg-surface-container-lowest rounded-2xl shadow-xl p-8">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-on-surface font-headline">Sign In</h2>
+            <p className="text-sm text-on-surface-variant/60 mt-1">Access your account to continue</p>
+          </div>
 
-              {/* Email + Password */}
-              <TabsContent value="password">
-                <form onSubmit={handleEmailLogin} className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="admin@suryam.in"
-                      {...emailForm.register('email')}
-                    />
-                    {emailForm.formState.errors.email && (
-                      <p className="text-xs text-destructive">{emailForm.formState.errors.email.message as string}</p>
-                    )}
+          <Tabs defaultValue="password">
+            <TabsList className="w-full mb-6">
+              <TabsTrigger value="password" className="flex-1 text-xs">Email & Password</TabsTrigger>
+              <TabsTrigger value="otp" className="flex-1 text-xs">Mobile OTP</TabsTrigger>
+            </TabsList>
+
+            {/* Email + Password */}
+            <TabsContent value="password">
+              <form onSubmit={handleEmailLogin} className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Email Address</label>
+                  <Input className="mt-1" type="email" placeholder="admin@suryamcrm.in" {...emailForm.register('email')} />
+                  <FieldError msg={emailForm.formState.errors.email?.message as string} />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Password</label>
+                  <Input className="mt-1" type="password" placeholder="••••••••" {...emailForm.register('password')} />
+                  <FieldError msg={emailForm.formState.errors.password?.message as string} />
+                </div>
+                <Button type="submit" className="w-full mt-2" loading={emailForm.formState.isSubmitting}>
+                  Sign In
+                </Button>
+              </form>
+            </TabsContent>
+
+            {/* Mobile OTP */}
+            <TabsContent value="otp">
+              {!otpSent ? (
+                <form onSubmit={handleOtpRequest} className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Mobile Number</label>
+                    <Input className="mt-1" type="tel" placeholder="9876543210" maxLength={10} {...otpRequestForm.register('mobile')} />
+                    <FieldError msg={otpRequestForm.formState.errors.mobile?.message as string} />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      {...emailForm.register('password')}
-                    />
-                    {emailForm.formState.errors.password && (
-                      <p className="text-xs text-destructive">{emailForm.formState.errors.password.message as string}</p>
-                    )}
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={emailForm.formState.isSubmitting}
-                  >
-                    {emailForm.formState.isSubmitting && (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    )}
-                    Sign In
+                  <Button type="submit" className="w-full mt-2" loading={otpRequestForm.formState.isSubmitting}>
+                    Send OTP
                   </Button>
                 </form>
-              </TabsContent>
+              ) : (
+                <form onSubmit={handleOtpVerify} className="space-y-4">
+                  <p className="text-sm text-on-surface-variant/70">
+                    OTP sent to <span className="font-bold text-on-surface">+91 {otpMobile}</span>.{' '}
+                    <button type="button" className="text-primary hover:underline font-semibold" onClick={() => setOtpSent(false)}>
+                      Change
+                    </button>
+                  </p>
+                  <div>
+                    <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Enter OTP</label>
+                    <Input className="mt-1 text-center text-lg tracking-widest" type="text" placeholder="123456" maxLength={6} {...otpVerifyForm.register('otp')} />
+                    <FieldError msg={otpVerifyForm.formState.errors.otp?.message as string} />
+                  </div>
+                  <Button type="submit" className="w-full mt-2" loading={otpVerifyForm.formState.isSubmitting}>
+                    Verify OTP
+                  </Button>
+                </form>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
 
-              {/* Mobile OTP */}
-              <TabsContent value="otp">
-                {!otpSent ? (
-                  <form onSubmit={handleOtpRequest} className="space-y-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="mobile">Mobile Number</Label>
-                      <Input
-                        id="mobile"
-                        type="tel"
-                        placeholder="9876543210"
-                        maxLength={10}
-                        {...otpRequestForm.register('mobile')}
-                      />
-                      {otpRequestForm.formState.errors.mobile && (
-                        <p className="text-xs text-destructive">{otpRequestForm.formState.errors.mobile.message as string}</p>
-                      )}
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={otpRequestForm.formState.isSubmitting}
-                    >
-                      {otpRequestForm.formState.isSubmitting && (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      )}
-                      Send OTP
-                    </Button>
-                  </form>
-                ) : (
-                  <form onSubmit={handleOtpVerify} className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      OTP sent to <strong>+91 {otpMobile}</strong>.{' '}
-                      <button
-                        type="button"
-                        className="text-brand-500 hover:underline"
-                        onClick={() => setOtpSent(false)}
-                      >
-                        Change
-                      </button>
-                    </p>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="otp">Enter OTP</Label>
-                      <Input
-                        id="otp"
-                        type="text"
-                        placeholder="123456"
-                        maxLength={6}
-                        className="text-center text-lg tracking-widest"
-                        {...otpVerifyForm.register('otp')}
-                      />
-                      {otpVerifyForm.formState.errors.otp && (
-                        <p className="text-xs text-destructive">{otpVerifyForm.formState.errors.otp.message as string}</p>
-                      )}
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={otpVerifyForm.formState.isSubmitting}
-                    >
-                      {otpVerifyForm.formState.isSubmitting && (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      )}
-                      Verify OTP
-                    </Button>
-                  </form>
-                )}
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-
-        <p className="text-center text-xs text-muted-foreground mt-6">
+        <p className="text-center text-xs text-on-surface-variant/40 mt-6">
           Suryam CRM &copy; {new Date().getFullYear()} &mdash; Solar EPC Management
         </p>
       </div>

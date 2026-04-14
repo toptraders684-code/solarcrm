@@ -1,34 +1,36 @@
 import * as React from 'react';
-import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
-const badgeVariants = cva(
-  'inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-  {
-    variants: {
-      variant: {
-        default: 'border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80',
-        secondary: 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        destructive: 'border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80',
-        outline: 'text-foreground',
-        success: 'border-transparent bg-green-100 text-green-800',
-        warning: 'border-transparent bg-yellow-100 text-yellow-800',
-        info: 'border-transparent bg-blue-100 text-blue-800',
-        purple: 'border-transparent bg-purple-100 text-purple-800',
-      },
-    },
-    defaultVariants: {
-      variant: 'default',
-    },
-  }
-);
-
-export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {}
-
-function Badge({ className, variant, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
+export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+  variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'purple';
 }
 
-export { Badge, badgeVariants };
+const variantClasses: Record<string, string> = {
+  default: 'bg-primary/10 text-primary',
+  secondary: 'bg-surface-container text-on-surface-variant',
+  destructive: 'bg-error/10 text-error',
+  outline: 'border border-outline-variant text-on-surface-variant',
+  success: 'bg-primary/10 text-primary',
+  warning: 'bg-tertiary-container/30 text-on-tertiary-container',
+  info: 'bg-secondary-container text-on-secondary-fixed-variant',
+  purple: 'bg-purple-100 text-purple-700',
+};
+
+export function Badge({ className, variant = 'default', ...props }: BadgeProps) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide',
+        variantClasses[variant],
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+export const badgeVariants = (opts?: { variant?: string }) =>
+  cn(
+    'inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide',
+    variantClasses[opts?.variant ?? 'default']
+  );

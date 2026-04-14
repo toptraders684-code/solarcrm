@@ -1,10 +1,5 @@
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
@@ -15,21 +10,14 @@ interface ConfirmDialogProps {
   description: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  variant?: 'default' | 'destructive';
+  variant?: 'primary' | 'danger';
   onConfirm: () => void;
   loading?: boolean;
 }
 
 export function ConfirmDialog({
-  open,
-  onOpenChange,
-  title,
-  description,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
-  variant = 'default',
-  onConfirm,
-  loading,
+  open, onOpenChange, title, description, confirmLabel = 'Confirm', cancelLabel = 'Cancel',
+  variant = 'primary', onConfirm, loading,
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -39,12 +27,8 @@ export function ConfirmDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-            {cancelLabel}
-          </Button>
-          <Button variant={variant} onClick={onConfirm} disabled={loading}>
-            {loading ? 'Please wait...' : confirmLabel}
-          </Button>
+          <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={loading}>{cancelLabel}</Button>
+          <Button variant={variant} onClick={onConfirm} loading={loading}>{confirmLabel}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

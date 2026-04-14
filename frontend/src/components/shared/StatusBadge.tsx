@@ -1,24 +1,30 @@
-import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { toTitleCase } from '@/utils/formatters';
 
-type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'purple';
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'success' | 'warning' | 'info' | 'purple';
 
 const STATUS_MAP: Record<string, BadgeVariant> = {
-  // Lead statuses
   new: 'info',
   in_progress: 'warning',
   converted: 'success',
   closed: 'secondary',
-  // User statuses
   pending_approval: 'warning',
   active: 'success',
   inactive: 'secondary',
-  // Transaction statuses
   approved: 'success',
   rejected: 'destructive',
-  // Document statuses
   uploaded: 'success',
   pending: 'warning',
+};
+
+const variantClasses: Record<BadgeVariant, string> = {
+  default: 'bg-primary/10 text-primary',
+  secondary: 'bg-surface-container text-on-surface-variant',
+  destructive: 'bg-error/10 text-error',
+  success: 'bg-primary/10 text-primary',
+  warning: 'bg-tertiary-container/30 text-on-tertiary-container',
+  info: 'bg-secondary-container text-on-secondary-fixed-variant',
+  purple: 'bg-purple-100 text-purple-700',
 };
 
 interface StatusBadgeProps {
@@ -29,8 +35,14 @@ interface StatusBadgeProps {
 export function StatusBadge({ status, className }: StatusBadgeProps) {
   const variant = STATUS_MAP[status] ?? 'secondary';
   return (
-    <Badge variant={variant} className={className}>
+    <span
+      className={cn(
+        'inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide',
+        variantClasses[variant],
+        className
+      )}
+    >
       {toTitleCase(status)}
-    </Badge>
+    </span>
   );
 }

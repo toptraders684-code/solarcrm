@@ -1,12 +1,9 @@
-import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createLeadSchema, type CreateLeadFormData } from '@/utils/validators';
 import { masterService } from '@/services/master.service';
@@ -19,28 +16,11 @@ interface AddLeadFormProps {
 }
 
 export function AddLeadForm({ onSuccess, onCancel }: AddLeadFormProps) {
-  const { data: enums } = useQuery({
-    queryKey: ['enums'],
-    queryFn: () => masterService.getEnums(),
-  });
+  const { data: enums } = useQuery({ queryKey: ['enums'], queryFn: () => masterService.getEnums() });
+  const { data: statesData } = useQuery({ queryKey: ['states'], queryFn: () => masterService.getStates() });
+  const { data: staffData } = useQuery({ queryKey: ['staff'], queryFn: () => usersService.getStaff() });
 
-  const { data: statesData } = useQuery({
-    queryKey: ['states'],
-    queryFn: () => masterService.getStates(),
-  });
-
-  const { data: staffData } = useQuery({
-    queryKey: ['staff'],
-    queryFn: () => usersService.getStaff(),
-  });
-
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<CreateLeadFormData>({
+  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<CreateLeadFormData>({
     resolver: zodResolver(createLeadSchema),
   });
 
@@ -66,131 +46,115 @@ export function AddLeadForm({ onSuccess, onCancel }: AddLeadFormProps) {
     }
   });
 
+  const L = ({ children }: { children: React.ReactNode }) => (
+    <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">{children}</label>
+  );
+
   return (
-    <form onSubmit={onSubmit} className="space-y-4 overflow-y-auto max-h-[calc(100vh-160px)] pr-1">
+    <form onSubmit={onSubmit} className="mt-6 space-y-4 overflow-y-auto max-h-[calc(100vh-160px)] pr-1">
+      <div>
+        <L>Customer Name *</L>
+        <Input className="mt-1" placeholder="Full name" {...register('customerName')} />
+        {errors.customerName && <p className="text-xs text-error mt-1">{errors.customerName.message}</p>}
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
-        <div className="col-span-2 space-y-1.5">
-          <Label>Customer Name *</Label>
-          <Input placeholder="Full name" {...register('customerName')} />
-          {errors.customerName && <p className="text-xs text-destructive">{errors.customerName.message}</p>}
+        <div>
+          <L>Mobile *</L>
+          <Input className="mt-1" placeholder="10-digit mobile" maxLength={10} {...register('mobile')} />
+          {errors.mobile && <p className="text-xs text-error mt-1">{errors.mobile.message}</p>}
         </div>
-
-        <div className="space-y-1.5">
-          <Label>Mobile *</Label>
-          <Input placeholder="10-digit mobile" maxLength={10} {...register('mobile')} />
-          {errors.mobile && <p className="text-xs text-destructive">{errors.mobile.message}</p>}
+        <div>
+          <L>Alternate Mobile</L>
+          <Input className="mt-1" placeholder="10-digit mobile" maxLength={10} {...register('alternateMobile')} />
         </div>
+      </div>
 
-        <div className="space-y-1.5">
-          <Label>Alternate Mobile</Label>
-          <Input placeholder="10-digit mobile" maxLength={10} {...register('alternateMobile')} />
-        </div>
+      <div>
+        <L>Email</L>
+        <Input className="mt-1" type="email" placeholder="customer@email.com" {...register('email')} />
+      </div>
 
-        <div className="col-span-2 space-y-1.5">
-          <Label>Email</Label>
-          <Input type="email" placeholder="customer@email.com" {...register('email')} />
-        </div>
+      <div>
+        <L>Village / Area *</L>
+        <Input className="mt-1" placeholder="Village or locality name" {...register('addressVillage')} />
+        {errors.addressVillage && <p className="text-xs text-error mt-1">{errors.addressVillage.message}</p>}
+      </div>
 
-        <div className="col-span-2 space-y-1.5">
-          <Label>Village / Area *</Label>
-          <Input placeholder="Village or locality name" {...register('addressVillage')} />
-          {errors.addressVillage && <p className="text-xs text-destructive">{errors.addressVillage.message}</p>}
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>State</Label>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <L>State</L>
           <Select onValueChange={(v) => { setValue('addressStateId', v); setValue('addressDistrictId', ''); }}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select state" />
-            </SelectTrigger>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Select state" /></SelectTrigger>
             <SelectContent>
-              {statesData?.data?.map((s) => (
-                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-              ))}
+              {statesData?.data?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
-
-        <div className="space-y-1.5">
-          <Label>District</Label>
+        <div>
+          <L>District</L>
           <Select onValueChange={(v) => setValue('addressDistrictId', v)} disabled={!selectedStateId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select district" />
-            </SelectTrigger>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Select district" /></SelectTrigger>
             <SelectContent>
-              {districtsData?.data?.map((d) => (
-                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-              ))}
+              {districtsData?.data?.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
+      </div>
 
-        <div className="space-y-1.5">
-          <Label>Pincode</Label>
-          <Input placeholder="6-digit pincode" maxLength={6} {...register('addressPincode')} />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <L>Pincode</L>
+          <Input className="mt-1" placeholder="6-digit pincode" maxLength={6} {...register('addressPincode')} />
         </div>
-
-        <div className="space-y-1.5">
-          <Label>DISCOM *</Label>
+        <div>
+          <L>DISCOM *</L>
           <Select onValueChange={(v) => setValue('discom', v as any)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select DISCOM" />
-            </SelectTrigger>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Select DISCOM" /></SelectTrigger>
             <SelectContent>
-              {enums?.discoms?.map((d) => (
-                <SelectItem key={d} value={d}>{d.toUpperCase()}</SelectItem>
-              ))}
+              {enums?.discoms?.map((d) => <SelectItem key={d} value={d}>{d.toUpperCase()}</SelectItem>)}
             </SelectContent>
           </Select>
-          {errors.discom && <p className="text-xs text-destructive">{errors.discom.message}</p>}
+          {errors.discom && <p className="text-xs text-error mt-1">{errors.discom.message}</p>}
         </div>
+      </div>
 
-        <div className="space-y-1.5">
-          <Label>Project Type *</Label>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <L>Project Type *</L>
           <Select onValueChange={(v) => setValue('projectType', v as any)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select type" />
-            </SelectTrigger>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Select type" /></SelectTrigger>
             <SelectContent>
               {enums?.projectTypes?.map((t) => (
                 <SelectItem key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {errors.projectType && <p className="text-xs text-destructive">{errors.projectType.message}</p>}
+          {errors.projectType && <p className="text-xs text-error mt-1">{errors.projectType.message}</p>}
         </div>
-
-        <div className="space-y-1.5">
-          <Label>Est. Capacity (kW)</Label>
-          <Input
-            type="number"
-            step="0.01"
-            placeholder="e.g. 3.00"
-            {...register('estimatedCapacityKw', { valueAsNumber: true })}
-          />
+        <div>
+          <L>Est. Capacity (kW)</L>
+          <Input className="mt-1" type="number" step="0.01" placeholder="e.g. 3.00" {...register('estimatedCapacityKw', { valueAsNumber: true })} />
         </div>
+      </div>
 
-        <div className="space-y-1.5">
-          <Label>Lead Source *</Label>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <L>Lead Source *</L>
           <Select onValueChange={(v) => setValue('leadSource', v as any)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select source" />
-            </SelectTrigger>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Select source" /></SelectTrigger>
             <SelectContent>
               {enums?.leadSources?.map((s) => (
                 <SelectItem key={s} value={s}>{s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {errors.leadSource && <p className="text-xs text-destructive">{errors.leadSource.message}</p>}
+          {errors.leadSource && <p className="text-xs text-error mt-1">{errors.leadSource.message}</p>}
         </div>
-
-        <div className="space-y-1.5">
-          <Label>Finance Preference</Label>
+        <div>
+          <L>Finance Preference</L>
           <Select onValueChange={(v) => setValue('financePreference', v as any)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select preference" />
-            </SelectTrigger>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Select preference" /></SelectTrigger>
             <SelectContent>
               {enums?.financePreferences?.map((f) => (
                 <SelectItem key={f} value={f}>{f.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}</SelectItem>
@@ -198,38 +162,29 @@ export function AddLeadForm({ onSuccess, onCancel }: AddLeadFormProps) {
             </SelectContent>
           </Select>
         </div>
-
-        <div className="col-span-2 space-y-1.5">
-          <Label>Assigned Staff *</Label>
-          <Select onValueChange={(v) => setValue('assignedStaffId', v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select staff member" />
-            </SelectTrigger>
-            <SelectContent>
-              {staffData?.data?.map((u) => (
-                <SelectItem key={u.id} value={u.id}>
-                  {u.name} ({u.role.replace(/_/g, ' ')})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.assignedStaffId && <p className="text-xs text-destructive">{errors.assignedStaffId.message}</p>}
-        </div>
-
-        <div className="col-span-2 space-y-1.5">
-          <Label>Follow Up Date</Label>
-          <Input type="date" {...register('followUpDate')} />
-        </div>
       </div>
 
-      <div className="flex gap-3 pt-2 border-t">
-        <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
-          Cancel
-        </Button>
-        <Button type="submit" className="flex-1" disabled={isSubmitting}>
-          {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          Create Lead
-        </Button>
+      <div>
+        <L>Assigned Staff *</L>
+        <Select onValueChange={(v) => setValue('assignedStaffId', v)}>
+          <SelectTrigger className="mt-1"><SelectValue placeholder="Select staff member" /></SelectTrigger>
+          <SelectContent>
+            {staffData?.data?.map((u) => (
+              <SelectItem key={u.id} value={u.id}>{u.name} ({u.role.replace(/_/g, ' ')})</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {errors.assignedStaffId && <p className="text-xs text-error mt-1">{errors.assignedStaffId.message}</p>}
+      </div>
+
+      <div>
+        <L>Follow Up Date</L>
+        <Input className="mt-1" type="date" {...register('followUpDate')} />
+      </div>
+
+      <div className="flex gap-3 pt-4 border-t border-surface-container-low">
+        <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">Cancel</Button>
+        <Button type="submit" className="flex-1" loading={isSubmitting}>Create Lead</Button>
       </div>
     </form>
   );

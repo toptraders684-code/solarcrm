@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Filter, Phone, MapPin, Calendar } from 'lucide-react';
+import { Plus, Search, Phone, Calendar } from 'lucide-react';
 import { PageWrapper } from '@/components/shared/PageWrapper';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -31,8 +30,7 @@ export default function LeadsListPage() {
     queryKey: ['leads', page, search, statusFilter, discomFilter],
     queryFn: () =>
       leadsService.getLeads({
-        page,
-        limit: 25,
+        page, limit: 25,
         search: search || undefined,
         status: statusFilter || undefined,
         discom: discomFilter || undefined,
@@ -49,27 +47,25 @@ export default function LeadsListPage() {
       actions={
         canAddLead ? (
           <Button onClick={() => setAddOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus size={16} />
             Add Lead
           </Button>
         ) : undefined
       }
     >
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center bg-white rounded-xl border p-4">
-        <div className="relative flex-1 min-w-48">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+      <div className="bg-surface-container-lowest rounded-xl p-4 flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 min-w-52">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50" size={16} />
           <Input
-            placeholder="Search by name, mobile, lead code..."
+            placeholder="Search name, mobile, lead code..."
             className="pl-9"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v === 'all' ? '' : v); setPage(1); }}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
+          <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="new">New</SelectItem>
@@ -79,9 +75,7 @@ export default function LeadsListPage() {
           </SelectContent>
         </Select>
         <Select value={discomFilter} onValueChange={(v) => { setDiscomFilter(v === 'all' ? '' : v); setPage(1); }}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="DISCOM" />
-          </SelectTrigger>
+          <SelectTrigger className="w-40"><SelectValue placeholder="DISCOM" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All DISCOMs</SelectItem>
             <SelectItem value="tpcodl">TPCODL</SelectItem>
@@ -93,75 +87,62 @@ export default function LeadsListPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border overflow-hidden">
+      <div className="bg-surface-container-lowest rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-left">
             <thead>
-              <tr className="border-b bg-gray-50">
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Lead Code</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Customer</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">DISCOM</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Source</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Assigned</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Follow Up</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
+              <tr className="bg-surface-container-low text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">
+                <th className="px-6 py-4">Lead Code</th>
+                <th className="px-4 py-4">Customer</th>
+                <th className="px-4 py-4">DISCOM</th>
+                <th className="px-4 py-4">Source</th>
+                <th className="px-4 py-4">Assigned</th>
+                <th className="px-4 py-4">Follow Up</th>
+                <th className="px-6 py-4">Status</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-surface-container-low">
               {isLoading
                 ? [...Array(8)].map((_, i) => (
-                    <tr key={i} className="border-b">
+                    <tr key={i}>
                       {[...Array(7)].map((_, j) => (
-                        <td key={j} className="px-4 py-3">
-                          <Skeleton className="h-4 w-full" />
-                        </td>
+                        <td key={j} className="px-4 py-4"><Skeleton className="h-4" /></td>
                       ))}
                     </tr>
                   ))
                 : leads.map((lead: Lead) => (
-                    <tr key={lead.id} className="border-b hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3">
-                        <Link
-                          to={`/leads/${lead.id}`}
-                          className="font-mono text-brand-600 hover:underline font-medium"
-                        >
+                    <tr key={lead.id} className="hover:bg-surface-container-low/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <Link to={`/leads/${lead.id}`} className="font-mono text-primary font-bold hover:underline text-sm">
                           {lead.leadCode}
                         </Link>
                       </td>
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="font-medium text-gray-900">{lead.customerName}</p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                            <Phone className="w-3 h-3" />
-                            {lead.mobile}
-                          </p>
-                        </div>
+                      <td className="px-4 py-4">
+                        <p className="text-sm font-bold text-on-surface">{lead.customerName}</p>
+                        <p className="text-xs text-on-surface-variant/60 flex items-center gap-1 mt-0.5">
+                          <Phone size={11} />{lead.mobile}
+                        </p>
                       </td>
-                      <td className="px-4 py-3">
-                        <Badge variant="info">{lead.discom.toUpperCase()}</Badge>
+                      <td className="px-4 py-4">
+                        <span className="px-2 py-0.5 bg-secondary-container text-on-secondary-fixed-variant rounded text-[10px] font-bold uppercase">
+                          {lead.discom.toUpperCase()}
+                        </span>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {toTitleCase(lead.leadSource)}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {lead.assignedStaff?.name ?? '—'}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="px-4 py-4 text-sm text-on-surface-variant">{toTitleCase(lead.leadSource)}</td>
+                      <td className="px-4 py-4 text-sm text-on-surface-variant">{lead.assignedStaff?.name ?? '—'}</td>
+                      <td className="px-4 py-4 text-sm text-on-surface-variant">
                         {lead.followUpDate ? (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {formatDate(lead.followUpDate)}
+                          <span className="flex items-center gap-1.5">
+                            <Calendar size={12} className="text-primary" />{formatDate(lead.followUpDate)}
                           </span>
                         ) : '—'}
                       </td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={lead.status} />
-                      </td>
+                      <td className="px-6 py-4"><StatusBadge status={lead.status} /></td>
                     </tr>
                   ))}
               {!isLoading && leads.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={7} className="px-4 py-16 text-center text-on-surface-variant/50 text-sm">
                     No leads found. {canAddLead && 'Click "Add Lead" to create one.'}
                   </td>
                 </tr>
@@ -172,27 +153,13 @@ export default function LeadsListPage() {
 
         {/* Pagination */}
         {meta && meta.totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t">
-            <p className="text-sm text-muted-foreground">
-              Page {meta.page} of {meta.totalPages} ({meta.total} results)
+          <div className="flex items-center justify-between px-6 py-4 border-t border-surface-container-low">
+            <p className="text-xs text-on-surface-variant/60">
+              Page {meta.page} of {meta.totalPages} &mdash; {meta.total} results
             </p>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === meta.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-              </Button>
+              <Button variant="secondary" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Previous</Button>
+              <Button variant="secondary" size="sm" disabled={page === meta.totalPages} onClick={() => setPage((p) => p + 1)}>Next</Button>
             </div>
           </div>
         )}
@@ -200,15 +167,12 @@ export default function LeadsListPage() {
 
       {/* Add Lead Sheet */}
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-          <SheetHeader className="mb-6">
+        <SheetContent className="overflow-y-auto p-8">
+          <SheetHeader>
             <SheetTitle>Add New Lead</SheetTitle>
           </SheetHeader>
           <AddLeadForm
-            onSuccess={() => {
-              setAddOpen(false);
-              queryClient.invalidateQueries({ queryKey: ['leads'] });
-            }}
+            onSuccess={() => { setAddOpen(false); queryClient.invalidateQueries({ queryKey: ['leads'] }); }}
             onCancel={() => setAddOpen(false)}
           />
         </SheetContent>

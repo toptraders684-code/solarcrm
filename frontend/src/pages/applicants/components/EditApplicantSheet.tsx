@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,9 +15,9 @@ import type { Applicant } from '@/types';
 // ── Field wrapper defined OUTSIDE the component so React doesn't remount on every render ──
 function F({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      {children}
+    <div>
+      <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">{label}</label>
+      <div className="mt-1">{children}</div>
     </div>
   );
 }
@@ -119,7 +117,7 @@ export function EditApplicantSheet({ open, onOpenChange, applicant }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto p-8">
         <SheetHeader className="mb-4">
           <SheetTitle>Edit Project Details — {applicant.applicantCode}</SheetTitle>
         </SheetHeader>
@@ -173,7 +171,7 @@ export function EditApplicantSheet({ open, onOpenChange, applicant }: Props) {
               </F>
             </div>
 
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Address</p>
+            <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-widest pt-2">Address</p>
             <div className="grid grid-cols-2 gap-3">
               <F label="House / Plot No.">
                 <Input value={form.addressHouse ?? ''} onChange={(e) => set('addressHouse', e.target.value)} />
@@ -227,7 +225,7 @@ export function EditApplicantSheet({ open, onOpenChange, applicant }: Props) {
 
           {/* ── Tab 2: Installation & Finance ── */}
           <TabsContent value="installation" className="space-y-4">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Installation</p>
+            <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-widest">Installation</p>
             <div className="grid grid-cols-2 gap-3">
               <F label="DISCOM">
                 <Select value={sv(form.discom)} onValueChange={(v) => set('discom', v)}>
@@ -275,7 +273,7 @@ export function EditApplicantSheet({ open, onOpenChange, applicant }: Props) {
               </div>
             </div>
 
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Finance</p>
+            <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-widest pt-2">Finance</p>
             <div className="grid grid-cols-2 gap-3">
               <F label="Contract Amount (₹)">
                 <Input type="number" step="1" value={form.contractAmount ?? ''} onChange={(e) => set('contractAmount', e.target.value)} />
@@ -313,7 +311,7 @@ export function EditApplicantSheet({ open, onOpenChange, applicant }: Props) {
 
           {/* ── Tab 3: Survey & DISCOM ── */}
           <TabsContent value="discom" className="space-y-4">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Site Survey</p>
+            <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-widest">Site Survey</p>
             <div className="grid grid-cols-2 gap-3">
               <F label="Survey Date">
                 <Input type="date" value={form.surveyDate ?? ''} onChange={(e) => set('surveyDate', e.target.value)} />
@@ -334,7 +332,7 @@ export function EditApplicantSheet({ open, onOpenChange, applicant }: Props) {
               </div>
             </div>
 
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">DISCOM Application</p>
+            <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-widest pt-2">DISCOM Application</p>
             <div className="grid grid-cols-2 gap-3">
               <F label="Portal Application Date">
                 <Input type="date" value={form.portalApplicationDate ?? ''} onChange={(e) => set('portalApplicationDate', e.target.value)} />
@@ -370,14 +368,9 @@ export function EditApplicantSheet({ open, onOpenChange, applicant }: Props) {
           </TabsContent>
         </Tabs>
 
-        <div className="flex gap-3 mt-6 pt-4 border-t">
-          <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button className="flex-1" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-            {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Save Changes
-          </Button>
+        <div className="flex gap-3 mt-6 pt-4 border-t border-surface-container-low">
+          <Button variant="secondary" className="flex-1" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button className="flex-1" onClick={() => saveMutation.mutate()} loading={saveMutation.isPending}>Save Changes</Button>
         </div>
       </SheetContent>
     </Sheet>

@@ -1,13 +1,12 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ChevronRight, Loader2, Pencil } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageWrapper } from '@/components/shared/PageWrapper';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { StageProgressBar } from './components/StageProgressBar';
 import { DocumentsTab } from './components/DocumentsTab';
@@ -17,9 +16,26 @@ import { DiscomTab } from './components/DiscomTab';
 import { ProcurementTab } from './components/ProcurementTab';
 import { EditApplicantSheet } from './components/EditApplicantSheet';
 import { applicantsService } from '@/services/applicants.service';
-import { formatDate, getStageName, getDiscomLabel, toTitleCase, formatCapacity } from '@/utils/formatters';
+import { formatDate, getStageName, toTitleCase, formatCapacity } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
-import { useState } from 'react';
+
+function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between py-2 border-b border-surface-container-low last:border-0">
+      <span className="text-xs text-on-surface-variant/60 font-medium flex-shrink-0">{label}</span>
+      <span className="text-sm font-semibold text-on-surface text-right">{children ?? '—'}</span>
+    </div>
+  );
+}
+
+function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-surface-container-lowest rounded-xl p-6">
+      <h4 className="text-xs font-black uppercase tracking-widest text-on-surface-variant/50 mb-4">{title}</h4>
+      {children}
+    </div>
+  );
+}
 
 export default function ApplicantDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -70,20 +86,17 @@ export default function ApplicantDetailPage() {
       subtitle={`Project Code: ${applicant.applicantCode}`}
       actions={
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate('/applicants')}>
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back
+          <Button variant="secondary" size="sm" onClick={() => navigate('/applicants')}>
+            <ArrowLeft size={14} />Back
           </Button>
           {canEdit && (
-            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-              <Pencil className="w-4 h-4 mr-1" />
-              Edit Details
+            <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
+              <Pencil size={14} />Edit Details
             </Button>
           )}
           {canAdvance && (
             <Button size="sm" onClick={() => setAdvanceOpen(true)}>
-              <ChevronRight className="w-4 h-4 mr-1" />
-              Advance Stage
+              <ChevronRight size={14} />Advance Stage
             </Button>
           )}
         </div>
@@ -93,14 +106,20 @@ export default function ApplicantDetailPage() {
       <StageProgressBar currentStage={applicant.stage} />
 
       {/* Meta info strip */}
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Badge variant="info">{applicant.discom.toUpperCase()}</Badge>
-        <Badge variant="secondary" className="capitalize">{applicant.projectType}</Badge>
+      <div className="flex flex-wrap gap-2 items-center">
+        <span className="px-2.5 py-1 bg-secondary-container text-on-secondary-fixed-variant rounded-lg text-xs font-bold uppercase">
+          {applicant.discom.toUpperCase()}
+        </span>
+        <span className="px-2.5 py-1 bg-surface-container text-on-surface-variant rounded-lg text-xs font-semibold capitalize">
+          {applicant.projectType}
+        </span>
         {applicant.systemCapacityKw && (
-          <Badge variant="outline">{formatCapacity(applicant.systemCapacityKw)}</Badge>
+          <span className="px-2.5 py-1 bg-surface-container text-on-surface-variant rounded-lg text-xs font-semibold">
+            {formatCapacity(applicant.systemCapacityKw)}
+          </span>
         )}
-        <span className="text-muted-foreground">Assigned: {applicant.assignedStaff?.name ?? '—'}</span>
-        <span className="text-muted-foreground">Stage updated: {formatDate(applicant.stageUpdatedAt)}</span>
+        <span className="text-xs text-on-surface-variant/60">Assigned: {applicant.assignedStaff?.name ?? '—'}</span>
+        <span className="text-xs text-on-surface-variant/60">Stage updated: {formatDate(applicant.stageUpdatedAt)}</span>
       </div>
 
       {/* Tabs */}
@@ -116,85 +135,61 @@ export default function ApplicantDetailPage() {
 
         <TabsContent value="details" className="mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Personal Info */}
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Personal Information</CardTitle></CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <InfoRow label="Date of Birth">{formatDate(applicant.dateOfBirth)}</InfoRow>
-                <InfoRow label="Gender">{applicant.gender ? toTitleCase(applicant.gender) : '—'}</InfoRow>
-                <InfoRow label="Email">{applicant.email ?? '—'}</InfoRow>
-                <InfoRow label="WhatsApp">{applicant.whatsappNumber ?? '—'}</InfoRow>
-                <InfoRow label="Alternate Mobile">{applicant.alternateMobile ?? '—'}</InfoRow>
-              </CardContent>
-            </Card>
+            <SectionCard title="Personal Information">
+              <InfoRow label="Date of Birth">{formatDate(applicant.dateOfBirth)}</InfoRow>
+              <InfoRow label="Gender">{applicant.gender ? toTitleCase(applicant.gender) : null}</InfoRow>
+              <InfoRow label="Email">{applicant.email}</InfoRow>
+              <InfoRow label="WhatsApp">{applicant.whatsappNumber}</InfoRow>
+              <InfoRow label="Alternate Mobile">{applicant.alternateMobile}</InfoRow>
+            </SectionCard>
 
-            {/* Address */}
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Address</CardTitle></CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <InfoRow label="House / Plot">{applicant.addressHouse ?? '—'}</InfoRow>
-                <InfoRow label="Street">{applicant.addressStreet ?? '—'}</InfoRow>
-                <InfoRow label="Village">{applicant.addressVillage ?? '—'}</InfoRow>
-                <InfoRow label="District">{applicant.addressDistrict?.name ?? '—'}</InfoRow>
-                <InfoRow label="State">{applicant.addressState?.name ?? '—'}</InfoRow>
-                <InfoRow label="Pincode">{applicant.addressPincode ?? '—'}</InfoRow>
-                {applicant.gpsLatitude && (
-                  <InfoRow label="GPS">{applicant.gpsLatitude}, {applicant.gpsLongitude}</InfoRow>
-                )}
-              </CardContent>
-            </Card>
+            <SectionCard title="Address">
+              <InfoRow label="House / Plot">{applicant.addressHouse}</InfoRow>
+              <InfoRow label="Street">{applicant.addressStreet}</InfoRow>
+              <InfoRow label="Village">{applicant.addressVillage}</InfoRow>
+              <InfoRow label="District">{applicant.addressDistrict?.name}</InfoRow>
+              <InfoRow label="State">{applicant.addressState?.name}</InfoRow>
+              <InfoRow label="Pincode">{applicant.addressPincode}</InfoRow>
+              {applicant.gpsLatitude && (
+                <InfoRow label="GPS">{applicant.gpsLatitude}, {applicant.gpsLongitude}</InfoRow>
+              )}
+            </SectionCard>
 
-            {/* Installation */}
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Installation Details</CardTitle></CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <InfoRow label="System Capacity">{formatCapacity(applicant.systemCapacityKw)}</InfoRow>
-                <InfoRow label="Sanctioned Load">{formatCapacity(applicant.sanctionedLoadKw)}</InfoRow>
-                <InfoRow label="Roof Type">{applicant.roofType ? toTitleCase(applicant.roofType) : '—'}</InfoRow>
-                <InfoRow label="Consumer No.">{applicant.existingConsumerNo ?? '—'}</InfoRow>
-                <InfoRow label="DISCOM Ref No.">{applicant.discomRefNo ?? '—'}</InfoRow>
-              </CardContent>
-            </Card>
+            <SectionCard title="Installation Details">
+              <InfoRow label="System Capacity">{formatCapacity(applicant.systemCapacityKw)}</InfoRow>
+              <InfoRow label="Sanctioned Load">{formatCapacity(applicant.sanctionedLoadKw)}</InfoRow>
+              <InfoRow label="Roof Type">{applicant.roofType ? toTitleCase(applicant.roofType) : null}</InfoRow>
+              <InfoRow label="Consumer No.">{applicant.existingConsumerNo}</InfoRow>
+              <InfoRow label="DISCOM Ref No.">{applicant.discomRefNo}</InfoRow>
+            </SectionCard>
 
-            {/* Survey */}
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Survey Information</CardTitle></CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <InfoRow label="Survey Date">{formatDate(applicant.surveyDate)}</InfoRow>
-                <InfoRow label="Surveyed By">{applicant.surveyedBy ?? '—'}</InfoRow>
-                <InfoRow label="Roof Area">{applicant.roofAreaSqft ? `${applicant.roofAreaSqft} sqft` : '—'}</InfoRow>
-                <InfoRow label="Recommended Capacity">{formatCapacity(applicant.recommendedCapacityKw)}</InfoRow>
-                {applicant.shadowAnalysis && (
-                  <InfoRow label="Shadow Analysis">{applicant.shadowAnalysis}</InfoRow>
-                )}
-              </CardContent>
-            </Card>
+            <SectionCard title="Survey Information">
+              <InfoRow label="Survey Date">{formatDate(applicant.surveyDate)}</InfoRow>
+              <InfoRow label="Surveyed By">{applicant.surveyedBy}</InfoRow>
+              <InfoRow label="Roof Area">{applicant.roofAreaSqft ? `${applicant.roofAreaSqft} sqft` : null}</InfoRow>
+              <InfoRow label="Recommended Capacity">{formatCapacity(applicant.recommendedCapacityKw)}</InfoRow>
+              {applicant.shadowAnalysis && (
+                <InfoRow label="Shadow Analysis">{applicant.shadowAnalysis}</InfoRow>
+              )}
+            </SectionCard>
 
-            {/* DISCOM Application */}
-            <Card>
-              <CardHeader><CardTitle className="text-sm">DISCOM Application</CardTitle></CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <InfoRow label="Portal Application">{formatDate(applicant.portalApplicationDate)}</InfoRow>
-                <InfoRow label="JE Name">{applicant.jeName ?? '—'}</InfoRow>
-                <InfoRow label="JE Contact">{applicant.jeContact ?? '—'}</InfoRow>
-                <InfoRow label="MRT Date">{formatDate(applicant.mrtDate)}</InfoRow>
-                <InfoRow label="Inspection Date">{formatDate(applicant.inspectionDate)}</InfoRow>
-                <InfoRow label="Inspection Result">{applicant.inspectionResult ? toTitleCase(applicant.inspectionResult) : '—'}</InfoRow>
-                <InfoRow label="Net Meter S/N">{applicant.netMeterSerialNo ?? '—'}</InfoRow>
-              </CardContent>
-            </Card>
+            <SectionCard title="DISCOM Application">
+              <InfoRow label="Portal Application">{formatDate(applicant.portalApplicationDate)}</InfoRow>
+              <InfoRow label="JE Name">{applicant.jeName}</InfoRow>
+              <InfoRow label="JE Contact">{applicant.jeContact}</InfoRow>
+              <InfoRow label="MRT Date">{formatDate(applicant.mrtDate)}</InfoRow>
+              <InfoRow label="Inspection Date">{formatDate(applicant.inspectionDate)}</InfoRow>
+              <InfoRow label="Inspection Result">{applicant.inspectionResult ? toTitleCase(applicant.inspectionResult) : null}</InfoRow>
+              <InfoRow label="Net Meter S/N">{applicant.netMeterSerialNo}</InfoRow>
+            </SectionCard>
 
-            {/* Finance */}
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Finance Details</CardTitle></CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <InfoRow label="Finance Mode">{applicant.financeMode ? toTitleCase(applicant.financeMode) : '—'}</InfoRow>
-                <InfoRow label="Bank Name">{applicant.bankName ?? '—'}</InfoRow>
-                <InfoRow label="Loan Amount">{applicant.loanAmount ? `₹${applicant.loanAmount}` : '—'}</InfoRow>
-                <InfoRow label="Loan Sanctioned">{formatDate(applicant.loanSanctionedDate)}</InfoRow>
-                <InfoRow label="Overpayment Rule">{toTitleCase(applicant.overpaymentRule)}</InfoRow>
-              </CardContent>
-            </Card>
+            <SectionCard title="Finance Details">
+              <InfoRow label="Finance Mode">{applicant.financeMode ? toTitleCase(applicant.financeMode) : null}</InfoRow>
+              <InfoRow label="Bank Name">{applicant.bankName}</InfoRow>
+              <InfoRow label="Loan Amount">{applicant.loanAmount ? `₹${applicant.loanAmount}` : null}</InfoRow>
+              <InfoRow label="Loan Sanctioned">{formatDate(applicant.loanSanctionedDate)}</InfoRow>
+              <InfoRow label="Overpayment Rule">{toTitleCase(applicant.overpaymentRule)}</InfoRow>
+            </SectionCard>
           </div>
         </TabsContent>
 
@@ -219,11 +214,7 @@ export default function ApplicantDetailPage() {
         </TabsContent>
       </Tabs>
 
-      <EditApplicantSheet
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        applicant={applicant}
-      />
+      <EditApplicantSheet open={editOpen} onOpenChange={setEditOpen} applicant={applicant} />
 
       <ConfirmDialog
         open={advanceOpen}
@@ -235,14 +226,5 @@ export default function ApplicantDetailPage() {
         loading={advanceMutation.isPending}
       />
     </PageWrapper>
-  );
-}
-
-function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex justify-between gap-4">
-      <span className="text-muted-foreground flex-shrink-0">{label}</span>
-      <span className="text-right font-medium">{children}</span>
-    </div>
   );
 }

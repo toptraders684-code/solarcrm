@@ -1,13 +1,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StatusBadge } from '@/components/shared/StatusBadge';
@@ -16,8 +13,15 @@ import { financeService } from '@/services/finance.service';
 import { formatDate, formatCurrency, toTitleCase } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
 
-interface FinanceTabProps {
-  applicantId: string;
+interface FinanceTabProps { applicantId: string; }
+
+function SummaryCard({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className={`bg-surface-container-lowest rounded-xl p-4 ${accent ? 'ring-2 ring-primary/20' : ''}`}>
+      <p className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-1">{label}</p>
+      <p className={`text-xl font-black font-headline ${accent ? 'text-primary' : 'text-on-surface'}`}>{value}</p>
+    </div>
+  );
 }
 
 export function FinanceTab({ applicantId }: FinanceTabProps) {
@@ -31,7 +35,7 @@ export function FinanceTab({ applicantId }: FinanceTabProps) {
   const [description, setDescription] = useState('');
   const [refNumber, setRefNumber] = useState('');
 
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ['applicant-transactions', applicantId],
     queryFn: () => applicantsService.getTransactions(applicantId),
   });
@@ -40,28 +44,16 @@ export function FinanceTab({ applicantId }: FinanceTabProps) {
   const summary = data?.summary;
 
   const addMutation = useMutation({
-    mutationFn: () =>
-      financeService.createTransaction({
-        applicantId,
-        type,
-        amount: Number(amount),
-        paymentMethod: method,
-        transactionDate: txDate,
-        description: description || undefined,
-        referenceNumber: refNumber || undefined,
-      }),
+    mutationFn: () => financeService.createTransaction({
+      applicantId, type, amount: Number(amount), paymentMethod: method,
+      transactionDate: txDate, description: description || undefined, referenceNumber: refNumber || undefined,
+    }),
     onSuccess: () => {
       toast.success('Transaction added');
       queryClient.invalidateQueries({ queryKey: ['applicant-transactions', applicantId] });
-      setAddOpen(false);
-      setAmount('');
-      setDescription('');
-      setRefNumber('');
-      setTxDate('');
+      setAddOpen(false); setAmount(''); setDescription(''); setRefNumber(''); setTxDate('');
     },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || 'Failed to add transaction');
-    },
+    onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to add transaction'),
   });
 
   const approveMutation = useMutation({
@@ -82,71 +74,63 @@ export function FinanceTab({ applicantId }: FinanceTabProps) {
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <SummaryCard label="Contract Value" value={formatCurrency(summary.totalContract)} />
-          <SummaryCard label="Total Received" value={formatCurrency(summary.totalReceived)} color="text-green-600" />
-          <SummaryCard label="Balance Due" value={formatCurrency(summary.balanceDue)} color="text-red-500" />
-          <SummaryCard label="Subsidy Received" value={formatCurrency(summary.totalSubsidy)} color="text-blue-600" />
+          <SummaryCard label="Total Received" value={formatCurrency(summary.totalReceived)} accent />
+          <SummaryCard label="Balance Due" value={formatCurrency(summary.balanceDue)} />
+          <SummaryCard label="Subsidy Received" value={formatCurrency(summary.totalSubsidy)} />
         </div>
       )}
 
       {/* Add Button */}
       {canAddTx && (
         <div className="flex justify-end">
-          <Button size="sm" onClick={() => setAddOpen(true)}>
-            <Plus className="w-4 h-4 mr-1" />
-            Add Transaction
-          </Button>
+          <Button size="sm" onClick={() => setAddOpen(true)}><Plus size={14} />Add Transaction</Button>
         </div>
       )}
 
       {/* Transactions Table */}
-      <div className="bg-white rounded-xl border overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-surface-container-lowest rounded-xl overflow-hidden">
+        <table className="w-full text-left">
           <thead>
-            <tr className="border-b bg-gray-50">
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Date</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Type</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Amount</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Method</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
-              {canApprove && <th className="text-left px-4 py-3 font-medium text-gray-600">Actions</th>}
+            <tr className="bg-surface-container-low text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">
+              <th className="px-4 py-4">Date</th>
+              <th className="px-4 py-4">Type</th>
+              <th className="px-4 py-4">Amount</th>
+              <th className="px-4 py-4">Method</th>
+              <th className="px-4 py-4">Status</th>
+              {canApprove && <th className="px-4 py-4">Actions</th>}
             </tr>
           </thead>
-          <tbody>
-            {transactions.map((tx) => (
-              <tr key={tx.id} className="border-b hover:bg-gray-50">
-                <td className="px-4 py-3 text-muted-foreground">{formatDate(tx.transactionDate)}</td>
+          <tbody className="divide-y divide-surface-container-low">
+            {transactions.map((tx: any) => (
+              <tr key={tx.id} className="hover:bg-surface-container-low/50 transition-colors">
+                <td className="px-4 py-3 text-sm text-on-surface-variant">{formatDate(tx.transactionDate)}</td>
                 <td className="px-4 py-3">
-                  <Badge variant={tx.type === 'customer_receipt' ? 'success' : tx.type === 'subsidy' ? 'info' : 'warning'}>
-                    {toTitleCase(tx.type)}
-                  </Badge>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                    tx.type === 'customer_receipt' ? 'bg-primary/10 text-primary' :
+                    tx.type === 'subsidy' ? 'bg-secondary-container text-on-secondary-fixed-variant' :
+                    'bg-surface-container text-on-surface-variant'
+                  }`}>{toTitleCase(tx.type)}</span>
                 </td>
-                <td className="px-4 py-3 font-semibold">{formatCurrency(tx.amount)}</td>
-                <td className="px-4 py-3 text-muted-foreground">{toTitleCase(tx.paymentMethod)}</td>
+                <td className="px-4 py-3 text-sm font-bold text-on-surface">{formatCurrency(tx.amount)}</td>
+                <td className="px-4 py-3 text-sm text-on-surface-variant">{toTitleCase(tx.paymentMethod)}</td>
                 <td className="px-4 py-3"><StatusBadge status={tx.status} /></td>
                 {canApprove && (
                   <td className="px-4 py-3">
                     {tx.status === 'pending_approval' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-green-600 border-green-200 hover:bg-green-50"
+                      <button
                         onClick={() => approveMutation.mutate(tx.id)}
                         disabled={approveMutation.isPending}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary hover:text-white transition-all"
                       >
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Approve
-                      </Button>
+                        <CheckCircle size={12} />Approve
+                      </button>
                     )}
                   </td>
                 )}
               </tr>
             ))}
             {transactions.length === 0 && (
-              <tr>
-                <td colSpan={canApprove ? 6 : 5} className="px-4 py-8 text-center text-muted-foreground">
-                  No transactions recorded.
-                </td>
-              </tr>
+              <tr><td colSpan={canApprove ? 6 : 5} className="px-4 py-8 text-center text-sm text-on-surface-variant/50">No transactions recorded.</td></tr>
             )}
           </tbody>
         </table>
@@ -155,15 +139,13 @@ export function FinanceTab({ applicantId }: FinanceTabProps) {
       {/* Add Transaction Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Transaction</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Add Transaction</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Type *</Label>
+              <div>
+                <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Type *</label>
                 <Select value={type} onValueChange={setType}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="customer_receipt">Customer Receipt</SelectItem>
                     <SelectItem value="vendor_payment">Vendor Payment</SelectItem>
@@ -171,14 +153,14 @@ export function FinanceTab({ applicantId }: FinanceTabProps) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label>Amount (₹) *</Label>
-                <Input type="number" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <div>
+                <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Amount (₹) *</label>
+                <Input className="mt-1" type="number" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
               </div>
-              <div className="space-y-1.5">
-                <Label>Payment Method *</Label>
+              <div>
+                <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Payment Method *</label>
                 <Select value={method} onValueChange={setMethod}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {['cash', 'cheque', 'bank_transfer', 'upi', 'other'].map((m) => (
                       <SelectItem key={m} value={m}>{toTitleCase(m)}</SelectItem>
@@ -186,43 +168,26 @@ export function FinanceTab({ applicantId }: FinanceTabProps) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label>Date *</Label>
-                <Input type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)} />
+              <div>
+                <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Date *</label>
+                <Input className="mt-1" type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)} />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Reference Number</Label>
-              <Input placeholder="Cheque no., UTR, etc." value={refNumber} onChange={(e) => setRefNumber(e.target.value)} />
+            <div>
+              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Reference Number</label>
+              <Input className="mt-1" placeholder="Cheque no., UTR, etc." value={refNumber} onChange={(e) => setRefNumber(e.target.value)} />
             </div>
-            <div className="space-y-1.5">
-              <Label>Description</Label>
-              <Textarea placeholder="Optional notes..." value={description} onChange={(e) => setDescription(e.target.value)} />
+            <div>
+              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Description</label>
+              <Textarea className="mt-1" placeholder="Optional notes..." value={description} onChange={(e) => setDescription(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
-            <Button
-              disabled={!amount || !txDate || addMutation.isPending}
-              onClick={() => addMutation.mutate()}
-            >
-              {addMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Add Transaction
-            </Button>
+            <Button variant="secondary" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button disabled={!amount || !txDate} loading={addMutation.isPending} onClick={() => addMutation.mutate()}>Add Transaction</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-function SummaryCard({ label, value, color = 'text-gray-900' }: { label: string; value: string; color?: string }) {
-  return (
-    <Card>
-      <CardContent className="p-3">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className={`text-lg font-bold mt-0.5 ${color}`}>{value}</p>
-      </CardContent>
-    </Card>
   );
 }

@@ -1,93 +1,49 @@
-import { Bell, Search, LogOut, User } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Bell, Search, HelpCircle } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { authService } from '@/services/auth.service';
 
 export function Header() {
-  const { user, clearAuth } = useAuthStore();
-  const navigate = useNavigate();
+  const { user } = useAuthStore();
 
   const initials = user?.name
-    ? user.name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
+    ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : '?';
 
-  const handleLogout = async () => {
-    try {
-      await authService.logout();
-    } catch {
-      // ignore
-    }
-    clearAuth();
-    toast.success('Logged out successfully');
-    navigate('/login');
-  };
-
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center gap-4 px-6 flex-shrink-0">
+    <header className="sticky top-0 z-20 w-full bg-surface/80 backdrop-blur-xl flex justify-between items-center h-16 px-8 shadow-sm border-b border-outline-variant/10">
       {/* Search */}
-      <div className="flex-1 max-w-md">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input placeholder="Search..." className="pl-9 h-8 bg-gray-50" />
+      <div className="flex items-center flex-1 max-w-md">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50" size={18} />
+          <input
+            className="w-full pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-xl text-sm focus:ring-2 focus:ring-primary-container/20 outline-none placeholder:text-on-surface-variant/40"
+            placeholder="Search projects, leads, documents..."
+            type="text"
+          />
         </div>
       </div>
 
-      <div className="flex items-center gap-2 ml-auto">
-        {/* Notifications bell */}
-        <Button variant="ghost" size="icon" className="relative text-gray-500 hover:text-gray-700">
-          <Bell className="w-4 h-4" />
-        </Button>
-
-        {/* User avatar dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2">
-              <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-brand-400 hover:ring-offset-1 transition-all">
-                <AvatarFallback className="bg-brand-500 text-white text-xs font-semibold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-semibold text-gray-900">{user?.name}</p>
-                <p className="text-xs text-muted-foreground capitalize">
-                  {user?.role?.replace(/_/g, ' ')}
-                </p>
-                {user?.email && (
-                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                )}
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
-              onClick={handleLogout}
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      {/* Right */}
+      <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 text-on-surface-variant">
+          <button className="hover:text-primary transition-colors">
+            <Bell size={20} />
+          </button>
+          <button className="hover:text-primary transition-colors">
+            <HelpCircle size={20} />
+          </button>
+        </div>
+        <div className="h-8 w-px bg-outline-variant/30" />
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-xs font-bold leading-none text-on-surface">{user?.name}</p>
+            <p className="text-[10px] text-on-surface-variant capitalize mt-0.5">
+              {user?.role?.replace(/_/g, ' ')}
+            </p>
+          </div>
+          <div className="h-10 w-10 rounded-full signature-gradient flex items-center justify-center text-white text-sm font-black border-2 border-white shadow-sm">
+            {initials}
+          </div>
+        </div>
       </div>
     </header>
   );

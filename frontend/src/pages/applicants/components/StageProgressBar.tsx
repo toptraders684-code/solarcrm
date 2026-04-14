@@ -8,48 +8,48 @@ interface StageProgressBarProps {
 
 export function StageProgressBar({ currentStage }: StageProgressBarProps) {
   const stages = Object.entries(STAGE_LABELS);
+  const completedPercent = ((currentStage - 1) / (stages.length - 1)) * 100;
 
   return (
-    <div className="bg-white rounded-xl border p-4">
-      <div className="flex items-center gap-0 overflow-x-auto pb-2">
-        {stages.map(([num, label], idx) => {
+    <div className="bg-surface-container-lowest p-6 rounded-xl">
+      <div className="flex items-center justify-between mb-8">
+        <h3 className="text-xs font-black uppercase tracking-widest text-on-surface-variant/50">Project Workflow</h3>
+        <span className="text-xs font-bold text-primary">Stage {currentStage} of {stages.length}</span>
+      </div>
+
+      <div className="relative flex justify-between items-center w-full overflow-x-auto pb-2">
+        {/* Background connector */}
+        <div className="absolute top-5 left-0 w-full h-1 bg-surface-container-high rounded-full -translate-y-1/2" />
+        {/* Active connector */}
+        <div
+          className="absolute top-5 left-0 h-1 signature-gradient rounded-full -translate-y-1/2 transition-all duration-500"
+          style={{ width: `${completedPercent}%` }}
+        />
+
+        {stages.map(([num, label]) => {
           const stageNum = Number(num);
           const isCompleted = stageNum < currentStage;
           const isCurrent = stageNum === currentStage;
-          const isUpcoming = stageNum > currentStage;
 
           return (
-            <div key={num} className="flex items-center flex-shrink-0">
-              <div className="flex flex-col items-center">
-                <div
-                  className={cn(
-                    'w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-all',
-                    isCompleted && 'bg-brand-500 border-brand-500 text-white',
-                    isCurrent && 'bg-white border-brand-500 text-brand-600 shadow-md ring-2 ring-brand-200',
-                    isUpcoming && 'bg-gray-100 border-gray-200 text-gray-400'
-                  )}
-                >
-                  {isCompleted ? <Check className="w-4 h-4" /> : num}
-                </div>
-                <span
-                  className={cn(
-                    'mt-1 text-[10px] text-center max-w-[60px] leading-tight',
-                    isCompleted && 'text-brand-600 font-medium',
-                    isCurrent && 'text-brand-700 font-bold',
-                    isUpcoming && 'text-gray-400'
-                  )}
-                >
-                  {label}
-                </span>
+            <div key={num} className="relative z-10 flex flex-col items-center gap-2 group flex-shrink-0 px-1">
+              <div className={cn(
+                'rounded-full flex items-center justify-center transition-all',
+                isCompleted || isCurrent
+                  ? 'signature-gradient text-white shadow-lg'
+                  : 'bg-surface-container-high text-on-surface-variant/40',
+                isCurrent
+                  ? 'h-11 w-11 border-4 border-surface-container-lowest scale-110 shadow-xl'
+                  : 'h-9 w-9'
+              )}>
+                {isCompleted ? <Check size={16} /> : <span className="text-xs font-black">{num}</span>}
               </div>
-              {idx < stages.length - 1 && (
-                <div
-                  className={cn(
-                    'h-0.5 w-8 mx-1 flex-shrink-0 mt-[-18px]',
-                    stageNum < currentStage ? 'bg-brand-500' : 'bg-gray-200'
-                  )}
-                />
-              )}
+              <span className={cn(
+                'text-[9px] font-bold uppercase tracking-tight text-center max-w-[52px] leading-tight',
+                isCurrent ? 'text-primary font-black' : isCompleted ? 'text-on-surface' : 'text-on-surface-variant/40'
+              )}>
+                {label}
+              </span>
             </div>
           );
         })}
