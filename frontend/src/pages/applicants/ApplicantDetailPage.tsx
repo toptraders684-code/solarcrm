@@ -14,28 +14,11 @@ import { ChecklistTab } from './components/ChecklistTab';
 import { FinanceTab } from './components/FinanceTab';
 import { DiscomTab } from './components/DiscomTab';
 import { ProcurementTab } from './components/ProcurementTab';
+import { DetailsTab } from './components/DetailsTab';
 import { EditApplicantSheet } from './components/EditApplicantSheet';
 import { applicantsService } from '@/services/applicants.service';
 import { formatDate, getStageName, toTitleCase, formatCapacity } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
-
-function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between py-2 border-b border-surface-container-low last:border-0">
-      <span className="text-xs text-on-surface-variant/60 font-medium flex-shrink-0">{label}</span>
-      <span className="text-sm font-semibold text-on-surface text-right">{children ?? '—'}</span>
-    </div>
-  );
-}
-
-function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-surface-container-lowest rounded-xl p-6">
-      <h4 className="text-xs font-black uppercase tracking-widest text-on-surface-variant/50 mb-4">{title}</h4>
-      {children}
-    </div>
-  );
-}
 
 export default function ApplicantDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -134,63 +117,7 @@ export default function ApplicantDetailPage() {
         </TabsList>
 
         <TabsContent value="details" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <SectionCard title="Personal Information">
-              <InfoRow label="Date of Birth">{formatDate(applicant.dateOfBirth)}</InfoRow>
-              <InfoRow label="Gender">{applicant.gender ? toTitleCase(applicant.gender) : null}</InfoRow>
-              <InfoRow label="Email">{applicant.email}</InfoRow>
-              <InfoRow label="WhatsApp">{applicant.whatsappNumber}</InfoRow>
-              <InfoRow label="Alternate Mobile">{applicant.alternateMobile}</InfoRow>
-            </SectionCard>
-
-            <SectionCard title="Address">
-              <InfoRow label="House / Plot">{applicant.addressHouse}</InfoRow>
-              <InfoRow label="Street">{applicant.addressStreet}</InfoRow>
-              <InfoRow label="Village">{applicant.addressVillage}</InfoRow>
-              <InfoRow label="District">{applicant.addressDistrict?.name}</InfoRow>
-              <InfoRow label="State">{applicant.addressState?.name}</InfoRow>
-              <InfoRow label="Pincode">{applicant.addressPincode}</InfoRow>
-              {applicant.gpsLatitude && (
-                <InfoRow label="GPS">{applicant.gpsLatitude}, {applicant.gpsLongitude}</InfoRow>
-              )}
-            </SectionCard>
-
-            <SectionCard title="Installation Details">
-              <InfoRow label="System Capacity">{formatCapacity(applicant.systemCapacityKw)}</InfoRow>
-              <InfoRow label="Sanctioned Load">{formatCapacity(applicant.sanctionedLoadKw)}</InfoRow>
-              <InfoRow label="Roof Type">{applicant.roofType ? toTitleCase(applicant.roofType) : null}</InfoRow>
-              <InfoRow label="Consumer No.">{applicant.existingConsumerNo}</InfoRow>
-              <InfoRow label="DISCOM Ref No.">{applicant.discomRefNo}</InfoRow>
-            </SectionCard>
-
-            <SectionCard title="Survey Information">
-              <InfoRow label="Survey Date">{formatDate(applicant.surveyDate)}</InfoRow>
-              <InfoRow label="Surveyed By">{applicant.surveyedBy}</InfoRow>
-              <InfoRow label="Roof Area">{applicant.roofAreaSqft ? `${applicant.roofAreaSqft} sqft` : null}</InfoRow>
-              <InfoRow label="Recommended Capacity">{formatCapacity(applicant.recommendedCapacityKw)}</InfoRow>
-              {applicant.shadowAnalysis && (
-                <InfoRow label="Shadow Analysis">{applicant.shadowAnalysis}</InfoRow>
-              )}
-            </SectionCard>
-
-            <SectionCard title="DISCOM Application">
-              <InfoRow label="Portal Application">{formatDate(applicant.portalApplicationDate)}</InfoRow>
-              <InfoRow label="JE Name">{applicant.jeName}</InfoRow>
-              <InfoRow label="JE Contact">{applicant.jeContact}</InfoRow>
-              <InfoRow label="MRT Date">{formatDate(applicant.mrtDate)}</InfoRow>
-              <InfoRow label="Inspection Date">{formatDate(applicant.inspectionDate)}</InfoRow>
-              <InfoRow label="Inspection Result">{applicant.inspectionResult ? toTitleCase(applicant.inspectionResult) : null}</InfoRow>
-              <InfoRow label="Net Meter S/N">{applicant.netMeterSerialNo}</InfoRow>
-            </SectionCard>
-
-            <SectionCard title="Finance Details">
-              <InfoRow label="Finance Mode">{applicant.financeMode ? toTitleCase(applicant.financeMode) : null}</InfoRow>
-              <InfoRow label="Bank Name">{applicant.bankName}</InfoRow>
-              <InfoRow label="Loan Amount">{applicant.loanAmount ? `₹${applicant.loanAmount}` : null}</InfoRow>
-              <InfoRow label="Loan Sanctioned">{formatDate(applicant.loanSanctionedDate)}</InfoRow>
-              <InfoRow label="Overpayment Rule">{toTitleCase(applicant.overpaymentRule)}</InfoRow>
-            </SectionCard>
-          </div>
+          <DetailsTab applicant={applicant} />
         </TabsContent>
 
         <TabsContent value="discom" className="mt-4">
