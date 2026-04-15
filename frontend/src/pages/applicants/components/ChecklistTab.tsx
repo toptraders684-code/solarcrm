@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Circle } from 'lucide-react';
+import { CheckCircle2, Circle, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -48,6 +48,11 @@ export function ChecklistTab({ applicantId, applicant }: ChecklistTabProps) {
   const totalCount = items.length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
+  // All phases open by default; toggle individual phases
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const togglePhase = (phase: string) =>
+    setCollapsed((prev) => ({ ...prev, [phase]: !prev[phase] }));
+
   return (
     <div className="space-y-4">
       {/* DISCOM + Project Type selector */}
@@ -92,37 +97,95 @@ export function ChecklistTab({ applicantId, applicant }: ChecklistTabProps) {
             </div>
           </div>
 
-          {Object.entries(grouped).map(([phase, phaseItems]) => (
-            <div key={phase}>
-              <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50 mb-3">{phase}</p>
-              <div className="space-y-2">
-                {[...phaseItems]
-                  .sort((a, b) => (a.masterItem?.itemOrder ?? 0) - (b.masterItem?.itemOrder ?? 0))
-                  .map((item) => (
-                    <div key={item.masterItemId} className={`flex items-start gap-3 p-4 rounded-xl transition-all ${item.isCompleted ? 'bg-primary/5 border border-primary/20' : 'bg-surface-container-lowest border border-surface-container-low hover:border-primary/20'}`}>
-                      <button
-                        disabled={!canEdit || toggleMutation.isPending}
-                        onClick={() => toggleMutation.mutate({ itemId: item.masterItemId, isCompleted: !item.isCompleted })}
-                        className="mt-0.5 flex-shrink-0"
-                      >
-                        {item.isCompleted
-                          ? <CheckCircle2 size={18} className="text-primary" />
-                          : <Circle size={18} className="text-on-surface-variant/30 hover:text-on-surface-variant" />}
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium ${item.isCompleted ? 'text-on-surface-variant/50 line-through' : 'text-on-surface'}`}>
-                          {item.masterItem?.itemText}
-                          {item.masterItem?.isMandatory && <span className="ml-1 text-error text-xs no-underline not-italic">*</span>}
-                        </p>
-                        {item.isCompleted && item.completedAt && (
-                          <p className="text-xs text-on-surface-variant/50 mt-0.5">Completed {formatDate(item.completedAt)}</p>
-                        )}
+          {Object.entries(grouped).map(([phase, phaseItems]) => {
+            const sorted = [...phaseItems].sort(
+              (a, b) => (a.masterItem?.itemOrder ?? 0) - (b.masterItem?.itemOrder ?? 0)
+            );
+            const phaseDone  = sorted.filter((i) => i.isCompleted).length;
+            const phaseTotal = sorted.length;
+            const phaseProgress = phaseTotal > 0 ? (phaseDone / phaseTotal) * 100 : 0;
+            const isOpen = !collapsed[phase];
+
+            return (
+              <div key={phase} className="rounded-xl border border-surface-container-low overflow-hidden">
+                {/* Phase header — clickable to collapse */}
+                <button
+                  onClick={() => togglePhase(phase)}
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-surface-container-lowest hover:bg-surface-container transition-colors"
+                >
+                  <span className="flex-shrink-0 text-on-surface-variant/50">
+                    {isOpen
+                      ? <ChevronDown size={16} />
+                      : <ChevronRight size={16} />}
+                  </span>
+                  <span className="flex-1 text-left text-[11px] font-black uppercase tracking-widest text-on-surface-variant/70">
+                    {phase}
+                  </span>
+                  {/* Per-phase progress bar + count */}
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="hidden sm:flex items-center gap-2">
+                      <div className="w-24 h-1.5 bg-surface-container rounded-full overflow-hidden">
+                        <div
+                          className="h-full signature-gradient rounded-full transition-all"
+                          style={{ width: `${phaseProgress}%` }}
+                        />
                       </div>
                     </div>
-                  ))}
+                    <span className={`text-xs font-bold tabular-nums ${phaseDone === phaseTotal ? 'text-primary' : 'text-on-surface-variant/50'}`}>
+                      {phaseDone}/{phaseTotal}
+                    </span>
+                    {phaseDone === phaseTotal && phaseTotal > 0 && (
+                      <CheckCircle2 size={14} className="text-primary flex-shrink-0" />
+                    )}
+                  </div>
+                </button>
+
+                {/* Phase items */}
+                {isOpen && (
+                  <div className="px-4 py-3 space-y-2 bg-surface/50">
+                    {sorted.map((item) => (
+                      <div
+                        key={item.masterItemId}
+                        className={`flex items-start gap-3 p-4 rounded-xl transition-all ${
+                          item.isCompleted
+                            ? 'bg-primary/5 border border-primary/20'
+                            : 'bg-surface-container-lowest border border-surface-container-low hover:border-primary/20'
+                        }`}
+                      >
+                        <button
+                          disabled={!canEdit || toggleMutation.isPending}
+                          onClick={() =>
+                            toggleMutation.mutate({
+                              itemId: item.masterItemId,
+                              isCompleted: !item.isCompleted,
+                            })
+                          }
+                          className="mt-0.5 flex-shrink-0"
+                        >
+                          {item.isCompleted
+                            ? <CheckCircle2 size={18} className="text-primary" />
+                            : <Circle size={18} className="text-on-surface-variant/30 hover:text-on-surface-variant" />}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium ${item.isCompleted ? 'text-on-surface-variant/50 line-through' : 'text-on-surface'}`}>
+                            {item.masterItem?.itemText}
+                            {item.masterItem?.isMandatory && (
+                              <span className="ml-1 text-error text-xs no-underline not-italic">*</span>
+                            )}
+                          </p>
+                          {item.isCompleted && item.completedAt && (
+                            <p className="text-xs text-on-surface-variant/50 mt-0.5">
+                              Completed {formatDate(item.completedAt)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {items.length === 0 && (
             <p className="text-sm text-on-surface-variant/50 text-center py-8">
