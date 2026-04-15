@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Phone, Calendar, Pencil } from 'lucide-react';
+import { Plus, Search, Phone, Calendar, Pencil, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageWrapper } from '@/components/shared/PageWrapper';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { leadsService } from '@/services/leads.service';
 import { usersService } from '@/services/users.service';
 import { AddLeadForm } from './components/AddLeadForm';
+import { BulkUploadDialog } from './components/BulkUploadDialog';
 import { formatDate, getDiscomLabel, toTitleCase } from '@/utils/formatters';
 import type { Lead } from '@/types';
 import { useAuthStore } from '@/store/authStore';
@@ -22,6 +23,7 @@ export default function LeadsListPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [discomFilter, setDiscomFilter] = useState('');
@@ -70,10 +72,16 @@ export default function LeadsListPage() {
       subtitle={`${meta?.total ?? 0} total leads`}
       actions={
         canAddLead ? (
-          <Button onClick={() => setAddOpen(true)}>
-            <Plus size={16} />
-            Add Lead
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setBulkOpen(true)}>
+              <Upload size={16} />
+              Bulk Import
+            </Button>
+            <Button onClick={() => setAddOpen(true)}>
+              <Plus size={16} />
+              Add Lead
+            </Button>
+          </div>
         ) : undefined
       }
     >
@@ -200,6 +208,9 @@ export default function LeadsListPage() {
           </div>
         )}
       </div>
+
+      {/* Bulk Upload Dialog */}
+      <BulkUploadDialog open={bulkOpen} onOpenChange={setBulkOpen} />
 
       {/* Reassign Staff Dialog */}
       <Dialog open={!!reassignTarget} onOpenChange={(v) => { if (!v) { setReassignTarget(null); setReassignStaffId(''); } }}>

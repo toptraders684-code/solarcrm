@@ -50,4 +50,15 @@ export const leadsService = {
     const { data } = await api.post(`/leads/${id}/followups`, dto);
     return data;
   },
+
+  bulkUpload: async (
+    file: File,
+  ): Promise<{ created: number; failed: { row: number; name: string; reason: string }[]; total: number }> => {
+    const form = new FormData();
+    form.append('file', file);
+    const { data } = await api.post('/leads/bulk-upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
 };

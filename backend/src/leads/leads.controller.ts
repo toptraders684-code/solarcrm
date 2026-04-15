@@ -8,7 +8,10 @@ import {
   Query,
   UseGuards,
   Req,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { LeadsService } from './leads.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
@@ -65,5 +68,13 @@ export class LeadsController {
   @Roles('admin', 'operations_staff', 'field_technician')
   addFollowup(@Param('id') id: string, @Body() dto: CreateFollowupDto, @CurrentUser() user: any) {
     return this.leadsService.addFollowup(id, dto, user.companyId, user.id);
+  }
+
+  @Post('bulk-upload')
+  @Roles('admin', 'operations_staff')
+  @UseInterceptors(FileInterceptor('file'))
+  bulkUpload(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
+    if (!file) throw new Error('No file uploaded');
+    return this.leadsService.bulkUpload(file, user.companyId, user.id);
   }
 }

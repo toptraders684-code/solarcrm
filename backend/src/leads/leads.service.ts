@@ -9,6 +9,7 @@ import { EmailService } from '../notifications/email.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { CreateFollowupDto } from './dto/create-followup.dto';
+import * as XLSX from 'xlsx';
 
 @Injectable()
 export class LeadsService {
@@ -211,6 +212,146 @@ export class LeadsService {
     });
 
     return { data: updated };
+  }
+
+  async bulkUpload(file: Express.Multer.File, companyId: string, userId: string) {
+    // Parse Excel or CSV
+    const workbook = XLSX.read(file.buffer, { type: 'buffer', cellDates: true });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows: any[] = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+    if (rows.length === 0) throw new BadRequestException('File is empty or has no data rows');
+    if (rows.length > 500) throw new BadRequestException('Maximum 500 rows per upload');
+
+    // Normalise header aliases (case-insensitive, trim)
+    const normalise = (v: any) => String(v ?? '').trim().toLowerCase();
+
+    const DISCOM_MAP: Record<string, string> = {
+      tpcodl: 'tpcodl', 'tp codl': 'tpcodl',
+      tpnodl: 'tpnodl', 'tp nodl': 'tpnodl',
+      tpsodl: 'tpsodl', 'tp sodl': 'tpsodl',
+      tpwodl: 'tpwodl', 'tp wodl': 'tpwodl',
+    };
+    const PROJECT_TYPE_MAP: Record<string, string> = {
+      residential: 'residential', res: 'residential',
+      commercial: 'commercial', com: 'commercial',
+    };
+    const LEAD_SOURCE_MAP: Record<string, string> = {
+      'walk in': 'walk_in', walk_in: 'walk_in', walkin: 'walk_in',
+      referral: 'referral', ref: 'referral',
+      online: 'online',
+      camp: 'camp',
+      'channel partner': 'channel_partner', channel_partner: 'channel_partner',
+      other: 'other',
+    };
+    const FINANCE_MAP: Record<string, string> = {
+      self: 'self',
+      'govt bank': 'govt_bank', govt_bank: 'govt_bank',
+      'private bank': 'private_bank', private_bank: 'private_bank',
+    };
+
+    // Get header key helper: find value by multiple possible column names
+    const col = (row: any, ...names: string[]) => {
+      for (const name of names) {
+        const key = Object.keys(row).find(k => k.trim().toLowerCase() === name.toLowerCase());
+        if (key !== undefined) return String(row[key] ?? '').trim();
+      }
+      return '';
+    };
+
+    // Fetch all staff for name matching (once, before loop)
+    const allStaff = await this.prisma.user.findMany({
+      where: { companyId, status: 'active' },
+      select: { id: true, name: true },
+    });
+    const staffByName = new Map(allStaff.map(s => [s.name.trim().toLowerCase(), s.id]));
+
+    const created: string[] = [];
+    const failed: { row: number; name: string; reason: string }[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowNum = i + 2; // +2 because row 1 = header
+
+      try {
+        const customerName = col(row, 'Customer Name', 'Name', 'customer_name');
+        const mobile = col(row, 'Mobile', 'Phone', 'mobile');
+        const addressVillage = col(row, 'Village / Area', 'Village', 'Area', 'address_village', 'addressVillage');
+        const discomRaw = col(row, 'DISCOM', 'Discom', 'discom');
+        const projectTypeRaw = col(row, 'Project Type', 'Type', 'project_type', 'projectType');
+        const leadSourceRaw = col(row, 'Lead Source', 'Source', 'lead_source', 'leadSource');
+
+        // Required field validation
+        if (!customerName) { failed.push({ row: rowNum, name: customerName || '(blank)', reason: 'Customer Name is required' }); continue; }
+        if (!mobile || !/^\d{10}$/.test(mobile)) { failed.push({ row: rowNum, name: customerName, reason: `Mobile must be 10 digits (got: "${mobile}")` }); continue; }
+        if (!addressVillage) { failed.push({ row: rowNum, name: customerName, reason: 'Village / Area is required' }); continue; }
+
+        const discom = DISCOM_MAP[normalise(discomRaw)];
+        if (!discom) { failed.push({ row: rowNum, name: customerName, reason: `Unknown DISCOM: "${discomRaw}". Use TPCODL/TPNODL/TPSODL/TPWODL` }); continue; }
+
+        const projectType = PROJECT_TYPE_MAP[normalise(projectTypeRaw)];
+        if (!projectType) { failed.push({ row: rowNum, name: customerName, reason: `Unknown Project Type: "${projectTypeRaw}". Use Residential/Commercial` }); continue; }
+
+        const leadSource = LEAD_SOURCE_MAP[normalise(leadSourceRaw)];
+        if (!leadSource) { failed.push({ row: rowNum, name: customerName, reason: `Unknown Lead Source: "${leadSourceRaw}". Use Walk In/Referral/Online/Camp/Channel Partner/Other` }); continue; }
+
+        // Optional fields
+        const alternateMobile = col(row, 'Alternate Mobile', 'Alt Mobile', 'alternate_mobile');
+        const email = col(row, 'Email', 'email');
+        const addressPincode = col(row, 'Pincode', 'address_pincode');
+        const capacityStr = col(row, 'Capacity (kW)', 'Capacity', 'capacity_kw', 'estimatedCapacityKw');
+        const estimatedCapacityKw = capacityStr ? parseFloat(capacityStr) : undefined;
+        const financeRaw = col(row, 'Finance Preference', 'Finance', 'finance_preference');
+        const financePreference = financeRaw ? (FINANCE_MAP[normalise(financeRaw)] ?? undefined) : undefined;
+        const followUpDateRaw = col(row, 'Follow Up Date', 'Follow-Up Date', 'followUpDate', 'follow_up_date');
+        let followUpDate: Date | undefined;
+        if (followUpDateRaw) {
+          const d = new Date(followUpDateRaw);
+          if (!isNaN(d.getTime())) followUpDate = d;
+        }
+
+        // Assigned staff: match by name, fallback to uploader
+        const assignedToName = col(row, 'Assigned To', 'Assigned Staff', 'assignedTo');
+        let assignedStaffId = userId; // default: uploader
+        if (assignedToName) {
+          const matched = staffByName.get(assignedToName.toLowerCase());
+          if (matched) assignedStaffId = matched;
+          // if not matched, still proceed with uploader as default
+        }
+
+        // Generate lead code
+        const count = await this.prisma.lead.count({ where: { companyId } });
+        const leadCode = `LD-${String(count + 1).padStart(5, '0')}`;
+
+        const lead = await this.prisma.lead.create({
+          data: {
+            leadCode,
+            customerName,
+            mobile,
+            alternateMobile: alternateMobile || undefined,
+            email: email || undefined,
+            discom: discom as any,
+            projectType: projectType as any,
+            leadSource: leadSource as any,
+            estimatedCapacityKw: estimatedCapacityKw && !isNaN(estimatedCapacityKw) ? estimatedCapacityKw : undefined,
+            financePreference: financePreference as any,
+            addressVillage,
+            addressPincode: addressPincode || undefined,
+            followUpDate,
+            companyId,
+            assignedStaffId,
+            createdById: userId,
+            status: 'new',
+          },
+        });
+
+        created.push(lead.id);
+      } catch (err: any) {
+        failed.push({ row: rowNum, name: col(row, 'Customer Name', 'Name') || '(unknown)', reason: err?.message || 'Unknown error' });
+      }
+    }
+
+    return { created: created.length, failed, total: rows.length };
   }
 
   async addFollowup(leadId: string, dto: CreateFollowupDto, companyId: string, userId: string) {
