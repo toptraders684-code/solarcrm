@@ -48,10 +48,10 @@ export function ChecklistTab({ applicantId, applicant }: ChecklistTabProps) {
   const totalCount = items.length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
-  // All phases open by default; toggle individual phases
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  // All phases collapsed by default; toggle to expand
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const togglePhase = (phase: string) =>
-    setCollapsed((prev) => ({ ...prev, [phase]: !prev[phase] }));
+    setExpanded((prev) => ({ ...prev, [phase]: !prev[phase] }));
 
   return (
     <div className="space-y-4">
@@ -104,7 +104,7 @@ export function ChecklistTab({ applicantId, applicant }: ChecklistTabProps) {
             const phaseDone  = sorted.filter((i) => i.isCompleted).length;
             const phaseTotal = sorted.length;
             const phaseProgress = phaseTotal > 0 ? (phaseDone / phaseTotal) * 100 : 0;
-            const isOpen = !collapsed[phase];
+            const isOpen = !!expanded[phase];
 
             return (
               <div key={phase} className="rounded-xl border border-surface-container-low overflow-hidden">
