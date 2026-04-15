@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Phone, MapPin, Calendar, Zap, Plus, Pencil, History, PhoneCall, PhoneOff, CalendarCheck, ClipboardList, FileCheck, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Phone, MapPin, Calendar, Zap, Plus, Pencil, X, Save, History, PhoneCall, PhoneOff, CalendarCheck, FileCheck, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { useForm } from 'react-hook-form';
 import { PageWrapper } from '@/components/shared/PageWrapper';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/StatusBadge';
@@ -12,7 +11,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { leadsService } from '@/services/leads.service';
 import { usersService } from '@/services/users.service';
@@ -29,12 +27,20 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
   return (
     <div>
       <p className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-1">{label}</p>
-      <div className="text-sm font-medium text-on-surface">{children}</div>
+      <div className="text-sm font-medium text-on-surface">{children || '—'}</div>
     </div>
   );
 }
 
-// ── Icon map for each outcome type ──
+function F({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">{label}</label>
+      <div className="mt-1">{children}</div>
+    </div>
+  );
+}
+
 const OUTCOME_ICON: Record<string, React.ComponentType<any>> = {
   contacted:          PhoneCall,
   not_reachable:      PhoneOff,
@@ -44,7 +50,6 @@ const OUTCOME_ICON: Record<string, React.ComponentType<any>> = {
   other:              MessageCircle,
 };
 
-// ── Friendly title map ──
 const OUTCOME_TITLE: Record<string, string> = {
   contacted:          'Called — Contacted',
   not_reachable:      'Call Attempt — Not Reachable',
@@ -77,7 +82,6 @@ function ActivityTimeline({ followups, canAdd, onAddFollowup }: { followups: any
 
   return (
     <div className="bg-surface-container-lowest rounded-xl p-6">
-      {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
           <History size={20} className="text-primary" />
@@ -104,32 +108,24 @@ function ActivityTimeline({ followups, canAdd, onAddFollowup }: { followups: any
       ) : (
         <>
           <div className="relative">
-            {/* Vertical connector line */}
             <div className="absolute left-[19px] top-6 bottom-0 w-px bg-surface-container-low" />
-
             <div className="space-y-0">
               {visible.map((fu: any, idx: number) => {
                 const Icon = OUTCOME_ICON[fu.outcomeType] ?? MessageCircle;
                 const isFirst = idx === 0;
-
                 return (
                   <div key={fu.id} className="relative flex gap-4 pb-7 last:pb-0">
-                    {/* Icon node */}
                     <div className="flex-shrink-0 relative z-10">
                       {isFirst ? (
-                        /* Most recent: large green ring */
                         <div className="w-10 h-10 rounded-full border-[3px] border-primary bg-surface-container-lowest flex items-center justify-center shadow-sm">
                           <Icon size={16} className="text-primary" />
                         </div>
                       ) : (
-                        /* Older: smaller gray circle with icon */
                         <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center">
                           <Icon size={15} className="text-on-surface-variant/60" />
                         </div>
                       )}
                     </div>
-
-                    {/* Content */}
                     <div className="flex-1 min-w-0 pt-1.5">
                       <p className="text-sm font-bold text-on-surface leading-snug">
                         {OUTCOME_TITLE[fu.outcomeType] ?? toTitleCase(fu.outcomeType)}
@@ -159,16 +155,12 @@ function ActivityTimeline({ followups, canAdd, onAddFollowup }: { followups: any
               })}
             </div>
           </div>
-
-          {/* View Full History / Collapse */}
           {hasMore && (
             <button
               onClick={() => setExpanded(!expanded)}
               className="w-full mt-5 pt-4 border-t border-surface-container-low text-xs font-black uppercase tracking-widest text-primary hover:text-primary/70 transition-colors text-center"
             >
-              {expanded
-                ? `COLLAPSE HISTORY`
-                : `VIEW FULL HISTORY (${sorted.length - PREVIEW_COUNT} more)`}
+              {expanded ? `COLLAPSE HISTORY` : `VIEW FULL HISTORY (${sorted.length - PREVIEW_COUNT} more)`}
             </button>
           )}
         </>
@@ -183,7 +175,8 @@ export default function LeadDetailPage() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
 
-  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<Record<string, any>>({});
   const [followupOpen, setFollowupOpen] = useState(false);
   const [convertOpen, setConvertOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
@@ -192,7 +185,7 @@ export default function LeadDetailPage() {
   const [followUpDate, setFollowUpDate] = useState('');
   const [closureReason, setClosureReason] = useState('');
 
-  const editForm = useForm<any>();
+  const set = (key: string, value: any) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const { data, isLoading } = useQuery({
     queryKey: ['lead', id],
@@ -203,10 +196,46 @@ export default function LeadDetailPage() {
   const { data: staffData } = useQuery({
     queryKey: ['staff'],
     queryFn: () => usersService.getStaff(),
-    enabled: editOpen,
+    enabled: editing,
   });
 
   const lead = data?.data;
+
+  const startEdit = () => {
+    setForm({
+      customerName: lead?.customerName ?? '',
+      mobile: lead?.mobile ?? '',
+      alternateMobile: lead?.alternateMobile ?? '',
+      email: lead?.email ?? '',
+      discom: lead?.discom ?? '',
+      projectType: lead?.projectType ?? '',
+      leadSource: lead?.leadSource ?? '',
+      estimatedCapacityKw: lead?.estimatedCapacityKw ?? '',
+      financePreference: lead?.financePreference ?? '',
+      addressVillage: lead?.addressVillage ?? '',
+      addressPincode: lead?.addressPincode ?? '',
+      assignedStaffId: lead?.assignedStaff?.id ?? '',
+      followUpDate: lead?.followUpDate ? lead.followUpDate.slice(0, 10) : '',
+    });
+    setEditing(true);
+  };
+
+  const cancelEdit = () => { setEditing(false); setForm({}); };
+
+  const saveMutation = useMutation({
+    mutationFn: () => {
+      const payload: Record<string, any> = {};
+      Object.entries(form).forEach(([k, v]) => { payload[k] = v === '' ? null : v; });
+      if (payload.estimatedCapacityKw) payload.estimatedCapacityKw = parseFloat(payload.estimatedCapacityKw);
+      return leadsService.updateLead(id!, payload as any);
+    },
+    onSuccess: () => {
+      toast.success('Lead updated');
+      queryClient.invalidateQueries({ queryKey: ['lead', id] });
+      cancelEdit();
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.error?.message || err?.response?.data?.message || 'Failed to update lead'),
+  });
 
   const addFollowupMutation = useMutation({
     mutationFn: () =>
@@ -230,16 +259,6 @@ export default function LeadDetailPage() {
       else navigate('/applicants');
     },
     onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to convert lead'),
-  });
-
-  const editMutation = useMutation({
-    mutationFn: (values: any) => leadsService.updateLead(id!, values),
-    onSuccess: () => {
-      toast.success('Lead updated');
-      queryClient.invalidateQueries({ queryKey: ['lead', id] });
-      setEditOpen(false);
-    },
-    onError: (err: any) => toast.error(err?.response?.data?.error?.message || err?.response?.data?.message || 'Failed to update lead'),
   });
 
   const closeMutation = useMutation({
@@ -278,22 +297,6 @@ export default function LeadDetailPage() {
           <Button variant="secondary" size="sm" onClick={() => navigate('/leads')}>
             <ArrowLeft size={14} />Back
           </Button>
-          {canEdit && (
-            <Button size="sm" variant="secondary" onClick={() => {
-              editForm.reset({
-                customerName: lead.customerName, mobile: lead.mobile,
-                alternateMobile: lead.alternateMobile ?? '', email: lead.email ?? '',
-                discom: lead.discom, projectType: lead.projectType,
-                leadSource: lead.leadSource, estimatedCapacityKw: lead.estimatedCapacityKw ?? '',
-                financePreference: lead.financePreference ?? '',
-                addressVillage: lead.addressVillage ?? '', addressPincode: lead.addressPincode ?? '',
-                assignedStaffId: lead.assignedStaff?.id ?? '',
-              });
-              setEditOpen(true);
-            }}>
-              <Pencil size={14} />Edit
-            </Button>
-          )}
           {canConvert && (
             <Button size="sm" onClick={() => setConvertOpen(true)}>
               <Zap size={14} />Convert to Project
@@ -308,46 +311,138 @@ export default function LeadDetailPage() {
       }
     >
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Info */}
+        {/* Lead Information card */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-surface-container-lowest rounded-xl p-6">
-            <h3 className="text-sm font-bold text-on-surface font-headline mb-5">Lead Information</h3>
-            <div className="grid grid-cols-2 gap-5">
-              <InfoRow label="Status"><StatusBadge status={lead.status} /></InfoRow>
-              <InfoRow label="DISCOM">
-                <span className="px-2 py-0.5 bg-secondary-container text-on-secondary-fixed-variant rounded text-[10px] font-bold uppercase">
-                  {lead.discom.toUpperCase()}
-                </span>
-              </InfoRow>
-              <InfoRow label="Mobile">
-                <span className="flex items-center gap-1"><Phone size={12} className="text-primary" />{lead.mobile}</span>
-              </InfoRow>
-              {lead.alternateMobile && <InfoRow label="Alt Mobile">{lead.alternateMobile}</InfoRow>}
-              <InfoRow label="Project Type">{toTitleCase(lead.projectType)}</InfoRow>
-              <InfoRow label="Lead Source">{toTitleCase(lead.leadSource)}</InfoRow>
-              {lead.estimatedCapacityKw && <InfoRow label="Est. Capacity">{lead.estimatedCapacityKw} kW</InfoRow>}
-              {lead.financePreference && <InfoRow label="Finance">{toTitleCase(lead.financePreference)}</InfoRow>}
-              <InfoRow label="Village">
-                <span className="flex items-center gap-1"><MapPin size={12} className="text-primary" />{lead.addressVillage}</span>
-              </InfoRow>
-              <InfoRow label="Assigned To">{lead.assignedStaff?.name ?? '—'}</InfoRow>
-              {lead.followUpDate && (
-                <InfoRow label="Next Follow-up">
-                  <span className="flex items-center gap-1"><Calendar size={12} className="text-primary" />{formatDate(lead.followUpDate)}</span>
-                </InfoRow>
-              )}
-              <InfoRow label="Created">{formatDate(lead.createdAt)}</InfoRow>
-              {lead.email && <InfoRow label="Email">{lead.email}</InfoRow>}
-              {lead.convertedApplicantId && (
-                <InfoRow label="Converted To">
-                  <Link to={`/applicants/${lead.convertedApplicantId}`} className="text-primary hover:underline font-semibold">
-                    View Project →
-                  </Link>
-                </InfoRow>
+            {/* Card header with inline Edit / Cancel+Save */}
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-xs font-black uppercase tracking-widest text-on-surface-variant/50">Lead Information</h3>
+              {canEdit && (
+                editing ? (
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="secondary" onClick={cancelEdit} disabled={saveMutation.isPending}>
+                      <X size={12} />Cancel
+                    </Button>
+                    <Button size="sm" onClick={() => saveMutation.mutate()} loading={saveMutation.isPending}>
+                      <Save size={12} />Save
+                    </Button>
+                  </div>
+                ) : (
+                  <Button size="sm" variant="secondary" onClick={startEdit}>
+                    <Pencil size={12} />Edit
+                  </Button>
+                )
               )}
             </div>
-          </div>
 
+            {editing ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <F label="Customer Name *"><Input value={form.customerName ?? ''} onChange={(e) => set('customerName', e.target.value)} /></F>
+                </div>
+                <F label="Mobile *"><Input maxLength={10} value={form.mobile ?? ''} onChange={(e) => set('mobile', e.target.value)} /></F>
+                <F label="Alternate Mobile"><Input maxLength={10} value={form.alternateMobile ?? ''} onChange={(e) => set('alternateMobile', e.target.value)} /></F>
+                <div className="md:col-span-2">
+                  <F label="Email"><Input type="email" value={form.email ?? ''} onChange={(e) => set('email', e.target.value)} /></F>
+                </div>
+                <F label="DISCOM">
+                  <Select value={sv(form.discom)} onValueChange={(v) => set('discom', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {['tpcodl','tpnodl','tpsodl','tpwodl'].map(d => <SelectItem key={d} value={d}>{d.toUpperCase()}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </F>
+                <F label="Project Type">
+                  <Select value={sv(form.projectType)} onValueChange={(v) => set('projectType', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="residential">Residential</SelectItem>
+                      <SelectItem value="commercial">Commercial</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </F>
+                <F label="Lead Source">
+                  <Select value={sv(form.leadSource)} onValueChange={(v) => set('leadSource', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {['walk_in','referral','online','camp','channel_partner','other'].map(s => <SelectItem key={s} value={s}>{toTitleCase(s)}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </F>
+                <F label="Finance Preference">
+                  <Select value={sv(form.financePreference) ?? 'none'} onValueChange={(v) => set('financePreference', v === 'none' ? '' : v)}>
+                    <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {['self','govt_bank','private_bank'].map(f => <SelectItem key={f} value={f}>{toTitleCase(f)}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </F>
+                <F label="Est. Capacity (kW)">
+                  <Input type="number" step="0.1" value={form.estimatedCapacityKw ?? ''} onChange={(e) => set('estimatedCapacityKw', e.target.value)} />
+                </F>
+                <F label="Pincode">
+                  <Input maxLength={6} value={form.addressPincode ?? ''} onChange={(e) => set('addressPincode', e.target.value)} />
+                </F>
+                <div className="md:col-span-2">
+                  <F label="Village / Location">
+                    <Input value={form.addressVillage ?? ''} onChange={(e) => set('addressVillage', e.target.value)} />
+                  </F>
+                </div>
+                <F label="Assigned Staff">
+                  <Select value={sv(form.assignedStaffId)} onValueChange={(v) => set('assignedStaffId', v)}>
+                    <SelectTrigger><SelectValue placeholder="Select staff member" /></SelectTrigger>
+                    <SelectContent>
+                      {staffData?.data?.map((u: any) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.name} ({u.role.replace(/_/g, ' ')})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </F>
+                <F label="Follow Up Date">
+                  <Input type="date" value={form.followUpDate ?? ''} onChange={(e) => set('followUpDate', e.target.value)} />
+                </F>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-5">
+                <InfoRow label="Status"><StatusBadge status={lead.status} /></InfoRow>
+                <InfoRow label="DISCOM">
+                  <span className="px-2 py-0.5 bg-secondary-container text-on-secondary-fixed-variant rounded text-[10px] font-bold uppercase">
+                    {lead.discom.toUpperCase()}
+                  </span>
+                </InfoRow>
+                <InfoRow label="Mobile">
+                  <span className="flex items-center gap-1"><Phone size={12} className="text-primary" />{lead.mobile}</span>
+                </InfoRow>
+                {lead.alternateMobile && <InfoRow label="Alt Mobile">{lead.alternateMobile}</InfoRow>}
+                <InfoRow label="Project Type">{toTitleCase(lead.projectType)}</InfoRow>
+                <InfoRow label="Lead Source">{toTitleCase(lead.leadSource)}</InfoRow>
+                {lead.estimatedCapacityKw && <InfoRow label="Est. Capacity">{lead.estimatedCapacityKw} kW</InfoRow>}
+                {lead.financePreference && <InfoRow label="Finance">{toTitleCase(lead.financePreference)}</InfoRow>}
+                <InfoRow label="Village">
+                  <span className="flex items-center gap-1"><MapPin size={12} className="text-primary" />{lead.addressVillage}</span>
+                </InfoRow>
+                <InfoRow label="Assigned To">{lead.assignedStaff?.name ?? '—'}</InfoRow>
+                {lead.followUpDate && (
+                  <InfoRow label="Next Follow-up">
+                    <span className="flex items-center gap-1"><Calendar size={12} className="text-primary" />{formatDate(lead.followUpDate)}</span>
+                  </InfoRow>
+                )}
+                <InfoRow label="Created">{formatDate(lead.createdAt)}</InfoRow>
+                {lead.email && <InfoRow label="Email">{lead.email}</InfoRow>}
+                {lead.convertedApplicantId && (
+                  <InfoRow label="Converted To">
+                    <Link to={`/applicants/${lead.convertedApplicantId}`} className="text-primary hover:underline font-semibold">
+                      View Project →
+                    </Link>
+                  </InfoRow>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Activity Timeline — right column */}
@@ -359,115 +454,6 @@ export default function LeadDetailPage() {
           />
         </div>
       </div>
-
-      {/* Edit Lead Sheet */}
-      <Sheet open={editOpen} onOpenChange={setEditOpen}>
-        <SheetContent className="overflow-y-auto p-8">
-          <SheetHeader><SheetTitle>Edit Lead</SheetTitle></SheetHeader>
-          <form onSubmit={editForm.handleSubmit((v) => {
-            const payload: any = { ...v };
-            if (payload.estimatedCapacityKw) payload.estimatedCapacityKw = parseFloat(payload.estimatedCapacityKw);
-            else delete payload.estimatedCapacityKw;
-            if (!payload.financePreference) delete payload.financePreference;
-            if (!payload.alternateMobile) delete payload.alternateMobile;
-            if (!payload.email) delete payload.email;
-            if (!payload.assignedStaffId) delete payload.assignedStaffId;
-            editMutation.mutate(payload);
-          })} className="mt-6 space-y-4">
-            <div>
-              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Customer Name *</label>
-              <Input className="mt-1" {...editForm.register('customerName', { required: true })} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Mobile *</label>
-                <Input className="mt-1" maxLength={10} {...editForm.register('mobile', { required: true })} />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Alternate Mobile</label>
-                <Input className="mt-1" maxLength={10} {...editForm.register('alternateMobile')} />
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Email</label>
-              <Input className="mt-1" type="email" {...editForm.register('email')} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">DISCOM</label>
-                <Select value={editForm.watch('discom')} onValueChange={(v) => editForm.setValue('discom', v)}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {['tpcodl','tpnodl','tpsodl','tpwodl'].map(d => <SelectItem key={d} value={d}>{d.toUpperCase()}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Project Type</label>
-                <Select value={editForm.watch('projectType')} onValueChange={(v) => editForm.setValue('projectType', v)}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="residential">Residential</SelectItem>
-                    <SelectItem value="commercial">Commercial</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Lead Source</label>
-                <Select value={editForm.watch('leadSource')} onValueChange={(v) => editForm.setValue('leadSource', v)}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {['walk_in','referral','online','camp','channel_partner','other'].map(s => <SelectItem key={s} value={s}>{toTitleCase(s)}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Finance Preference</label>
-                <Select value={sv(editForm.watch('financePreference'))} onValueChange={(v) => editForm.setValue('financePreference', v === 'none' ? '' : v)}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="None" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {['self','govt_bank','private_bank'].map(f => <SelectItem key={f} value={f}>{toTitleCase(f)}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Est. Capacity (kW)</label>
-                <Input className="mt-1" type="number" step="0.1" {...editForm.register('estimatedCapacityKw')} />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Pincode</label>
-                <Input className="mt-1" maxLength={6} {...editForm.register('addressPincode')} />
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Village / Location</label>
-              <Input className="mt-1" {...editForm.register('addressVillage')} />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Assigned Staff</label>
-              <Select value={editForm.watch('assignedStaffId') ?? ''} onValueChange={(v) => editForm.setValue('assignedStaffId', v)}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Select staff member" /></SelectTrigger>
-                <SelectContent>
-                  {staffData?.data?.map((u: any) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name} ({u.role.replace(/_/g, ' ')})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-3 pt-4 border-t border-surface-container-low">
-              <Button type="button" variant="secondary" className="flex-1" onClick={() => setEditOpen(false)}>Cancel</Button>
-              <Button type="submit" className="flex-1" loading={editMutation.isPending}>Save Changes</Button>
-            </div>
-          </form>
-        </SheetContent>
-      </Sheet>
 
       {/* Add Followup Dialog */}
       <Dialog open={followupOpen} onOpenChange={setFollowupOpen}>
