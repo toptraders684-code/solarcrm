@@ -49,12 +49,14 @@ function F({ label, children }: { label: string; children: React.ReactNode }) {
   );
 }
 
+type Section = 'discom' | 'survey' | null;
+
 interface DiscomTabProps { applicant: Applicant; }
 
 export function DiscomTab({ applicant }: DiscomTabProps) {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
-  const [editing, setEditing] = useState(false);
+  const [editingSection, setEditingSection] = useState<Section>(null);
   const [form, setForm] = useState<Record<string, any>>({});
   const [advanceOpen, setAdvanceOpen] = useState(false);
 
@@ -63,19 +65,31 @@ export function DiscomTab({ applicant }: DiscomTabProps) {
 
   const set = (key: string, value: any) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const startEdit = () => {
-    setForm({
-      portalApplicationDate: applicant.portalApplicationDate ? applicant.portalApplicationDate.slice(0, 10) : '',
-      jeName: applicant.jeName ?? '',
-      jeContact: applicant.jeContact ?? '',
-      mrtDate: applicant.mrtDate ? applicant.mrtDate.slice(0, 10) : '',
-      inspectionDate: applicant.inspectionDate ? applicant.inspectionDate.slice(0, 10) : '',
-      inspectionResult: applicant.inspectionResult ?? '',
-      netMeterSerialNo: applicant.netMeterSerialNo ?? '',
-      discomRefNo: applicant.discomRefNo ?? '',
-    });
-    setEditing(true);
+  const startEdit = (section: Section) => {
+    if (section === 'discom') {
+      setForm({
+        portalApplicationDate: applicant.portalApplicationDate ? applicant.portalApplicationDate.slice(0, 10) : '',
+        jeName: applicant.jeName ?? '',
+        jeContact: applicant.jeContact ?? '',
+        mrtDate: applicant.mrtDate ? applicant.mrtDate.slice(0, 10) : '',
+        inspectionDate: applicant.inspectionDate ? applicant.inspectionDate.slice(0, 10) : '',
+        inspectionResult: applicant.inspectionResult ?? '',
+        netMeterSerialNo: applicant.netMeterSerialNo ?? '',
+        discomRefNo: applicant.discomRefNo ?? '',
+      });
+    } else if (section === 'survey') {
+      setForm({
+        surveyDate: applicant.surveyDate ? applicant.surveyDate.slice(0, 10) : '',
+        surveyedBy: applicant.surveyedBy ?? '',
+        roofAreaSqft: applicant.roofAreaSqft ?? '',
+        recommendedCapacityKw: applicant.recommendedCapacityKw ?? '',
+        shadowAnalysis: applicant.shadowAnalysis ?? '',
+      });
+    }
+    setEditingSection(section);
   };
+
+  const cancelEdit = () => { setEditingSection(null); setForm({}); };
 
   const saveMutation = useMutation({
     mutationFn: () => {
@@ -84,9 +98,9 @@ export function DiscomTab({ applicant }: DiscomTabProps) {
       return applicantsService.updateApplicant(applicant.id, payload as any);
     },
     onSuccess: () => {
-      toast.success('DISCOM Application details saved');
+      toast.success('Details saved');
       queryClient.invalidateQueries({ queryKey: ['applicant', applicant.id] });
-      setEditing(false); setForm({});
+      cancelEdit();
     },
     onError: (err: any) => toast.error(err?.response?.data?.error?.message || err?.response?.data?.message || 'Failed to save'),
   });
@@ -105,6 +119,29 @@ export function DiscomTab({ applicant }: DiscomTabProps) {
   });
 
   const missingFields = guidance?.fields.filter((f) => !(applicant as any)[f]) ?? [];
+
+  // Shared edit/cancel/save buttons for a section header
+  function SectionActions({ section }: { section: Section }) {
+    const isEditing = editingSection === section;
+    if (!canEdit) return null;
+    if (isEditing) {
+      return (
+        <div className="flex gap-2">
+          <Button size="sm" variant="secondary" onClick={cancelEdit} disabled={saveMutation.isPending}>
+            <X size={12} />Cancel
+          </Button>
+          <Button size="sm" onClick={() => saveMutation.mutate()} loading={saveMutation.isPending}>
+            <Save size={12} />Save
+          </Button>
+        </div>
+      );
+    }
+    return (
+      <Button size="sm" variant="secondary" onClick={() => startEdit(section)} disabled={editingSection !== null}>
+        <Pencil size={12} />Edit
+      </Button>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -141,26 +178,14 @@ export function DiscomTab({ applicant }: DiscomTabProps) {
         </div>
       )}
 
-      {/* DISCOM Details */}
+      {/* ── DISCOM Portal Application ─────────────────────────────────── */}
       <div className="bg-surface-container-lowest rounded-xl p-6">
         <div className="flex items-center justify-between mb-5">
           <h4 className="text-xs font-black uppercase tracking-widest text-on-surface-variant/50">DISCOM Portal Application</h4>
-          {canEdit && !editing && (
-            <Button size="sm" variant="secondary" onClick={startEdit}><Pencil size={12} />Edit</Button>
-          )}
-          {editing && (
-            <div className="flex gap-2">
-              <Button size="sm" variant="secondary" onClick={() => { setEditing(false); setForm({}); }} disabled={saveMutation.isPending}>
-                <X size={12} />Cancel
-              </Button>
-              <Button size="sm" onClick={() => saveMutation.mutate()} loading={saveMutation.isPending}>
-                <Save size={12} />Save
-              </Button>
-            </div>
-          )}
+          <SectionActions section="discom" />
         </div>
 
-        {editing ? (
+        {editingSection === 'discom' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <F label="Portal Application Date"><Input type="date" value={form.portalApplicationDate ?? ''} onChange={(e) => set('portalApplicationDate', e.target.value)} /></F>
             <F label="JE Name"><Input value={form.jeName ?? ''} onChange={(e) => set('jeName', e.target.value)} placeholder="Junior Engineer name" /></F>
@@ -212,16 +237,32 @@ export function DiscomTab({ applicant }: DiscomTabProps) {
         )}
       </div>
 
-      {/* Site Survey Summary */}
+      {/* ── Site Survey Summary ───────────────────────────────────────── */}
       <div className="bg-surface-container-lowest rounded-xl p-6">
-        <h4 className="text-xs font-black uppercase tracking-widest text-on-surface-variant/50 mb-4">Site Survey Summary</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-          <InfoRow label="Survey Date">{applicant.surveyDate ? formatDate(applicant.surveyDate) : null}</InfoRow>
-          <InfoRow label="Surveyed By">{applicant.surveyedBy}</InfoRow>
-          <InfoRow label="Roof Area">{applicant.roofAreaSqft ? `${applicant.roofAreaSqft} sqft` : null}</InfoRow>
-          <InfoRow label="Recommended Capacity">{applicant.recommendedCapacityKw ? `${applicant.recommendedCapacityKw} kW` : null}</InfoRow>
-          {applicant.shadowAnalysis && <InfoRow label="Shadow Analysis">{applicant.shadowAnalysis}</InfoRow>}
+        <div className="flex items-center justify-between mb-5">
+          <h4 className="text-xs font-black uppercase tracking-widest text-on-surface-variant/50">Site Survey Summary</h4>
+          <SectionActions section="survey" />
         </div>
+
+        {editingSection === 'survey' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <F label="Survey Date"><Input type="date" value={form.surveyDate ?? ''} onChange={(e) => set('surveyDate', e.target.value)} /></F>
+            <F label="Surveyed By"><Input value={form.surveyedBy ?? ''} onChange={(e) => set('surveyedBy', e.target.value)} placeholder="Staff name" /></F>
+            <F label="Roof Area (sqft)"><Input type="number" min={1} value={form.roofAreaSqft ?? ''} onChange={(e) => set('roofAreaSqft', e.target.value ? Number(e.target.value) : '')} placeholder="e.g. 500" /></F>
+            <F label="Recommended Capacity (kW)"><Input type="number" min={1} step={0.1} value={form.recommendedCapacityKw ?? ''} onChange={(e) => set('recommendedCapacityKw', e.target.value ? Number(e.target.value) : '')} placeholder="e.g. 5" /></F>
+            <div className="md:col-span-2">
+              <F label="Shadow Analysis Notes"><Input value={form.shadowAnalysis ?? ''} onChange={(e) => set('shadowAnalysis', e.target.value)} placeholder="Describe shading conditions" /></F>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+            <InfoRow label="Survey Date">{applicant.surveyDate ? formatDate(applicant.surveyDate) : null}</InfoRow>
+            <InfoRow label="Surveyed By">{applicant.surveyedBy}</InfoRow>
+            <InfoRow label="Roof Area">{applicant.roofAreaSqft ? `${applicant.roofAreaSqft} sqft` : null}</InfoRow>
+            <InfoRow label="Recommended Capacity">{applicant.recommendedCapacityKw ? `${applicant.recommendedCapacityKw} kW` : null}</InfoRow>
+            {applicant.shadowAnalysis && <InfoRow label="Shadow Analysis">{applicant.shadowAnalysis}</InfoRow>}
+          </div>
+        )}
       </div>
 
       <ConfirmDialog
