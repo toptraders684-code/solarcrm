@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Phone, Calendar } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, Search, Phone, Calendar, Pencil } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageWrapper } from '@/components/shared/PageWrapper';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { leadsService } from '@/services/leads.service';
+import { usersService } from '@/services/users.service';
 import { AddLeadForm } from './components/AddLeadForm';
 import { formatDate, getDiscomLabel, toTitleCase } from '@/utils/formatters';
 import type { Lead } from '@/types';
@@ -25,6 +28,27 @@ export default function LeadsListPage() {
   const [page, setPage] = useState(1);
 
   const canAddLead = user && ['admin', 'operations_staff', 'field_technician'].includes(user.role);
+  const canReassign = user && ['admin', 'operations_staff'].includes(user.role);
+
+  const [reassignTarget, setReassignTarget] = useState<Lead | null>(null);
+  const [reassignStaffId, setReassignStaffId] = useState('');
+
+  const { data: staffData } = useQuery({
+    queryKey: ['staff'],
+    queryFn: () => usersService.getStaff(),
+    enabled: !!reassignTarget,
+  });
+
+  const reassignMutation = useMutation({
+    mutationFn: () => leadsService.updateLead(reassignTarget!.id, { assignedStaffId: reassignStaffId }),
+    onSuccess: () => {
+      toast.success('Lead reassigned');
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      setReassignTarget(null);
+      setReassignStaffId('');
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to reassign'),
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['leads', page, search, statusFilter, discomFilter],
@@ -129,7 +153,19 @@ export default function LeadsListPage() {
                         </span>
                       </td>
                       <td className="px-4 py-4 text-sm text-on-surface-variant">{toTitleCase(lead.leadSource)}</td>
-                      <td className="px-4 py-4 text-sm text-on-surface-variant">{lead.assignedStaff?.name ?? '—'}</td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-1.5 group">
+                          <span className="text-sm text-on-surface-variant">{lead.assignedStaff?.name ?? '—'}</span>
+                          {canReassign && (
+                            <button
+                              onClick={(e) => { e.preventDefault(); setReassignTarget(lead); setReassignStaffId(lead.assignedStaff?.id ?? ''); }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 rounded flex items-center justify-center text-on-surface-variant/40 hover:text-primary hover:bg-primary/10"
+                            >
+                              <Pencil size={11} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-4 text-sm text-on-surface-variant">
                         {lead.followUpDate ? (
                           <span className="flex items-center gap-1.5">
@@ -164,6 +200,40 @@ export default function LeadsListPage() {
           </div>
         )}
       </div>
+
+      {/* Reassign Staff Dialog */}
+      <Dialog open={!!reassignTarget} onOpenChange={(v) => { if (!v) { setReassignTarget(null); setReassignStaffId(''); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reassign Lead</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-on-surface-variant">
+              Lead: <span className="font-bold text-on-surface">{reassignTarget?.customerName}</span>
+              <span className="ml-2 font-mono text-xs text-primary">{reassignTarget?.leadCode}</span>
+            </p>
+            <div>
+              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Assign To *</label>
+              <Select value={reassignStaffId} onValueChange={setReassignStaffId}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Select staff member" /></SelectTrigger>
+                <SelectContent>
+                  {staffData?.data?.map((u: any) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name} <span className="text-on-surface-variant/60 text-xs">({u.role.replace(/_/g, ' ')})</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => { setReassignTarget(null); setReassignStaffId(''); }}>Cancel</Button>
+            <Button disabled={!reassignStaffId} loading={reassignMutation.isPending} onClick={() => reassignMutation.mutate()}>
+              Reassign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Lead Sheet */}
       <Sheet open={addOpen} onOpenChange={setAddOpen}>

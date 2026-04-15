@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { leadsService } from '@/services/leads.service';
+import { usersService } from '@/services/users.service';
 import { formatDate, toTitleCase } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
 
@@ -199,6 +200,12 @@ export default function LeadDetailPage() {
     enabled: !!id,
   });
 
+  const { data: staffData } = useQuery({
+    queryKey: ['staff'],
+    queryFn: () => usersService.getStaff(),
+    enabled: editOpen,
+  });
+
   const lead = data?.data;
 
   const addFollowupMutation = useMutation({
@@ -280,6 +287,7 @@ export default function LeadDetailPage() {
                 leadSource: lead.leadSource, estimatedCapacityKw: lead.estimatedCapacityKw ?? '',
                 financePreference: lead.financePreference ?? '',
                 addressVillage: lead.addressVillage ?? '', addressPincode: lead.addressPincode ?? '',
+                assignedStaffId: lead.assignedStaff?.id ?? '',
               });
               setEditOpen(true);
             }}>
@@ -363,6 +371,7 @@ export default function LeadDetailPage() {
             if (!payload.financePreference) delete payload.financePreference;
             if (!payload.alternateMobile) delete payload.alternateMobile;
             if (!payload.email) delete payload.email;
+            if (!payload.assignedStaffId) delete payload.assignedStaffId;
             editMutation.mutate(payload);
           })} className="mt-6 space-y-4">
             <div>
@@ -438,6 +447,19 @@ export default function LeadDetailPage() {
             <div>
               <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Village / Location</label>
               <Input className="mt-1" {...editForm.register('addressVillage')} />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Assigned Staff</label>
+              <Select value={editForm.watch('assignedStaffId') ?? ''} onValueChange={(v) => editForm.setValue('assignedStaffId', v)}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Select staff member" /></SelectTrigger>
+                <SelectContent>
+                  {staffData?.data?.map((u: any) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name} ({u.role.replace(/_/g, ' ')})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex gap-3 pt-4 border-t border-surface-container-low">
               <Button type="button" variant="secondary" className="flex-1" onClick={() => setEditOpen(false)}>Cancel</Button>
