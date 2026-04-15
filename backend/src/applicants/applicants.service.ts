@@ -9,6 +9,7 @@ import { EmailService } from '../notifications/email.service';
 import { StorageService } from '../storage/storage.service';
 import { UpdateApplicantDto } from './dto/update-applicant.dto';
 import { StageChangeDto } from './dto/stage-change.dto';
+import { CreateActivityDto } from './dto/create-activity.dto';
 import { v4 as uuidv4 } from 'uuid';
 import * as path from 'path';
 
@@ -68,10 +69,32 @@ export class ApplicantsService {
         applicantVendors: {
           include: { vendor: true },
         },
+        activities: {
+          include: { createdBy: { select: { id: true, name: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
       },
     });
     if (!applicant) throw new NotFoundException('Applicant not found');
     return applicant;
+  }
+
+  async addActivity(id: string, dto: CreateActivityDto, companyId: string, userId: string) {
+    const applicant = await this.prisma.applicant.findFirst({ where: { id, companyId, deletedAt: null } });
+    if (!applicant) throw new NotFoundException('Applicant not found');
+
+    const activity = await this.prisma.projectActivity.create({
+      data: {
+        applicantId: id,
+        activityType: dto.activityType,
+        notes: dto.notes,
+        followUpDate: dto.followUpDate ? new Date(dto.followUpDate) : null,
+        createdById: userId,
+      },
+      include: { createdBy: { select: { id: true, name: true } } },
+    });
+
+    return { data: activity };
   }
 
   async update(id: string, dto: UpdateApplicantDto, companyId: string, userId: string, ipAddress: string) {

@@ -10,6 +10,7 @@ import { masterService } from '@/services/master.service';
 import { formatDate, toTitleCase, formatCapacity } from '@/utils/formatters';
 import type { Applicant } from '@/types';
 import { useAuthStore } from '@/store/authStore';
+import { ProjectActivityTimeline } from './ProjectActivityTimeline';
 
 type Section = 'personal' | 'address' | 'installation' | 'survey' | 'discom' | 'finance' | null;
 
@@ -168,6 +169,7 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
   }
 
   return (
+    <div className="space-y-6">
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
       {/* ── Personal Information ──────────────────────────────── */}
@@ -366,6 +368,14 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
           </>
         )}
       </SectionCard>
+
+    </div>
+
+    {/* ── Activity Timeline ─────────────────────────────────── */}
+    <ProjectActivityTimeline
+      applicantId={applicant.id}
+      activities={applicant.activities ?? []}
+    />
 
     </div>
   );

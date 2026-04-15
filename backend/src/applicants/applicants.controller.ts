@@ -17,6 +17,7 @@ import { Response } from 'express';
 import { ApplicantsService } from './applicants.service';
 import { UpdateApplicantDto } from './dto/update-applicant.dto';
 import { StageChangeDto } from './dto/stage-change.dto';
+import { CreateActivityDto } from './dto/create-activity.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -122,6 +123,12 @@ export class ApplicantsController {
   @Roles('admin', 'operations_staff')
   removeVendor(@Param('id') id: string, @Param('vendorId') vendorId: string, @CurrentUser() user: any) {
     return this.applicantsService.removeVendor(id, vendorId, user.companyId);
+  }
+
+  @Post(':id/activities')
+  @Roles('admin', 'operations_staff', 'field_technician')
+  addActivity(@Param('id') id: string, @Body() dto: CreateActivityDto, @CurrentUser() user: any) {
+    return this.applicantsService.addActivity(id, dto, user.companyId, user.id);
   }
 
   @Post(':id/upload-link')

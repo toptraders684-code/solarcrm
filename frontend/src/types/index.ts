@@ -202,6 +202,29 @@ export interface Applicant {
   checklists?: ApplicantChecklist[];
   transactions?: Transaction[];
   applicantVendors?: ApplicantVendor[];
+  activities?: ProjectActivity[];
+}
+
+export type ProjectActivityType =
+  | 'note'
+  | 'customer_contacted'
+  | 'site_visit'
+  | 'document_collected'
+  | 'payment_received'
+  | 'material_delivered'
+  | 'installation_update'
+  | 'inspection_done'
+  | 'other';
+
+export interface ProjectActivity {
+  id: string;
+  applicantId: string;
+  activityType: ProjectActivityType;
+  notes?: string;
+  followUpDate?: string;
+  createdById: string;
+  createdBy?: { id: string; name: string };
+  createdAt: string;
 }
 
 export interface ApplicantVendor {

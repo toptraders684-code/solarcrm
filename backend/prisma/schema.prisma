@@ -124,6 +124,18 @@ enum OutcomeType {
   other
 }
 
+enum ProjectActivityType {
+  note
+  customer_contacted
+  site_visit
+  document_collected
+  payment_received
+  material_delivered
+  installation_update
+  inspection_done
+  other
+}
+
 // ─────────────────────────────────────────────
 // MASTER TABLES
 // ─────────────────────────────────────────────
@@ -206,6 +218,7 @@ model User {
   assignedApplicants   Applicant[]          @relation("AssignedApplicants")
   createdApplicants    Applicant[]          @relation("CreatedApplicants")
   leadFollowups        LeadFollowup[]
+  projectActivities    ProjectActivity[]
   checklistItems       ApplicantChecklist[]
   uploadedDocuments    Document[]
   approvedTransactions Transaction[]        @relation("ApprovedTransactions")
@@ -275,6 +288,21 @@ model LeadFollowup {
   createdAt    DateTime    @default(now()) @map("created_at")
 
   @@map("lead_followups")
+}
+
+model ProjectActivity {
+  id           String              @id @default(uuid())
+  applicantId  String              @map("applicant_id")
+  applicant    Applicant           @relation(fields: [applicantId], references: [id])
+  activityType ProjectActivityType @map("activity_type")
+  notes        String?             @db.Text
+  followUpDate DateTime?           @map("follow_up_date") @db.Date
+  createdById  String              @map("created_by")
+  createdBy    User                @relation(fields: [createdById], references: [id])
+  createdAt    DateTime            @default(now()) @map("created_at")
+
+  @@index([applicantId], map: "idx_project_activities_applicant")
+  @@map("project_activities")
 }
 
 // ─────────────────────────────────────────────
@@ -373,6 +401,7 @@ model Applicant {
   applicantVendors    ApplicantVendor[]
   customerUploadLinks CustomerUploadLink[]
   piiVault            PiiVault?
+  activities          ProjectActivity[]
 
   @@unique([companyId, applicantCode])
   @@index([companyId, stage], map: "idx_applicants_company_stage")

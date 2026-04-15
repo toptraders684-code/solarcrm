@@ -89,4 +89,12 @@ export const applicantsService = {
     const { data } = await api.post(`/applicants/${id}/vendors/${vendorId}/remove`);
     return data;
   },
+
+  addActivity: async (
+    id: string,
+    dto: { activityType: string; notes?: string; followUpDate?: string },
+  ) => {
+    const { data } = await api.post(`/applicants/${id}/activities`, dto);
+    return data;
+  },
 };
