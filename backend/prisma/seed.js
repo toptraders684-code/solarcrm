@@ -188,7 +188,7 @@ function buildChecklist(discom, projectType) {
     { phase: 'Subsidy Claim', phaseOrder: 11, itemOrder: 2,  mandatory: true,  text: 'Subsidy application form uploaded to system' },
     { phase: 'Subsidy Claim', phaseOrder: 11, itemOrder: 3,  mandatory: true,  text: 'Bank account details verified for subsidy credit' },
     { phase: 'Subsidy Claim', phaseOrder: 11, itemOrder: 4,  mandatory: false, text: 'Subsidy application status: Under Review' },
-    { phase: 'Subsidy Claim', phaseOrder: 11, itemOrder: 5,  mandatory: false, text: 'Subsidy amount credited to customer bank account' },
+    { phase: 'Subsidy Claim', phaseOrder: 11, itemOrder: 5,  mandatory: true,  text: 'Subsidy amount credited to customer bank account' },
     { phase: 'Subsidy Claim', phaseOrder: 11, itemOrder: 6,  mandatory: false, text: 'Actual subsidy amount recorded in Finance module' },
     { phase: 'Subsidy Claim', phaseOrder: 11, itemOrder: 7,  mandatory: false, text: 'DISCOM bank reference number recorded' },
     { phase: 'Subsidy Claim', phaseOrder: 11, itemOrder: 8,  mandatory: false, text: 'Customer confirmation of subsidy receipt obtained' },
