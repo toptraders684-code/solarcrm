@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Search, LogOut, CheckCircle2, AlertTriangle, Info, Wallet } from 'lucide-react';
+import { Bell, Search, LogOut, CheckCircle2, AlertTriangle, Info, Wallet, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth.service';
@@ -26,7 +26,9 @@ function useDropdown() {
   return { open, setOpen, ref };
 }
 
-export function Header() {
+interface HeaderProps { onMobileToggle: () => void; }
+
+export function Header({ onMobileToggle }: HeaderProps) {
   const { user, clearAuth } = useAuthStore();
   const navigate = useNavigate();
   const notif = useDropdown();
@@ -51,6 +53,14 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-20 w-full bg-surface/80 backdrop-blur-xl flex justify-between items-center h-16 px-8 shadow-sm border-b border-outline-variant/10">
+      {/* Mobile hamburger */}
+      <button
+        onClick={onMobileToggle}
+        className="lg:hidden mr-4 w-9 h-9 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container-low hover:text-primary transition-colors"
+      >
+        <Menu size={20} />
+      </button>
+
       {/* Search */}
       <div className="flex items-center flex-1 max-w-md">
         <div className="relative w-full">
