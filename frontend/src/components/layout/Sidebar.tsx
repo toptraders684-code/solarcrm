@@ -9,8 +9,6 @@ import {
   Settings,
   Sun,
   HelpCircle,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
@@ -58,13 +56,33 @@ export function Sidebar({ desktopCollapsed, mobileOpen, onDesktopToggle, onExpan
         desktopCollapsed ? 'lg:translate-x-0 lg:w-16' : 'lg:translate-x-0 lg:w-64',
       )}
     >
-      {/* Logo */}
-      <div className={cn('mb-10 flex items-center', desktopCollapsed ? 'lg:justify-center lg:px-0 px-8' : 'px-8')}>
-        <div className={cn('flex items-center gap-2.5 mb-1', desktopCollapsed && 'lg:mb-0')}>
+      {/* Logo — click to collapse/expand on desktop */}
+      <button
+        onClick={onDesktopToggle}
+        title={desktopCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        className={cn(
+          'mb-10 flex items-center w-full transition-all hidden lg:flex',
+          desktopCollapsed ? 'justify-center px-0' : 'px-8 hover:opacity-80'
+        )}
+      >
+        <div className={cn('flex items-center gap-2.5', desktopCollapsed && 'lg:mb-0')}>
           <div className="w-8 h-8 signature-gradient rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
             <Sun size={18} className="text-white" />
           </div>
           <div className={desktopCollapsed ? 'lg:hidden' : ''}>
+            <p className="text-xl font-black text-primary tracking-tighter leading-none">Suryam</p>
+            <p className="text-[10px] uppercase tracking-widest text-on-surface-variant/60 mt-0.5">Solar CRM</p>
+          </div>
+        </div>
+      </button>
+
+      {/* Logo — mobile (non-clickable) */}
+      <div className={cn('mb-10 flex items-center px-8 lg:hidden')}>
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 signature-gradient rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
+            <Sun size={18} className="text-white" />
+          </div>
+          <div>
             <p className="text-xl font-black text-primary tracking-tighter leading-none">Suryam</p>
             <p className="text-[10px] uppercase tracking-widest text-on-surface-variant/60 mt-0.5">Solar CRM</p>
           </div>
@@ -128,18 +146,6 @@ export function Sidebar({ desktopCollapsed, mobileOpen, onDesktopToggle, onExpan
           <span className={desktopCollapsed ? 'lg:hidden' : ''}>Support</span>
         </NavLink>
 
-        {/* Desktop collapse toggle */}
-        <button
-          onClick={onDesktopToggle}
-          title={desktopCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className={cn(
-            'hidden lg:flex items-center gap-3 py-2.5 text-sm text-on-surface-variant/40 hover:text-primary transition-colors',
-            desktopCollapsed ? 'justify-center mx-2 w-10 rounded-xl' : ''
-          )}
-        >
-          {desktopCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-          {!desktopCollapsed && <span>Collapse</span>}
-        </button>
       </div>
     </aside>
   );
