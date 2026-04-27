@@ -277,7 +277,7 @@ export default function DocumentMasterPage() {
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="upload">Upload File</SelectItem>
-                  <SelectItem value="generate">Generate Document</SelectItem>
+                  <SelectItem value="generate">Generate</SelectItem>
                 </SelectContent>
               </Select>
             </div>
