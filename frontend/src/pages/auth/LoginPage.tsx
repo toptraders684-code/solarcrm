@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Sun } from 'lucide-react';
+import { Sun, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,7 @@ export default function LoginPage() {
   const { setAuth } = useAuthStore();
   const [otpSent, setOtpSent] = useState(false);
   const [otpMobile, setOtpMobile] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const emailForm = useForm({ resolver: zodResolver(emailLoginSchema) });
   const otpRequestForm = useForm({ resolver: zodResolver(otpRequestSchema) });
@@ -115,7 +116,16 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Password</label>
-                  <Input className="mt-1" type="password" placeholder="••••••••" {...emailForm.register('password')} />
+                  <div className="relative mt-1">
+                    <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="pr-10" {...emailForm.register('password')} />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40 hover:text-on-surface-variant transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                   <FieldError msg={emailForm.formState.errors.password?.message as string} />
                 </div>
                 <Button type="submit" className="w-full mt-2" loading={emailForm.formState.isSubmitting}>
