@@ -315,19 +315,132 @@ async function main() {
     console.log(`   ✓ ${totalItems} checklist items seeded`);
   }
 
+  // ── 6. Super Admin User ──
+  console.log('🔐 Seeding super admin user...');
+  const superAdminPasswordHash = await bcrypt.hash('superadmin@123', 12);
+  const superAdmin = await prisma.user.upsert({
+    where: { id: 'user-superadmin-001' },
+    update: { passwordHash: superAdminPasswordHash },
+    create: {
+      id: 'user-superadmin-001',
+      companyId: company.id,
+      name: 'Super Admin',
+      mobile: '9000000001',
+      email: 'superadmin@suryamcrm.in',
+      passwordHash: superAdminPasswordHash,
+      role: 'super_admin',
+      status: 'active',
+      permissionsJson: {},
+      ipWhitelist: [],
+      failedLoginCount: 0,
+    },
+  });
+  console.log(`   ✓ Super Admin: ${superAdmin.email} / superadmin@123`);
+
+  // ── 7. Document Master ──
+  const existingDocMasterCount = await prisma.documentMaster.count();
+  if (existingDocMasterCount > 0) {
+    console.log(`📄 Document master already seeded (${existingDocMasterCount} items) — skipping.`);
+  } else {
+    console.log('📄 Seeding document master...');
+    const docMasters = [
+      // ── TPCODL ──
+      { discom: 'tpcodl', title: 'Aadhaar, PAN Card And Bank Passbook Front Page', canGenerate: false, sortOrder: 1 },
+      { discom: 'tpcodl', title: 'Adani Data Sheet', canGenerate: false, sortOrder: 2 },
+      { discom: 'tpcodl', title: 'Adani Eastman Datasheet', canGenerate: false, sortOrder: 3 },
+      { discom: 'tpcodl', title: 'Customer Vendor Agreement', canGenerate: true, sortOrder: 4 },
+      { discom: 'tpcodl', title: 'DCR Certificate', canGenerate: false, sortOrder: 5 },
+      { discom: 'tpcodl', title: 'Declaration For DCR', canGenerate: true, sortOrder: 6 },
+      { discom: 'tpcodl', title: 'Digital Approval, Feasibility Report And Quotation', canGenerate: false, sortOrder: 7 },
+      { discom: 'tpcodl', title: 'Electricity Bill A4 Size Copy', canGenerate: false, sortOrder: 8 },
+      { discom: 'tpcodl', title: 'Form-1 Application Form Net Meter', canGenerate: true, sortOrder: 9 },
+      { discom: 'tpcodl', title: 'Form-3 Work Complete', canGenerate: true, sortOrder: 10 },
+      { discom: 'tpcodl', title: 'Generated File JEE Sign', canGenerate: true, sortOrder: 11 },
+      { discom: 'tpcodl', title: 'Geo Tag Photo Panel & Invertor', canGenerate: false, sortOrder: 12 },
+      { discom: 'tpcodl', title: 'GST Tax Invoice', canGenerate: true, sortOrder: 13 },
+      { discom: 'tpcodl', title: 'Installation TPCODL', canGenerate: false, sortOrder: 14 },
+      { discom: 'tpcodl', title: 'Joint Inspection Report', canGenerate: false, sortOrder: 15 },
+      { discom: 'tpcodl', title: 'Metafin Warranty Card', canGenerate: false, sortOrder: 16 },
+      { discom: 'tpcodl', title: 'Net Meter Agreement', canGenerate: true, sortOrder: 17 },
+      { discom: 'tpcodl', title: 'Net Meter Money Receipt', canGenerate: false, sortOrder: 18 },
+      { discom: 'tpcodl', title: 'PBblink Inverter DataSheet', canGenerate: false, sortOrder: 19 },
+      { discom: 'tpcodl', title: 'Quotation', canGenerate: true, sortOrder: 20 },
+      { discom: 'tpcodl', title: 'Solar Wiring Diagram', canGenerate: true, sortOrder: 21 },
+      { discom: 'tpcodl', title: 'Work Completion Certificate', canGenerate: true, sortOrder: 22 },
+      // ── TPNODL ──
+      { discom: 'tpnodl', title: 'Aadhaar Card', canGenerate: false, sortOrder: 1 },
+      { discom: 'tpnodl', title: 'PAN Card', canGenerate: false, sortOrder: 2 },
+      { discom: 'tpnodl', title: 'Bank Passbook Front Page', canGenerate: false, sortOrder: 3 },
+      { discom: 'tpnodl', title: 'Electricity Bill (A4 Size)', canGenerate: false, sortOrder: 4 },
+      { discom: 'tpnodl', title: 'Customer Agreement', canGenerate: true, sortOrder: 5 },
+      { discom: 'tpnodl', title: 'Technical Feasibility Report', canGenerate: false, sortOrder: 6 },
+      { discom: 'tpnodl', title: 'Application Form (Form-1)', canGenerate: true, sortOrder: 7 },
+      { discom: 'tpnodl', title: 'DCR Certificate', canGenerate: false, sortOrder: 8 },
+      { discom: 'tpnodl', title: 'GST Tax Invoice', canGenerate: true, sortOrder: 9 },
+      { discom: 'tpnodl', title: 'Installation Photos', canGenerate: false, sortOrder: 10 },
+      { discom: 'tpnodl', title: 'Site Survey Report', canGenerate: false, sortOrder: 11 },
+      { discom: 'tpnodl', title: 'DISCOM Approval Letter', canGenerate: false, sortOrder: 12 },
+      { discom: 'tpnodl', title: 'Net Meter Agreement', canGenerate: true, sortOrder: 13 },
+      { discom: 'tpnodl', title: 'Joint Inspection Report', canGenerate: false, sortOrder: 14 },
+      { discom: 'tpnodl', title: 'Geo Tag Photos', canGenerate: false, sortOrder: 15 },
+      { discom: 'tpnodl', title: 'Inverter Datasheet', canGenerate: false, sortOrder: 16 },
+      { discom: 'tpnodl', title: 'Panel Datasheet', canGenerate: false, sortOrder: 17 },
+      { discom: 'tpnodl', title: 'Work Completion Certificate', canGenerate: true, sortOrder: 18 },
+      // ── TPSODL ──
+      { discom: 'tpsodl', title: 'Aadhaar Card', canGenerate: false, sortOrder: 1 },
+      { discom: 'tpsodl', title: 'PAN Card', canGenerate: false, sortOrder: 2 },
+      { discom: 'tpsodl', title: 'Bank Account Details', canGenerate: false, sortOrder: 3 },
+      { discom: 'tpsodl', title: 'Electricity Bill', canGenerate: false, sortOrder: 4 },
+      { discom: 'tpsodl', title: 'Customer Consent Form', canGenerate: true, sortOrder: 5 },
+      { discom: 'tpsodl', title: 'Application Form', canGenerate: true, sortOrder: 6 },
+      { discom: 'tpsodl', title: 'Site Survey Report', canGenerate: false, sortOrder: 7 },
+      { discom: 'tpsodl', title: 'DCR Certificate', canGenerate: false, sortOrder: 8 },
+      { discom: 'tpsodl', title: 'Technical Design Drawing (SLD)', canGenerate: false, sortOrder: 9 },
+      { discom: 'tpsodl', title: 'DISCOM Portal Screenshot', canGenerate: false, sortOrder: 10 },
+      { discom: 'tpsodl', title: 'Feasibility Report', canGenerate: false, sortOrder: 11 },
+      { discom: 'tpsodl', title: 'Installation Completion Certificate', canGenerate: true, sortOrder: 12 },
+      { discom: 'tpsodl', title: 'Net Meter Agreement', canGenerate: true, sortOrder: 13 },
+      { discom: 'tpsodl', title: 'Commissioning Certificate', canGenerate: false, sortOrder: 14 },
+      { discom: 'tpsodl', title: 'GST Invoice', canGenerate: true, sortOrder: 15 },
+      { discom: 'tpsodl', title: 'Work Completion Certificate', canGenerate: true, sortOrder: 16 },
+      { discom: 'tpsodl', title: 'Geo Tag Photos', canGenerate: false, sortOrder: 17 },
+      // ── TPWODL ──
+      { discom: 'tpwodl', title: 'Aadhaar & PAN Card', canGenerate: false, sortOrder: 1 },
+      { discom: 'tpwodl', title: 'Bank Passbook Copy', canGenerate: false, sortOrder: 2 },
+      { discom: 'tpwodl', title: 'Electricity Bill (Latest)', canGenerate: false, sortOrder: 3 },
+      { discom: 'tpwodl', title: 'Customer Agreement', canGenerate: true, sortOrder: 4 },
+      { discom: 'tpwodl', title: 'DCR Certificate', canGenerate: false, sortOrder: 5 },
+      { discom: 'tpwodl', title: 'Technical Drawing (SLD)', canGenerate: false, sortOrder: 6 },
+      { discom: 'tpwodl', title: 'Application Form', canGenerate: true, sortOrder: 7 },
+      { discom: 'tpwodl', title: 'DISCOM Approval Letter', canGenerate: false, sortOrder: 8 },
+      { discom: 'tpwodl', title: 'Site Survey Photos', canGenerate: false, sortOrder: 9 },
+      { discom: 'tpwodl', title: 'Installation Photos', canGenerate: false, sortOrder: 10 },
+      { discom: 'tpwodl', title: 'Joint Inspection Report', canGenerate: false, sortOrder: 11 },
+      { discom: 'tpwodl', title: 'Net Meter Certificate', canGenerate: false, sortOrder: 12 },
+      { discom: 'tpwodl', title: 'GST Tax Invoice', canGenerate: true, sortOrder: 13 },
+      { discom: 'tpwodl', title: 'Work Completion Certificate', canGenerate: true, sortOrder: 14 },
+      { discom: 'tpwodl', title: 'Commissioning Certificate', canGenerate: false, sortOrder: 15 },
+      { discom: 'tpwodl', title: 'Warranty Cards', canGenerate: false, sortOrder: 16 },
+    ];
+
+    for (const item of docMasters) {
+      await prisma.documentMaster.create({ data: item });
+    }
+    console.log(`   ✓ ${docMasters.length} document master items seeded`);
+  }
+
   // ── Summary ──
   console.log('\n✅ Seed completed successfully!');
   console.log('─────────────────────────────────');
   console.log(`   States:           ${states.length}`);
   console.log(`   Districts:        ${odishaDistricts.length}`);
   console.log(`   Companies:        1`);
-  console.log(`   Admin users:      1`);
+  console.log(`   Admin users:      2`);
   console.log(`   Checklist items:  ${existingCount || totalItems}`);
   console.log('─────────────────────────────────');
   console.log('\n🔑 Default Login Credentials:');
-  console.log('   Email:    admin@suryamcrm.in');
-  console.log('   Password: admin@123');
-  console.log('   Mobile:   9999999999\n');
+  console.log('   Admin Email:    admin@suryamcrm.in / admin@123');
+  console.log('   Super Admin:    superadmin@suryamcrm.in / superadmin@123\n');
 }
 
 main()

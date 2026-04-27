@@ -16,6 +16,7 @@ enum UserRole {
   field_technician
   finance_manager
   vendor
+  super_admin
 }
 
 enum UserStatus {
@@ -467,13 +468,34 @@ model ApplicantChecklist {
 }
 
 // ─────────────────────────────────────────────
+// DOCUMENT MASTER
+// ─────────────────────────────────────────────
+
+model DocumentMaster {
+  id          String   @id @default(uuid())
+  discom      Discom
+  title       String   @db.VarChar(200)
+  canGenerate Boolean  @default(false) @map("can_generate")
+  sortOrder   Int      @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  documents Document[]
+
+  @@index([discom], map: "idx_doc_master_discom")
+  @@map("document_master")
+}
+
+// ─────────────────────────────────────────────
 // DOCUMENTS
 // ─────────────────────────────────────────────
 
 model Document {
-  id            String           @id @default(uuid())
-  applicantId   String           @map("applicant_id")
-  applicant     Applicant        @relation(fields: [applicantId], references: [id])
+  id            String          @id @default(uuid())
+  applicantId   String          @map("applicant_id")
+  applicant     Applicant       @relation(fields: [applicantId], references: [id])
+  masterItemId  String?         @map("master_item_id")
+  masterItem    DocumentMaster? @relation(fields: [masterItemId], references: [id])
   category      DocumentCategory
   docName       String           @map("doc_name") @db.VarChar(200)
   fileKey       String?          @map("file_key") @db.VarChar(500)

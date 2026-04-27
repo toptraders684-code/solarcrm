@@ -129,7 +129,7 @@ export default function ApplicantDetailPage() {
         </TabsContent>
 
         <TabsContent value="documents" className="mt-4">
-          <DocumentsTab applicantId={id!} />
+          <DocumentsTab applicantId={id!} discom={applicant.discom} />
         </TabsContent>
 
         <TabsContent value="checklist" className="mt-4">

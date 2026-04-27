@@ -318,7 +318,7 @@ export class ApplicantsService {
   async uploadDocument(
     applicantId: string,
     file: Express.Multer.File,
-    body: { docName: string; category: string },
+    body: { docName: string; category: string; masterItemId?: string },
     companyId: string,
     userId: string,
   ) {
@@ -335,9 +335,23 @@ export class ApplicantsService {
 
     const fileKey = await this.storage.uploadFile(file.buffer, filePath, file.mimetype);
 
+    // If re-uploading for the same master item, delete the previous file + record
+    if (body.masterItemId) {
+      const existing = await this.prisma.document.findFirst({
+        where: { applicantId, masterItemId: body.masterItemId },
+      });
+      if (existing) {
+        if (existing.fileKey) {
+          try { await this.storage.deleteFile(existing.fileKey); } catch { /* ignore */ }
+        }
+        await this.prisma.document.delete({ where: { id: existing.id } });
+      }
+    }
+
     const document = await this.prisma.document.create({
       data: {
         applicantId,
+        masterItemId: body.masterItemId || null,
         category: body.category as any || 'kyc',
         docName: body.docName || file.originalname,
         fileKey,

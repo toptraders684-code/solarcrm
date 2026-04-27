@@ -1,184 +1,254 @@
 import { useRef, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Upload, Download, FileText, Link2 } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Upload, Eye, FileText, Zap, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { applicantsService } from '@/services/applicants.service';
-import { formatDate, fileSizeLabel } from '@/utils/formatters';
-import { validateFile } from '@/utils/validators';
-import type { Document } from '@/types';
+import { documentMasterService } from '@/services/document-master.service';
+import type { Document, DocumentMaster } from '@/types';
 
-const CATEGORIES = ['kyc', 'technical', 'discom'] as const;
-const CATEGORY_LABELS: Record<string, string> = {
-  kyc: 'KYC Documents',
-  technical: 'Technical Documents',
-  discom: 'DISCOM Documents',
-};
+interface DocumentsTabProps {
+  applicantId: string;
+  discom: string;
+}
 
-interface DocumentsTabProps { applicantId: string; }
-
-export function DocumentsTab({ applicantId }: DocumentsTabProps) {
+export function DocumentsTab({ applicantId, discom }: DocumentsTabProps) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadOpen, setUploadOpen] = useState(false);
-  const [linkOpen, setLinkOpen] = useState(false);
-  const [uploadCategory, setUploadCategory] = useState('kyc');
-  const [uploadDocName, setUploadDocName] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [fileError, setFileError] = useState('');
-  const [uploadLink, setUploadLink] = useState('');
 
-  const { data } = useQuery({
+  const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<Record<string, File>>({});
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [viewFile, setViewFile] = useState<{ url: string; mimeType: string; title: string } | null>(null);
+  const [loadingViewId, setLoadingViewId] = useState<string | null>(null);
+
+  const { data: masterData, isLoading: masterLoading } = useQuery({
+    queryKey: ['document-master', discom],
+    queryFn: () => documentMasterService.list(discom),
+    enabled: !!discom,
+  });
+
+  const { data: docData } = useQuery({
     queryKey: ['applicant-documents', applicantId],
     queryFn: () => applicantsService.getDocuments(applicantId),
   });
 
-  const documents = data?.data ?? [];
+  const masters: DocumentMaster[] = masterData?.data ?? [];
+  const documents: Document[] = docData?.data ?? [];
 
-  const uploadMutation = useMutation({
-    mutationFn: () => applicantsService.uploadDocument(applicantId, selectedFile!, uploadDocName, uploadCategory),
-    onSuccess: () => {
-      toast.success('Document uploaded successfully');
-      queryClient.invalidateQueries({ queryKey: ['applicant-documents', applicantId] });
-      setUploadOpen(false); setSelectedFile(null); setUploadDocName('');
-    },
-    onError: (err: any) => toast.error(err?.response?.data?.message || 'Upload failed'),
-  });
+  const docByMasterId = documents.reduce((acc, doc) => {
+    if (doc.masterItemId) acc[doc.masterItemId] = doc;
+    return acc;
+  }, {} as Record<string, Document>);
 
-  const linkMutation = useMutation({
-    mutationFn: () => applicantsService.generateUploadLink(applicantId),
-    onSuccess: (res) => { setUploadLink(res.link); setLinkOpen(true); },
-    onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to generate link'),
-  });
+  const handleChooseFile = (masterItemId: string) => {
+    setActiveItemId(masterItemId);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const err = validateFile(file);
-    if (err) { setFileError(err); setSelectedFile(null); }
-    else { setFileError(''); setSelectedFile(file); }
+    if (!file || !activeItemId) return;
+    if (file.size > 2 * 1024 * 1024) { toast.error('File exceeds 2MB limit'); return; }
+    if (!['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)) {
+      toast.error('Only JPG, PNG, PDF allowed'); return;
+    }
+    setPendingFiles((prev) => ({ ...prev, [activeItemId]: file }));
   };
 
-  const handleDownload = async (doc: Document) => {
+  const clearPending = (masterItemId: string) => {
+    setPendingFiles((prev) => { const n = { ...prev }; delete n[masterItemId]; return n; });
+  };
+
+  const handleUpload = async (master: DocumentMaster) => {
+    const file = pendingFiles[master.id];
+    if (!file) return;
+    setUploadingId(master.id);
+    try {
+      await applicantsService.uploadDocument(applicantId, file, master.title, 'discom', master.id);
+      toast.success('Document uploaded');
+      queryClient.invalidateQueries({ queryKey: ['applicant-documents', applicantId] });
+      clearPending(master.id);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Upload failed');
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  const handleView = async (doc: Document, title: string) => {
+    setLoadingViewId(doc.id);
     try {
       const blob = await applicantsService.downloadDocument(applicantId, doc.id);
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = doc.fileName || doc.docName; a.click();
-      URL.revokeObjectURL(url);
-    } catch { toast.error('Failed to download document'); }
+      setViewFile({ url, mimeType: doc.mimeType || 'application/pdf', title });
+    } catch {
+      toast.error('Failed to load file');
+    } finally {
+      setLoadingViewId(null);
+    }
   };
 
-  const docsByCategory = CATEGORIES.reduce((acc, cat) => {
-    acc[cat] = documents.filter((d) => d.category === cat);
-    return acc;
-  }, {} as Record<string, Document[]>);
+  const closeView = () => {
+    if (viewFile?.url) URL.revokeObjectURL(viewFile.url);
+    setViewFile(null);
+  };
+
+  if (masterLoading) {
+    return (
+      <div className="space-y-2">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-14 rounded-xl bg-surface-container animate-pulse" />
+        ))}
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-end gap-2">
-        <Button variant="secondary" size="sm" onClick={() => linkMutation.mutate()} loading={linkMutation.isPending}>
-          <Link2 size={14} />Customer Upload Link
-        </Button>
-        <Button size="sm" onClick={() => setUploadOpen(true)}>
-          <Upload size={14} />Upload Document
-        </Button>
+    <div className="space-y-4">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      <div className="overflow-x-auto rounded-xl border border-outline-variant/10">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-surface-container border-b border-outline-variant/10">
+              <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50 w-12">Sl</th>
+              <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50">Document Title</th>
+              <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50 w-72">Upload File</th>
+              <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50 w-44">Uploaded File</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-outline-variant/5">
+            {masters.map((master, i) => {
+              const uploaded = docByMasterId[master.id];
+              const pending = pendingFiles[master.id];
+              const isUploading = uploadingId === master.id;
+              const isLoadingView = loadingViewId === uploaded?.id;
+
+              return (
+                <tr key={master.id} className="hover:bg-surface-container-low/30 transition-colors">
+                  {/* Sl No */}
+                  <td className="px-4 py-3 text-on-surface-variant/50 font-medium text-center">{i + 1}</td>
+
+                  {/* Document Title */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <FileText size={13} className="text-primary" />
+                      </div>
+                      <span className="font-semibold text-on-surface text-sm leading-snug">{master.title}</span>
+                    </div>
+                  </td>
+
+                  {/* Upload File */}
+                  <td className="px-4 py-3">
+                    {master.canGenerate ? (
+                      <button
+                        disabled
+                        title="Auto-generate coming soon"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary-container text-on-secondary-fixed-variant text-xs font-semibold opacity-50 cursor-not-allowed"
+                      >
+                        <Zap size={12} />Generate Document
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={() => handleChooseFile(master.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface hover:bg-surface-container text-on-surface-variant text-xs font-semibold transition-colors min-w-0"
+                        >
+                          {pending ? (
+                            <span className="text-primary truncate max-w-[110px]" title={pending.name}>{pending.name}</span>
+                          ) : (
+                            <><Upload size={12} />Choose File</>
+                          )}
+                        </button>
+                        {pending && (
+                          <>
+                            <button
+                              onClick={() => handleUpload(master)}
+                              disabled={isUploading}
+                              className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 disabled:opacity-60 transition-colors"
+                            >
+                              {isUploading ? 'Uploading…' : 'Upload'}
+                            </button>
+                            <button
+                              onClick={() => clearPending(master.id)}
+                              className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-error/10 text-on-surface-variant/50 hover:text-error transition-colors"
+                            >
+                              <X size={12} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Uploaded File */}
+                  <td className="px-4 py-3">
+                    {uploaded ? (
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wide">
+                          Uploaded
+                        </span>
+                        <button
+                          onClick={() => handleView(uploaded, master.title)}
+                          disabled={isLoadingView}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/5 disabled:opacity-60 transition-colors"
+                        >
+                          <Eye size={12} />{isLoadingView ? '…' : 'View'}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant/40 text-[10px] font-bold uppercase tracking-wide">
+                        Not Uploaded
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+
+            {masters.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-4 py-10 text-center text-sm text-on-surface-variant/50">
+                  No documents configured for {discom.toUpperCase()}.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
-      {CATEGORIES.map((cat) => (
-        <div key={cat}>
-          <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50 mb-3">{CATEGORY_LABELS[cat]}</p>
-          {docsByCategory[cat].length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {docsByCategory[cat].map((doc) => (
-                <div key={doc.id} className="flex items-center gap-3 p-4 bg-surface-container-lowest rounded-xl hover:shadow-sm transition-all">
-                  <div className="w-10 h-10 rounded-xl signature-gradient flex items-center justify-center flex-shrink-0">
-                    <FileText size={18} className="text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-on-surface truncate">{doc.docName}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${doc.status === 'uploaded' ? 'bg-primary/10 text-primary' : 'bg-surface-container text-on-surface-variant'}`}>
-                        {doc.status}
-                      </span>
-                      {doc.fileSizeBytes && <span className="text-xs text-on-surface-variant/50">{fileSizeLabel(doc.fileSizeBytes)}</span>}
-                      {doc.uploadedAt && <span className="text-xs text-on-surface-variant/50">{formatDate(doc.uploadedAt)}</span>}
-                    </div>
-                  </div>
-                  {doc.status === 'uploaded' && (
-                    <button className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-all" onClick={() => handleDownload(doc)}>
-                      <Download size={14} />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-on-surface-variant/50 py-2">No {CATEGORY_LABELS[cat].toLowerCase()} uploaded.</p>
-          )}
-        </div>
-      ))}
-
-      {/* Upload Dialog */}
-      <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Document Name *</label>
-              <Input className="mt-1" placeholder="e.g. Aadhaar Card" value={uploadDocName} onChange={(e) => setUploadDocName(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Category *</label>
-              <Select value={uploadCategory} onValueChange={setUploadCategory}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{CATEGORY_LABELS[c]}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">File *</label>
-              <div
-                className={`mt-1 border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${selectedFile ? 'border-primary bg-primary/5' : 'border-outline-variant/40 hover:border-primary/50'}`}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {selectedFile ? (
-                  <p className="text-sm font-bold text-primary">{selectedFile.name}</p>
-                ) : (
-                  <>
-                    <Upload size={32} className="text-on-surface-variant/30 mx-auto mb-2" />
-                    <p className="text-sm text-on-surface-variant/60">Click to select file</p>
-                    <p className="text-xs text-on-surface-variant/40 mt-1">PDF, JPG, PNG — max 2MB</p>
-                  </>
-                )}
-              </div>
-              <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleFileChange} />
-              {fileError && <p className="text-xs text-error mt-1">{fileError}</p>}
-            </div>
+      {/* View File Modal */}
+      <Dialog open={!!viewFile} onOpenChange={(open) => { if (!open) closeView(); }}>
+        <DialogContent className="max-w-3xl" style={{ height: '80vh' }}>
+          <DialogHeader>
+            <DialogTitle className="truncate pr-8">{viewFile?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden rounded-lg bg-surface-container" style={{ height: 'calc(80vh - 80px)' }}>
+            {viewFile?.mimeType?.startsWith('image/') ? (
+              <img
+                src={viewFile.url}
+                alt={viewFile.title}
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <iframe
+                src={viewFile?.url}
+                className="w-full h-full border-0 rounded-lg"
+                title={viewFile?.title}
+              />
+            )}
           </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setUploadOpen(false)}>Cancel</Button>
-            <Button disabled={!selectedFile || !uploadDocName} loading={uploadMutation.isPending} onClick={() => uploadMutation.mutate()}>Upload</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Upload Link Dialog */}
-      <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Customer Upload Link</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <p className="text-sm text-on-surface-variant/70">Share this link with the customer to allow them to upload documents. Valid for 24 hours.</p>
-            <div className="flex gap-2">
-              <Input value={uploadLink} readOnly className="font-mono text-xs" />
-              <Button variant="secondary" onClick={() => { navigator.clipboard.writeText(uploadLink); toast.success('Link copied!'); }}>Copy</Button>
-            </div>
-          </div>
-          <DialogFooter><Button onClick={() => setLinkOpen(false)}>Close</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

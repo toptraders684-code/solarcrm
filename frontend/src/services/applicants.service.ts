@@ -36,11 +36,12 @@ export const applicantsService = {
     return data;
   },
 
-  uploadDocument: async (id: string, file: File, docName: string, category: string): Promise<{ data: Document }> => {
+  uploadDocument: async (id: string, file: File, docName: string, category: string, masterItemId?: string): Promise<{ data: Document }> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('docName', docName);
     formData.append('category', category);
+    if (masterItemId) formData.append('masterItemId', masterItemId);
     const { data } = await api.post(`/applicants/${id}/documents`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });

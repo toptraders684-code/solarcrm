@@ -16,6 +16,10 @@ export function ProtectedLayout() {
     return <Navigate to="/login" replace />;
   }
 
+  if (user.role === 'super_admin') {
+    return <Navigate to="/admin/documents" replace />;
+  }
+
   return (
     <div className="min-h-screen bg-surface">
       <Sidebar

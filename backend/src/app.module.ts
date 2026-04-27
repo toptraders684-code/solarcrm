@@ -14,6 +14,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { StorageModule } from './storage/storage.module';
 import { AuditModule } from './audit/audit.module';
 import { MasterModule } from './master/master.module';
+import { DocumentMasterModule } from './document-master/document-master.module';
 import configuration from './config/configuration';
 
 @Module({
@@ -41,6 +42,7 @@ import configuration from './config/configuration';
     StorageModule,
     AuditModule,
     MasterModule,
+    DocumentMasterModule,
   ],
 })
 export class AppModule {}

@@ -2,7 +2,7 @@
 // ENUMS (matching Prisma schema)
 // ─────────────────────────────────────────────
 
-export type UserRole = 'admin' | 'operations_staff' | 'field_technician' | 'finance_manager' | 'vendor';
+export type UserRole = 'admin' | 'operations_staff' | 'field_technician' | 'finance_manager' | 'vendor' | 'super_admin';
 export type UserStatus = 'pending_approval' | 'active' | 'inactive';
 export type Discom = 'tpcodl' | 'tpnodl' | 'tpsodl' | 'tpwodl';
 export type ProjectType = 'residential' | 'commercial';
@@ -259,9 +259,20 @@ export interface ApplicantChecklist {
 // DOCUMENTS
 // ─────────────────────────────────────────────
 
+export interface DocumentMaster {
+  id: string;
+  discom: Discom;
+  title: string;
+  canGenerate: boolean;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface Document {
   id: string;
   applicantId: string;
+  masterItemId?: string;
   category: DocumentCategory;
   docName: string;
   fileKey?: string;

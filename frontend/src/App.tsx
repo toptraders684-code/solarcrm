@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
 import LoginPage from '@/pages/auth/LoginPage';
+import AdminLoginPage from '@/pages/admin/AdminLoginPage';
+import DocumentMasterPage from '@/pages/admin/DocumentMasterPage';
 import DashboardPage from '@/pages/dashboard/DashboardPage';
 import LeadsListPage from '@/pages/leads/LeadsListPage';
 import LeadDetailPage from '@/pages/leads/LeadDetailPage';
@@ -13,13 +15,27 @@ import ReportsPage from '@/pages/reports/ReportsPage';
 import SettingsPage from '@/pages/settings/SettingsPage';
 import SupportPage from '@/pages/support/SupportPage';
 import CustomerUploadPage from '@/pages/upload/CustomerUploadPage';
+import { useAuthStore } from '@/store/authStore';
+
+function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthStore();
+  if (!user) return <Navigate to="/admin" replace />;
+  if (user.role !== 'super_admin') return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
 
 export default function App() {
   return (
     <Routes>
       {/* Public routes */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/admin" element={<AdminLoginPage />} />
       <Route path="/upload/:token" element={<CustomerUploadPage />} />
+
+      {/* Super Admin routes */}
+      <Route path="/admin/documents" element={
+        <AdminProtectedRoute><DocumentMasterPage /></AdminProtectedRoute>
+      } />
 
       {/* Protected routes */}
       <Route element={<ProtectedLayout />}>
