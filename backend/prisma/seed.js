@@ -429,6 +429,38 @@ async function main() {
     console.log(`   ✓ ${docMasters.length} document master items seeded`);
   }
 
+  // ── 8. Demo: Solar Wiring Diagram uploaded for first TPCODL project ──
+  const solarWiringMaster = await prisma.documentMaster.findFirst({
+    where: { discom: 'tpcodl', title: 'Solar Wiring Diagram' },
+  });
+  const firstTpcodlProject = await prisma.applicant.findFirst({
+    where: { discom: 'tpcodl' },
+    orderBy: { createdAt: 'asc' },
+  });
+  if (solarWiringMaster && firstTpcodlProject) {
+    const existingDemoDoc = await prisma.document.findFirst({
+      where: { applicantId: firstTpcodlProject.id, masterItemId: solarWiringMaster.id },
+    });
+    if (!existingDemoDoc) {
+      await prisma.document.create({
+        data: {
+          applicantId: firstTpcodlProject.id,
+          masterItemId: solarWiringMaster.id,
+          category: 'discom',
+          docName: 'Solar Wiring Diagram',
+          fileKey: null,
+          fileName: 'Solar_Wiring_Diagram.pdf',
+          fileSizeBytes: 312000,
+          mimeType: 'application/pdf',
+          status: 'uploaded',
+          uploadedById: 'user-admin-001',
+          uploadedAt: new Date(),
+        },
+      });
+      console.log(`   ✓ Demo doc: Solar Wiring Diagram → ${firstTpcodlProject.applicantCode}`);
+    }
+  }
+
   // ── Summary ──
   console.log('\n✅ Seed completed successfully!');
   console.log('─────────────────────────────────');
