@@ -11,6 +11,7 @@ import VendorsListPage from '@/pages/vendors/VendorsListPage';
 import VendorDetailPage from '@/pages/vendors/VendorDetailPage';
 import ReportsPage from '@/pages/reports/ReportsPage';
 import SettingsPage from '@/pages/settings/SettingsPage';
+import SupportPage from '@/pages/support/SupportPage';
 import CustomerUploadPage from '@/pages/upload/CustomerUploadPage';
 
 export default function App() {
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/vendors/:id" element={<VendorDetailPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/support" element={<SupportPage />} />
       </Route>
 
       {/* Catch-all */}

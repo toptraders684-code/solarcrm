@@ -79,10 +79,18 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="mt-auto px-8 py-4 border-t border-black/5">
-        <a href="#" className="flex items-center gap-3 text-on-surface-variant/60 hover:text-primary transition-colors text-sm">
+        <NavLink
+          to="/support"
+          className={({ isActive }) =>
+            cn(
+              'flex items-center gap-3 transition-all text-sm',
+              isActive ? 'text-primary' : 'text-on-surface-variant/60 hover:text-primary'
+            )
+          }
+        >
           <HelpCircle size={18} />
           <span>Support</span>
-        </a>
+        </NavLink>
       </div>
     </aside>
   );
