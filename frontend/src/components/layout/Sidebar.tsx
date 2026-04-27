@@ -78,20 +78,7 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="mt-auto px-8 py-4 flex flex-col gap-4 border-t border-black/5">
-        {user && (
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 signature-gradient rounded-full flex items-center justify-center text-white text-xs font-black">
-              {user.name?.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <p className="text-xs font-bold text-on-surface leading-none">{user.name}</p>
-              <p className="text-[10px] text-on-surface-variant/60 capitalize mt-0.5">
-                {user.role.replace(/_/g, ' ')}
-              </p>
-            </div>
-          </div>
-        )}
+      <div className="mt-auto px-8 py-4 border-t border-black/5">
         <a href="#" className="flex items-center gap-3 text-on-surface-variant/60 hover:text-primary transition-colors text-sm">
           <HelpCircle size={18} />
           <span>Support</span>
