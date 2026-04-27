@@ -149,9 +149,9 @@ export function DocumentsTab({ applicantId, discom }: DocumentsTabProps) {
                     </div>
                   </td>
 
-                  {/* Upload File */}
+                  {/* Upload File — blank when already uploaded */}
                   <td className="px-4 py-3">
-                    {master.canGenerate ? (
+                    {uploaded ? null : master.canGenerate ? (
                       <button
                         disabled
                         title="Auto-generate coming soon"
