@@ -33,11 +33,14 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 interface SidebarProps {
-  collapsed: boolean;
-  onToggle: () => void;
+  desktopCollapsed: boolean;
+  mobileOpen: boolean;
+  onDesktopToggle: () => void;
+  onExpand: () => void;
+  onMobileClose: () => void;
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ desktopCollapsed, mobileOpen, onDesktopToggle, onExpand, onMobileClose }: SidebarProps) {
   const { user } = useAuthStore();
 
   const visibleItems = NAV_ITEMS.filter((item) => {
@@ -48,29 +51,24 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
     <aside
       className={cn(
-        'h-screen fixed left-0 top-0 flex flex-col bg-surface-container font-headline text-sm font-semibold tracking-tight py-6 z-30 transition-all duration-300',
-        collapsed
-          ? '-translate-x-full lg:translate-x-0 lg:w-16'
-          : 'translate-x-0 w-64'
+        'w-64 h-screen fixed left-0 top-0 flex flex-col bg-surface-container font-headline text-sm font-semibold tracking-tight py-6 z-30 transition-all duration-300',
+        // Mobile: hidden by default, slide in when mobileOpen
+        mobileOpen ? 'translate-x-0' : '-translate-x-full',
+        // Desktop: always visible; width shrinks when collapsed
+        desktopCollapsed ? 'lg:translate-x-0 lg:w-16' : 'lg:translate-x-0 lg:w-64',
       )}
     >
       {/* Logo */}
-      <div className={cn('mb-10 flex items-center', collapsed ? 'justify-center px-0' : 'px-8')}>
-        {collapsed ? (
-          <div className="w-8 h-8 signature-gradient rounded-lg flex items-center justify-center shadow-md">
+      <div className={cn('mb-10 flex items-center', desktopCollapsed ? 'lg:justify-center lg:px-0 px-8' : 'px-8')}>
+        <div className={cn('flex items-center gap-2.5 mb-1', desktopCollapsed && 'lg:mb-0')}>
+          <div className="w-8 h-8 signature-gradient rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
             <Sun size={18} className="text-white" />
           </div>
-        ) : (
-          <div>
-            <div className="flex items-center gap-2.5 mb-1">
-              <div className="w-8 h-8 signature-gradient rounded-lg flex items-center justify-center shadow-md">
-                <Sun size={18} className="text-white" />
-              </div>
-              <span className="text-xl font-black text-primary tracking-tighter">Suryam</span>
-            </div>
-            <div className="text-[10px] uppercase tracking-widest text-on-surface-variant/60 ml-10">Solar CRM</div>
+          <div className={desktopCollapsed ? 'lg:hidden' : ''}>
+            <p className="text-xl font-black text-primary tracking-tighter leading-none">Suryam</p>
+            <p className="text-[10px] uppercase tracking-widest text-on-surface-variant/60 mt-0.5">Solar CRM</p>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Nav */}
@@ -80,20 +78,32 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             key={item.to}
             to={item.to}
             end={item.to === '/'}
-            title={collapsed ? item.label : undefined}
+            title={desktopCollapsed ? item.label : undefined}
+            onClick={() => {
+              // On mobile: close drawer after navigation
+              if (mobileOpen) onMobileClose();
+              // On desktop collapsed: expand sidebar
+              if (desktopCollapsed) onExpand();
+            }}
             className={({ isActive }) =>
               cn(
                 'flex items-center transition-all py-3',
-                collapsed
-                  ? cn('justify-center px-0 mx-2 rounded-xl', isActive ? 'bg-primary/10 text-primary' : 'text-on-surface-variant/60 hover:bg-surface-container-high hover:text-on-surface')
-                  : cn('gap-3 px-8', isActive ? 'bg-surface-container-lowest text-primary rounded-l-xl ml-4 shadow-sm translate-x-1' : 'text-on-surface-variant/60 hover:bg-surface-container-high hover:text-on-surface')
+                desktopCollapsed
+                  ? cn('lg:justify-center lg:mx-2 lg:px-0 lg:rounded-xl gap-3 px-8',
+                      isActive
+                        ? 'lg:bg-primary/10 text-primary'
+                        : 'text-on-surface-variant/60 hover:bg-surface-container-high hover:text-on-surface lg:hover:bg-surface-container-high')
+                  : cn('gap-3 px-8',
+                      isActive
+                        ? 'bg-surface-container-lowest text-primary rounded-l-xl ml-4 shadow-sm translate-x-1'
+                        : 'text-on-surface-variant/60 hover:bg-surface-container-high hover:text-on-surface')
               )
             }
           >
             {({ isActive }) => (
               <>
                 <item.icon size={20} className={isActive ? 'text-primary' : ''} />
-                {!collapsed && <span>{item.label}</span>}
+                <span className={desktopCollapsed ? 'lg:hidden' : ''}>{item.label}</span>
               </>
             )}
           </NavLink>
@@ -101,34 +111,34 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className={cn('mt-auto border-t border-black/5 flex flex-col gap-1 pt-4', collapsed ? 'items-center px-0' : 'px-8')}>
+      <div className={cn('mt-auto border-t border-black/5 flex flex-col gap-1 pt-4', desktopCollapsed ? 'lg:items-center lg:px-0 px-8' : 'px-8')}>
         <NavLink
           to="/support"
-          title={collapsed ? 'Support' : undefined}
+          title={desktopCollapsed ? 'Support' : undefined}
+          onClick={() => { if (mobileOpen) onMobileClose(); }}
           className={({ isActive }) =>
             cn(
-              'flex items-center transition-all py-2.5',
-              collapsed
-                ? cn('justify-center mx-2 w-10 rounded-xl', isActive ? 'bg-primary/10 text-primary' : 'text-on-surface-variant/60 hover:text-primary')
-                : cn('gap-3 text-sm', isActive ? 'text-primary' : 'text-on-surface-variant/60 hover:text-primary')
+              'flex items-center gap-3 transition-all py-2.5 text-sm',
+              desktopCollapsed && 'lg:justify-center lg:mx-2 lg:w-10 lg:rounded-xl',
+              isActive ? 'text-primary' : 'text-on-surface-variant/60 hover:text-primary'
             )
           }
         >
           <HelpCircle size={18} />
-          {!collapsed && <span>Support</span>}
+          <span className={desktopCollapsed ? 'lg:hidden' : ''}>Support</span>
         </NavLink>
 
-        {/* Collapse toggle — desktop only */}
+        {/* Desktop collapse toggle */}
         <button
-          onClick={onToggle}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          onClick={onDesktopToggle}
+          title={desktopCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           className={cn(
-            'hidden lg:flex items-center py-2.5 text-on-surface-variant/40 hover:text-primary transition-colors',
-            collapsed ? 'justify-center mx-2 w-10 rounded-xl' : 'gap-3 text-sm'
+            'hidden lg:flex items-center gap-3 py-2.5 text-sm text-on-surface-variant/40 hover:text-primary transition-colors',
+            desktopCollapsed ? 'justify-center mx-2 w-10 rounded-xl' : ''
           )}
         >
-          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-          {!collapsed && <span>Collapse</span>}
+          {desktopCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          {!desktopCollapsed && <span>Collapse</span>}
         </button>
       </div>
     </aside>
