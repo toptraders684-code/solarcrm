@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -7,15 +7,11 @@ import {
   Truck,
   BarChart2,
   Settings,
-  LogOut,
   Sun,
   HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
-import { authService } from '@/services/auth.service';
-import { useState } from 'react';
-import { toast } from 'sonner';
 
 interface NavItem {
   to: string;
@@ -35,15 +31,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export function Sidebar() {
-  const { user, clearAuth } = useAuthStore();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    try { await authService.logout(); } catch { /* ignore */ }
-    clearAuth();
-    toast.success('Logged out');
-    navigate('/login');
-  };
+  const { user } = useAuthStore();
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (!item.roles) return true;
@@ -104,19 +92,10 @@ export function Sidebar() {
             </div>
           </div>
         )}
-        <div className="flex flex-col gap-2">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 text-on-surface-variant/60 hover:text-error transition-colors text-sm"
-          >
-            <LogOut size={18} />
-            <span>Logout</span>
-          </button>
-          <a href="#" className="flex items-center gap-3 text-on-surface-variant/60 hover:text-primary transition-colors text-sm">
-            <HelpCircle size={18} />
-            <span>Support</span>
-          </a>
-        </div>
+        <a href="#" className="flex items-center gap-3 text-on-surface-variant/60 hover:text-primary transition-colors text-sm">
+          <HelpCircle size={18} />
+          <span>Support</span>
+        </a>
       </div>
     </aside>
   );
