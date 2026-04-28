@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Upload, Eye, FileText, X } from 'lucide-react';
+import { Upload, Eye, FileText, X, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { applicantsService } from '@/services/applicants.service';
@@ -162,9 +162,17 @@ export function DocumentsTab({ applicantId, discom }: DocumentsTabProps) {
                     </div>
                   </td>
 
-                  {/* Upload File column — blank for view/generate, blank when uploaded */}
+                  {/* Upload File column */}
                   <td className="px-4 py-3">
-                    {master.docType === 'upload' && !uploaded && (
+                    {master.docType === 'generate' ? (
+                      <button
+                        disabled
+                        title="Auto-generate coming soon"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary-container text-on-secondary-fixed-variant text-xs font-semibold opacity-60 cursor-not-allowed"
+                      >
+                        <Zap size={12} />Generate Document
+                      </button>
+                    ) : master.docType === 'upload' && !uploaded ? (
                       <div className="flex items-center gap-2 flex-wrap">
                         <button
                           onClick={() => handleChooseFile(master.id)}
@@ -194,46 +202,31 @@ export function DocumentsTab({ applicantId, discom }: DocumentsTabProps) {
                           </>
                         )}
                       </div>
-                    )}
+                    ) : null}
                   </td>
 
                   {/* Uploaded File column */}
                   <td className="px-4 py-3">
-                    {/* view type: always show View button (fetches master file) */}
-                    {master.docType === 'view' ? (
-                      <button
-                        onClick={() => handleViewMasterFile(master)}
-                        disabled={isLoadingView || !master.masterFilePath}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/5 disabled:opacity-50 transition-colors"
-                        title={!master.masterFilePath ? 'File not yet uploaded by admin' : undefined}
-                      >
-                        <Eye size={12} />{isLoadingView ? '…' : 'View'}
-                      </button>
-                    ) : uploaded ? (
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wide">
-                          Uploaded
+                    {master.docType === 'upload' ? (
+                      uploaded ? (
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wide">
+                            Uploaded
+                          </span>
+                          <button
+                            onClick={() => handleView(uploaded, master.title)}
+                            disabled={loadingViewId === uploaded.id}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/5 disabled:opacity-60 transition-colors"
+                          >
+                            <Eye size={12} />{loadingViewId === uploaded.id ? '…' : 'View'}
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant/40 text-[10px] font-bold uppercase tracking-wide">
+                          Not Uploaded
                         </span>
-                        <button
-                          onClick={() => handleView(uploaded, master.title)}
-                          disabled={loadingViewId === uploaded.id}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/5 disabled:opacity-60 transition-colors"
-                        >
-                          <Eye size={12} />{loadingViewId === uploaded.id ? '…' : 'View'}
-                        </button>
-                      </div>
-                    ) : master.docType === 'generate' ? (
-                      <button
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-outline-variant/20 text-on-surface-variant/50 text-xs font-semibold hover:bg-surface-container transition-colors"
-                        onClick={() => toast.info('Document not yet generated')}
-                      >
-                        <Eye size={12} />View
-                      </button>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant/40 text-[10px] font-bold uppercase tracking-wide">
-                        Not Uploaded
-                      </span>
-                    )}
+                      )
+                    ) : null}
                   </td>
                 </tr>
               );
