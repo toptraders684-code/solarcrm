@@ -259,13 +259,17 @@ export interface ApplicantChecklist {
 // DOCUMENTS
 // ─────────────────────────────────────────────
 
+export type DocType = 'upload' | 'generate' | 'view';
+
 export interface DocumentMaster {
   id: string;
   discom: Discom;
   title: string;
-  canGenerate: boolean;
+  docType: DocType;
   sortOrder: number;
   isActive: boolean;
+  masterFilePath?: string;
+  masterFileMime?: string;
   createdAt: string;
 }
 

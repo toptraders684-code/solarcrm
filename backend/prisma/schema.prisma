@@ -110,6 +110,12 @@ enum VendorType {
   transport_logistics
 }
 
+enum DocType {
+  upload
+  generate
+  view
+}
+
 enum AuditAction {
   CREATE
   UPDATE
@@ -472,13 +478,15 @@ model ApplicantChecklist {
 // ─────────────────────────────────────────────
 
 model DocumentMaster {
-  id          String   @id @default(uuid())
-  discom      Discom
-  title       String   @db.VarChar(200)
-  canGenerate Boolean  @default(false) @map("can_generate")
-  sortOrder   Int      @map("sort_order")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id             String   @id @default(uuid())
+  discom         Discom
+  title          String   @db.VarChar(200)
+  docType        DocType  @default(upload) @map("doc_type")
+  sortOrder      Int      @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  masterFilePath String?  @map("master_file_path") @db.VarChar(500)
+  masterFileMime String?  @map("master_file_mime") @db.VarChar(100)
+  createdAt      DateTime @default(now()) @map("created_at")
 
   documents Document[]
 

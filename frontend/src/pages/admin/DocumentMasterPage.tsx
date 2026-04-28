@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Sun, LogOut, FileText, Zap, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, Sun, LogOut, FileText, Zap, Upload, Eye, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,21 +24,45 @@ const DISCOM_LABELS: Record<string, string> = {
 interface FormState {
   discom: string;
   title: string;
-  canGenerate: boolean;
+  docType: string;
   sortOrder: string;
 }
 
-const DEFAULT_FORM: FormState = { discom: 'tpcodl', title: '', canGenerate: false, sortOrder: '' };
+const DEFAULT_FORM: FormState = { discom: 'tpcodl', title: '', docType: 'upload', sortOrder: '' };
+
+function TypeBadge({ docType }: { docType: string }) {
+  if (docType === 'generate') {
+    return (
+      <span className="flex items-center gap-1 text-[10px] font-bold text-on-secondary-fixed-variant bg-secondary-container px-2 py-0.5 rounded-full w-fit">
+        <Zap size={9} />Generate
+      </span>
+    );
+  }
+  if (docType === 'view') {
+    return (
+      <span className="flex items-center gap-1 text-[10px] font-bold text-tertiary bg-tertiary/10 px-2 py-0.5 rounded-full w-fit">
+        <Eye size={9} />View File
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full w-fit">
+      <Upload size={9} />Upload
+    </span>
+  );
+}
 
 export default function DocumentMasterPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, clearAuth } = useAuthStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeDiscom, setActiveDiscom] = useState<string>('tpcodl');
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<DocumentMaster | null>(null);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [deleteItem, setDeleteItem] = useState<DocumentMaster | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -48,32 +72,49 @@ export default function DocumentMasterPage() {
 
   const items: DocumentMaster[] = data?.data ?? [];
 
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditItem(null);
+    setPendingFile(null);
+  };
+
   const createMutation = useMutation({
-    mutationFn: () => documentMasterService.create({
-      discom: form.discom,
-      title: form.title.trim(),
-      canGenerate: form.canGenerate,
-      sortOrder: form.sortOrder ? parseInt(form.sortOrder) : undefined,
-    }),
+    mutationFn: async () => {
+      const result = await documentMasterService.create({
+        discom: form.discom,
+        title: form.title.trim(),
+        docType: form.docType,
+        sortOrder: form.sortOrder ? parseInt(form.sortOrder) : undefined,
+      });
+      if (pendingFile && form.docType === 'view') {
+        await documentMasterService.uploadMasterFile(result.data.id, pendingFile);
+      }
+      return result;
+    },
     onSuccess: () => {
       toast.success('Document added');
       queryClient.invalidateQueries({ queryKey: ['document-master'] });
-      setFormOpen(false);
+      closeForm();
     },
     onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to add'),
   });
 
   const updateMutation = useMutation({
-    mutationFn: () => documentMasterService.update(editItem!.id, {
-      title: form.title.trim(),
-      canGenerate: form.canGenerate,
-      sortOrder: form.sortOrder ? parseInt(form.sortOrder) : undefined,
-    }),
+    mutationFn: async () => {
+      const result = await documentMasterService.update(editItem!.id, {
+        title: form.title.trim(),
+        docType: form.docType,
+        sortOrder: form.sortOrder ? parseInt(form.sortOrder) : undefined,
+      });
+      if (pendingFile) {
+        await documentMasterService.uploadMasterFile(editItem!.id, pendingFile);
+      }
+      return result;
+    },
     onSuccess: () => {
       toast.success('Document updated');
       queryClient.invalidateQueries({ queryKey: ['document-master'] });
-      setFormOpen(false);
-      setEditItem(null);
+      closeForm();
     },
     onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to update'),
   });
@@ -91,13 +132,25 @@ export default function DocumentMasterPage() {
   const openAdd = () => {
     setEditItem(null);
     setForm({ ...DEFAULT_FORM, discom: activeDiscom });
+    setPendingFile(null);
     setFormOpen(true);
   };
 
   const openEdit = (item: DocumentMaster) => {
     setEditItem(item);
-    setForm({ discom: item.discom, title: item.title, canGenerate: item.canGenerate, sortOrder: String(item.sortOrder) });
+    setForm({ discom: item.discom, title: item.title, docType: item.docType, sortOrder: String(item.sortOrder) });
+    setPendingFile(null);
     setFormOpen(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { toast.error('File exceeds 2MB limit'); return; }
+    if (!['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)) {
+      toast.error('Only JPG, PNG, PDF allowed'); return;
+    }
+    setPendingFile(file);
   };
 
   const handleLogout = async () => {
@@ -105,6 +158,8 @@ export default function DocumentMasterPage() {
     clearAuth();
     navigate('/admin');
   };
+
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="min-h-screen bg-surface">
@@ -199,15 +254,7 @@ export default function DocumentMasterPage() {
                       </div>
                     </td>
                     <td className="px-5 py-3">
-                      {item.canGenerate ? (
-                        <span className="flex items-center gap-1 text-[10px] font-bold text-on-secondary-fixed-variant bg-secondary-container px-2 py-0.5 rounded-full w-fit">
-                          <Zap size={9} />Generate
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full w-fit">
-                          <Upload size={9} />Upload
-                        </span>
-                      )}
+                      <TypeBadge docType={item.docType} />
                     </td>
                     <td className="px-5 py-3 text-xs text-on-surface-variant/60">{item.sortOrder}</td>
                     <td className="px-5 py-3">
@@ -242,7 +289,7 @@ export default function DocumentMasterPage() {
       </main>
 
       {/* Add / Edit Dialog */}
-      <Dialog open={formOpen} onOpenChange={(open) => { if (!open) { setFormOpen(false); setEditItem(null); } }}>
+      <Dialog open={formOpen} onOpenChange={(open) => { if (!open) closeForm(); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editItem ? 'Edit Document' : 'Add Document'}</DialogTitle>
@@ -271,16 +318,61 @@ export default function DocumentMasterPage() {
             <div>
               <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Type *</label>
               <Select
-                value={form.canGenerate ? 'generate' : 'upload'}
-                onValueChange={(v) => setForm((f) => ({ ...f, canGenerate: v === 'generate' }))}
+                value={form.docType}
+                onValueChange={(v) => { setForm((f) => ({ ...f, docType: v })); setPendingFile(null); }}
               >
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="upload">Upload File</SelectItem>
                   <SelectItem value="generate">Generate</SelectItem>
+                  <SelectItem value="view">View File</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* File upload — only shown when type is view */}
+            {form.docType === 'view' && (
+              <div>
+                <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">
+                  File {editItem?.masterFilePath ? '(leave blank to keep existing)' : ''}
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <div className="mt-1 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { if (fileInputRef.current) { fileInputRef.current.value = ''; fileInputRef.current.click(); } }}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface hover:bg-surface-container text-on-surface-variant text-xs font-semibold transition-colors"
+                  >
+                    {pendingFile ? (
+                      <span className="text-primary truncate max-w-[160px]" title={pendingFile.name}>{pendingFile.name}</span>
+                    ) : editItem?.masterFilePath ? (
+                      <><Eye size={12} />Replace File</>
+                    ) : (
+                      <><Upload size={12} />Choose File</>
+                    )}
+                  </button>
+                  {pendingFile && (
+                    <button
+                      type="button"
+                      onClick={() => setPendingFile(null)}
+                      className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-error/10 text-on-surface-variant/50 hover:text-error transition-colors"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                  {editItem?.masterFilePath && !pendingFile && (
+                    <span className="text-[10px] text-on-surface-variant/50">File already uploaded</span>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Sort Order</label>
               <Input
@@ -293,10 +385,10 @@ export default function DocumentMasterPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => { setFormOpen(false); setEditItem(null); }}>Cancel</Button>
+            <Button variant="secondary" onClick={closeForm}>Cancel</Button>
             <Button
               disabled={!form.title.trim()}
-              loading={createMutation.isPending || updateMutation.isPending}
+              loading={isPending}
               onClick={() => editItem ? updateMutation.mutate() : createMutation.mutate()}
             >
               {editItem ? 'Save Changes' : 'Add Document'}
