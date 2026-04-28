@@ -172,6 +172,15 @@ export function DocumentsTab({ applicantId, discom }: DocumentsTabProps) {
                       >
                         <Zap size={12} />Generate Document
                       </button>
+                    ) : master.docType === 'view' ? (
+                      <button
+                        onClick={() => handleViewMasterFile(master)}
+                        disabled={isLoadingView || !master.masterFilePath}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/5 disabled:opacity-50 transition-colors"
+                        title={!master.masterFilePath ? 'File not yet uploaded by admin' : undefined}
+                      >
+                        <Eye size={12} />{isLoadingView ? '…' : 'View File'}
+                      </button>
                     ) : master.docType === 'upload' && !uploaded ? (
                       <div className="flex items-center gap-2 flex-wrap">
                         <button
