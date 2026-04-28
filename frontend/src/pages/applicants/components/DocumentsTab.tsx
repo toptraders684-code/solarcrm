@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Upload, Eye, FileText, X, Zap } from 'lucide-react';
+import { Upload, Eye, FileText, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { applicantsService } from '@/services/applicants.service';
@@ -162,10 +162,9 @@ export function DocumentsTab({ applicantId, discom }: DocumentsTabProps) {
                     </div>
                   </td>
 
-                  {/* Upload File column */}
+                  {/* Upload File column — blank for view/generate, blank when uploaded */}
                   <td className="px-4 py-3">
-                    {/* view type and generate type: blank in upload column */}
-                    {master.docType === 'view' || master.docType === 'generate' ? null : uploaded ? null : (
+                    {master.docType === 'upload' && !uploaded && (
                       <div className="flex items-center gap-2 flex-wrap">
                         <button
                           onClick={() => handleChooseFile(master.id)}
@@ -195,17 +194,6 @@ export function DocumentsTab({ applicantId, discom }: DocumentsTabProps) {
                           </>
                         )}
                       </div>
-                    )}
-
-                    {/* generate type with no uploaded file: show Generate button */}
-                    {master.docType === 'generate' && !uploaded && (
-                      <button
-                        disabled
-                        title="Auto-generate coming soon"
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary-container text-on-secondary-fixed-variant text-xs font-semibold opacity-60 cursor-not-allowed"
-                      >
-                        <Zap size={12} />Generate Document
-                      </button>
                     )}
                   </td>
 

@@ -365,7 +365,7 @@ async function main() {
       { discom: 'tpcodl', title: 'Net Meter Money Receipt', docType: 'upload', sortOrder: 18 },
       { discom: 'tpcodl', title: 'PBblink Inverter DataSheet', docType: 'upload', sortOrder: 19 },
       { discom: 'tpcodl', title: 'Quotation', docType: 'generate', sortOrder: 20 },
-      { discom: 'tpcodl', title: 'Solar Wiring Diagram', docType: 'generate', sortOrder: 21 },
+      { discom: 'tpcodl', title: 'Solar Wiring Diagram', docType: 'view', sortOrder: 21 },
       { discom: 'tpcodl', title: 'Work Completion Certificate', docType: 'generate', sortOrder: 22 },
       // ── TPNODL ──
       { discom: 'tpnodl', title: 'Aadhaar Card', docType: 'upload', sortOrder: 1 },
