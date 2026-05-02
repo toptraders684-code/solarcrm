@@ -62,7 +62,7 @@ export const STAGE_LABELS: Record<number, string> = {
   3: 'Documents Collected',
   4: 'Portal Application',
   5: 'MRT Done',
-  6: 'Approval Received',
+  6: 'DISCOM Approval',
   7: 'Material Procurement',
   8: 'Installation Done',
   9: 'JE Inspection',
