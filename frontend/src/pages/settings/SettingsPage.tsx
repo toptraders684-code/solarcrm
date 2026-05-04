@@ -16,7 +16,7 @@ import { formatDate, toTitleCase } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
 import type { User } from '@/types';
 
-const ROLES = ['admin', 'operations_staff', 'field_technician', 'finance_manager', 'vendor'];
+const ROLES = ['operations_staff', 'field_technician', 'finance_manager', 'vendor'];
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
