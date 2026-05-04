@@ -21,7 +21,7 @@ export class UsersService {
   async findAll(companyId: string, query: any) {
     const { limit = 25, after, role, status, q } = query;
 
-    const where: any = { companyId, deletedAt: null };
+    const where: any = { companyId, deletedAt: null, role: { not: 'super_admin' } };
     if (role) where.role = role;
     if (status) where.status = status;
     if (q) {

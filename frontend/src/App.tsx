@@ -3,6 +3,7 @@ import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
 import LoginPage from '@/pages/auth/LoginPage';
 import AdminLoginPage from '@/pages/admin/AdminLoginPage';
 import DocumentMasterPage from '@/pages/admin/DocumentMasterPage';
+import AdminUsersPage from '@/pages/admin/AdminUsersPage';
 import DashboardPage from '@/pages/dashboard/DashboardPage';
 import LeadsListPage from '@/pages/leads/LeadsListPage';
 import LeadDetailPage from '@/pages/leads/LeadDetailPage';
@@ -35,6 +36,9 @@ export default function App() {
       {/* Super Admin routes */}
       <Route path="/admin/documents" element={
         <AdminProtectedRoute><DocumentMasterPage /></AdminProtectedRoute>
+      } />
+      <Route path="/admin/users" element={
+        <AdminProtectedRoute><AdminUsersPage /></AdminProtectedRoute>
       } />
 
       {/* Protected routes */}

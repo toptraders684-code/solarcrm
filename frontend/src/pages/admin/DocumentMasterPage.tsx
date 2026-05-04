@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, NavLink } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Sun, LogOut, FileText, Zap, Upload, Eye, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Sun, LogOut, FileText, Zap, Upload, Eye, X, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -164,24 +164,53 @@ export default function DocumentMasterPage() {
   return (
     <div className="min-h-screen bg-surface">
       {/* Header */}
-      <header className="sticky top-0 z-20 w-full bg-surface/80 backdrop-blur-xl border-b border-outline-variant/10 flex items-center justify-between h-16 px-8 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 signature-gradient rounded-lg flex items-center justify-center shadow-sm">
-            <Sun size={16} className="text-white" />
+      <header className="sticky top-0 z-20 w-full bg-surface/80 backdrop-blur-xl border-b border-outline-variant/10 shadow-sm">
+        <div className="flex items-center justify-between h-16 px-8">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 signature-gradient rounded-lg flex items-center justify-center shadow-sm">
+              <Sun size={16} className="text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-black text-primary leading-none">Suryam CRM</p>
+              <p className="text-[10px] text-on-surface-variant/50 uppercase tracking-widest">Super Admin Panel</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-black text-primary leading-none">Suryam CRM</p>
-            <p className="text-[10px] text-on-surface-variant/50 uppercase tracking-widest">Super Admin Panel</p>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-on-surface-variant hidden sm:block">{user?.name}</span>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-on-surface-variant hover:bg-error/5 hover:text-error transition-colors"
+            >
+              <LogOut size={15} />Logout
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-on-surface-variant hidden sm:block">{user?.name}</span>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-on-surface-variant hover:bg-error/5 hover:text-error transition-colors"
+        {/* Nav tabs */}
+        <div className="flex gap-1 px-8 border-t border-outline-variant/10">
+          <NavLink
+            to="/admin/documents"
+            className={({ isActive }) =>
+              `flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${
+                isActive
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-on-surface-variant/50 hover:text-on-surface-variant'
+              }`
+            }
           >
-            <LogOut size={15} />Logout
-          </button>
+            <FileText size={13} />Document Master
+          </NavLink>
+          <NavLink
+            to="/admin/users"
+            className={({ isActive }) =>
+              `flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${
+                isActive
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-on-surface-variant/50 hover:text-on-surface-variant'
+              }`
+            }
+          >
+            <Users size={13} />Admin Users
+          </NavLink>
         </div>
       </header>
 
