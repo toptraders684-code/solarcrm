@@ -17,7 +17,25 @@ import { formatDate, toTitleCase } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
 import type { Vendor } from '@/types';
 
-const VENDOR_TYPES = ['material_supplier', 'labour_installer', 'transport_logistics'];
+const VENDOR_TYPES = [
+  'channel_partner',
+  'district_partner',
+  'block_partner',
+  'installation_partner',
+  'transport_partner',
+  'insurance_partner',
+  'netmeter_partner',
+];
+
+const VENDOR_TYPE_LABELS: Record<string, string> = {
+  channel_partner:      'Channel Partner',
+  district_partner:     'District Partner',
+  block_partner:        'Block Partner',
+  installation_partner: 'Installation Partner',
+  transport_partner:    'Transport Partner',
+  insurance_partner:    'Insurance Partner',
+  netmeter_partner:     'Netmeter Partner',
+};
 
 export default function VendorsListPage() {
   const { user } = useAuthStore();
@@ -69,7 +87,7 @@ export default function VendorsListPage() {
           <SelectTrigger className="w-48"><SelectValue placeholder="All Types" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
-            {VENDOR_TYPES.map((t) => <SelectItem key={t} value={t}>{toTitleCase(t)}</SelectItem>)}
+            {VENDOR_TYPES.map((t) => <SelectItem key={t} value={t}>{VENDOR_TYPE_LABELS[t]}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -164,7 +182,7 @@ export default function VendorsListPage() {
                       if (checked) setValue('vendorTypes', [...selectedTypes, t]);
                       else setValue('vendorTypes', selectedTypes.filter((x) => x !== t));
                     }} />
-                  <label htmlFor={t} className="text-sm cursor-pointer font-medium">{toTitleCase(t)}</label>
+                  <label htmlFor={t} className="text-sm cursor-pointer font-medium">{VENDOR_TYPE_LABELS[t]}</label>
                 </div>
               ))}
             </div>

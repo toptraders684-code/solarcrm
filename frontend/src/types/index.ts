@@ -14,7 +14,7 @@ export type DocumentCategory = 'kyc' | 'technical' | 'discom';
 export type TransactionType = 'customer_receipt' | 'vendor_payment' | 'subsidy';
 export type PaymentMethod = 'cash' | 'cheque' | 'bank_transfer' | 'upi' | 'other';
 export type TransactionStatus = 'pending_approval' | 'approved' | 'rejected';
-export type VendorType = 'material_supplier' | 'labour_installer' | 'transport_logistics';
+export type VendorType = 'channel_partner' | 'district_partner' | 'block_partner' | 'installation_partner' | 'transport_partner' | 'insurance_partner' | 'netmeter_partner';
 export type OutcomeType = 'contacted' | 'not_reachable' | 'meeting_scheduled' | 'site_visit_done' | 'document_collected' | 'other';
 
 // ─────────────────────────────────────────────

@@ -14,9 +14,13 @@ import type { Applicant, ApplicantVendor } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 
 const VENDOR_TYPE_LABELS: Record<string, string> = {
-  material_supplier: 'Material Supplier',
-  labour_installer: 'Labour / Installer',
-  transport_logistics: 'Transport / Logistics',
+  channel_partner:      'Channel Partner',
+  district_partner:     'District Partner',
+  block_partner:        'Block Partner',
+  installation_partner: 'Installation Partner',
+  transport_partner:    'Transport Partner',
+  insurance_partner:    'Insurance Partner',
+  netmeter_partner:     'Netmeter Partner',
 };
 
 const CATEGORY_LABELS = [

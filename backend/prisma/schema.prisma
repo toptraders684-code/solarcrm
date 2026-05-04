@@ -108,6 +108,13 @@ enum VendorType {
   material_supplier
   labour_installer
   transport_logistics
+  channel_partner
+  district_partner
+  block_partner
+  installation_partner
+  transport_partner
+  insurance_partner
+  netmeter_partner
 }
 
 enum DocType {
