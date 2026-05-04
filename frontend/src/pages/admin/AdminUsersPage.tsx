@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Sun, LogOut, Users, FileText, CheckCircle2, XCircle } from 'lucide-react';
+import { Sun, LogOut, Users, FileText, CheckCircle2, XCircle, Plus, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { usersService } from '@/services/users.service';
 import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/store/authStore';
@@ -20,11 +23,24 @@ const STATUS_LABELS: Record<string, string> = {
   pending_approval: 'Pending',
 };
 
+interface CreateForm {
+  name: string;
+  email: string;
+  mobile: string;
+  password: string;
+}
+
+const DEFAULT_FORM: CreateForm = { name: '', email: '', mobile: '', password: '' };
+
 export default function AdminUsersPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, clearAuth } = useAuthStore();
+
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [form, setForm] = useState<CreateForm>(DEFAULT_FORM);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['super-admin-users'],
@@ -44,6 +60,24 @@ export default function AdminUsersPage() {
     onSettled: () => setTogglingId(null),
   });
 
+  const createMutation = useMutation({
+    mutationFn: () =>
+      usersService.createUser({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        mobile: form.mobile.trim(),
+        password: form.password,
+        role: 'admin',
+      }),
+    onSuccess: () => {
+      toast.success('Admin created');
+      queryClient.invalidateQueries({ queryKey: ['super-admin-users'] });
+      setFormOpen(false);
+      setForm(DEFAULT_FORM);
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to create admin'),
+  });
+
   const handleToggle = (admin: User) => {
     const newStatus = admin.status === 'active' ? 'inactive' : 'active';
     setTogglingId(admin.id);
@@ -55,6 +89,11 @@ export default function AdminUsersPage() {
     clearAuth();
     navigate('/admin');
   };
+
+  const canCreate =
+    form.name.trim().length > 0 &&
+    form.mobile.trim().length === 10 &&
+    form.password.length >= 6;
 
   return (
     <div className="min-h-screen bg-surface">
@@ -81,7 +120,7 @@ export default function AdminUsersPage() {
           </div>
         </div>
         {/* Nav tabs */}
-        <div className="flex gap-1 px-8 pb-0 border-t border-outline-variant/10">
+        <div className="flex gap-1 px-8 border-t border-outline-variant/10">
           <NavLink
             to="/admin/documents"
             className={({ isActive }) =>
@@ -110,9 +149,14 @@ export default function AdminUsersPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-8 py-8 space-y-6">
-        <div>
-          <h1 className="text-xl font-black text-on-surface">Admin Users</h1>
-          <p className="text-sm text-on-surface-variant/60 mt-0.5">Activate or deactivate admin accounts</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-black text-on-surface">Admin Users</h1>
+            <p className="text-sm text-on-surface-variant/60 mt-0.5">Create, activate or deactivate admin accounts</p>
+          </div>
+          <Button size="sm" onClick={() => { setForm(DEFAULT_FORM); setFormOpen(true); }}>
+            <Plus size={14} />Add Admin
+          </Button>
         </div>
 
         <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/10 overflow-hidden">
@@ -185,6 +229,76 @@ export default function AdminUsersPage() {
           )}
         </div>
       </main>
+
+      {/* Create Admin Dialog */}
+      <Dialog open={formOpen} onOpenChange={(open) => { if (!open) setFormOpen(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Admin</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Full Name *</label>
+              <Input
+                className="mt-1"
+                placeholder="e.g. Rajesh Kumar"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Mobile *</label>
+              <Input
+                className="mt-1"
+                type="tel"
+                placeholder="10-digit mobile"
+                maxLength={10}
+                value={form.mobile}
+                onChange={(e) => setForm((f) => ({ ...f, mobile: e.target.value.replace(/\D/g, '') }))}
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Email</label>
+              <Input
+                className="mt-1"
+                type="email"
+                placeholder="admin@example.com"
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Password *</label>
+              <div className="relative mt-1">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Min 6 characters"
+                  className="pr-10"
+                  value={form.password}
+                  onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40 hover:text-on-surface-variant transition-colors"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setFormOpen(false)}>Cancel</Button>
+            <Button
+              disabled={!canCreate}
+              loading={createMutation.isPending}
+              onClick={() => createMutation.mutate()}
+            >
+              Create Admin
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
