@@ -282,7 +282,7 @@ async function main() {
   console.log(`   ✓ Admin user: ${adminUser.email} / password: admin@123`);
 
   // ── 5. Checklist Master ──
-  const existingCount = await prisma.checklistMaster.count({ where: { companyId: company.id } });
+  const existingCount = await prisma.checklistMaster.count();
   let totalItems = 0;
   if (existingCount > 0) {
     console.log(`📋 Checklist master already seeded (${existingCount} items) — skipping.`);
@@ -297,7 +297,6 @@ async function main() {
         for (const item of items) {
           await prisma.checklistMaster.create({
             data: {
-              companyId: company.id,
               discom: discom,
               projectType: projectType,
               phaseName: item.phase,
