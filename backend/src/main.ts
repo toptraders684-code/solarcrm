@@ -9,6 +9,9 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Trust Railway's reverse proxy so rate-limit can read the real client IP
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
   // Security headers
   app.use(helmet());
 
