@@ -9,6 +9,8 @@ import {
   Query,
   UseGuards,
   Req,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -26,7 +28,7 @@ export class UsersController {
   @Get()
   @Roles('admin', 'operations_staff', 'super_admin')
   findAll(@CurrentUser() user: any, @Query() query: any) {
-    return this.usersService.findAll(user.companyId, query);
+    return this.usersService.findAll(user.companyId, query, user.role);
   }
 
   @Get('staff')
@@ -35,10 +37,21 @@ export class UsersController {
     return this.usersService.getStaff(user.companyId);
   }
 
+  @Patch('me/password')
+  @Roles('admin', 'operations_staff', 'field_technician', 'finance_manager', 'super_admin')
+  @HttpCode(HttpStatus.OK)
+  changePassword(
+    @Body() body: { currentPassword: string; newPassword: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.usersService.changePassword(user.id, body.currentPassword, body.newPassword);
+  }
+
   @Post(':id/approve')
-  @Roles('admin')
+  @Roles('admin', 'super_admin')
   approveUser(@Param('id') id: string, @CurrentUser() user: any) {
-    return this.usersService.approveUser(id, user.companyId, user.id);
+    const companyId = user.role === 'super_admin' ? null : user.companyId;
+    return this.usersService.approveUser(id, companyId, user.id);
   }
 
   @Get(':id')

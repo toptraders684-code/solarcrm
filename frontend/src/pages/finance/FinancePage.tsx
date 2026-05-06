@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle, XCircle, CreditCard, TrendingUp, Clock } from 'lucide-react';
 import { toast } from 'sonner';
@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { DateSelectPicker } from '@/components/ui/date-select-picker';
 import { financeService } from '@/services/finance.service';
 import { formatDate, formatCurrency, toTitleCase } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
@@ -46,7 +47,8 @@ export default function FinancePage() {
 
   const tabToFilter: Record<string, any> = {
     all: {}, pending: { status: 'pending_approval' },
-    receipts: { type: 'customer_receipt' }, vendor: { type: 'vendor_payment' }, subsidy: { type: 'subsidy' },
+    receipts: { type: 'customer_receipt' }, vendor: { type: 'vendor_payment' },
+    subsidy: { type: 'subsidy' }, expenses: { type: 'expense' },
   };
 
   const { data, isLoading } = useQuery({
@@ -82,21 +84,22 @@ export default function FinancePage() {
   return (
     <PageWrapper title="Finance" subtitle="Transaction management and approvals">
       {isLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28" />)}</div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-28" />)}</div>
       ) : summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <SummaryCard label="Total Received" value={formatCurrency(summary.totalReceived)} icon={TrendingUp} accent />
           <SummaryCard label="Vendor Payments" value={formatCurrency(summary.totalVendorPayments)} icon={CreditCard} />
           <SummaryCard label="Subsidy Received" value={formatCurrency(summary.totalSubsidy)} icon={CreditCard} />
+          <SummaryCard label="Total Expenses" value={formatCurrency(summary.totalExpenses ?? 0)} icon={CreditCard} />
           <SummaryCard label="Pending Approval" value={summary.pendingCount ?? 0} icon={Clock} />
         </div>
       )}
 
-      <div className="bg-surface-container-lowest rounded-xl p-4 flex gap-3 items-center">
+      <div className="bg-surface-container-lowest rounded-xl p-4 flex flex-wrap gap-3 items-center">
         <span className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Date range</span>
-        <Input type="date" className="w-40" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+        <DateSelectPicker className="w-44" value={dateFrom} onChange={setDateFrom} placeholder="From date" />
         <span className="text-xs text-on-surface-variant/50">to</span>
-        <Input type="date" className="w-40" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+        <DateSelectPicker className="w-44" value={dateTo} onChange={setDateTo} placeholder="To date" />
         {(dateFrom || dateTo) && (
           <button className="text-xs font-bold text-error hover:underline" onClick={() => { setDateFrom(''); setDateTo(''); }}>Clear</button>
         )}
@@ -109,6 +112,7 @@ export default function FinancePage() {
           <TabsTrigger value="receipts">Receipts</TabsTrigger>
           <TabsTrigger value="vendor">Vendor</TabsTrigger>
           <TabsTrigger value="subsidy">Subsidy</TabsTrigger>
+          <TabsTrigger value="expenses">Expenses</TabsTrigger>
         </TabsList>
         <TabsContent value={tab}>
           <div className="bg-surface-container-lowest rounded-xl overflow-hidden">
@@ -116,14 +120,15 @@ export default function FinancePage() {
               <thead>
                 <tr className="bg-surface-container-low text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">
                   <th className="px-6 py-4">Date</th><th className="px-4 py-4">Project</th>
-                  <th className="px-4 py-4">Type</th><th className="px-4 py-4">Amount</th>
+                  <th className="px-4 py-4">Type</th><th className="px-4 py-4">Vendor</th>
+                  <th className="px-4 py-4">Amount</th>
                   <th className="px-4 py-4">Method</th><th className="px-4 py-4">Status</th>
                   {canApprove && <th className="px-6 py-4">Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-container-low">
                 {isLoading ? [...Array(6)].map((_, i) => (
-                  <tr key={i}>{[...Array(canApprove ? 7 : 6)].map((_, j) => (
+                  <tr key={i}>{[...Array(canApprove ? 8 : 7)].map((_, j) => (
                     <td key={j} className="px-4 py-4"><Skeleton className="h-4" /></td>
                   ))}</tr>
                 )) : transactions.map((tx: Transaction) => (
@@ -140,8 +145,12 @@ export default function FinancePage() {
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                         tx.type === 'customer_receipt' ? 'bg-primary/10 text-primary' :
                         tx.type === 'subsidy' ? 'bg-secondary-container text-on-secondary-fixed-variant' :
+                        tx.type === 'expense' ? 'bg-error/10 text-error' :
                         'bg-tertiary-container/30 text-on-tertiary-container'
                       }`}>{toTitleCase(tx.type)}</span>
+                    </td>
+                    <td className="px-4 py-4 text-sm text-on-surface-variant">
+                      {(tx as any).vendor?.businessName ?? '—'}
                     </td>
                     <td className="px-4 py-4 text-sm font-bold text-on-surface">{formatCurrency(tx.amount)}</td>
                     <td className="px-4 py-4 text-sm text-on-surface-variant">{toTitleCase(tx.paymentMethod)}</td>
@@ -165,7 +174,7 @@ export default function FinancePage() {
                   </tr>
                 ))}
                 {!isLoading && transactions.length === 0 && (
-                  <tr><td colSpan={canApprove ? 7 : 6} className="px-4 py-16 text-center text-on-surface-variant/50 text-sm">No transactions found.</td></tr>
+                  <tr><td colSpan={canApprove ? 8 : 7} className="px-4 py-16 text-center text-on-surface-variant/50 text-sm">No transactions found.</td></tr>
                 )}
               </tbody>
             </table>
@@ -177,7 +186,7 @@ export default function FinancePage() {
         <DialogContent>
           <DialogHeader><DialogTitle>Reject Transaction</DialogTitle></DialogHeader>
           <div>
-            <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Reason *</label>
+            <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Reason <span className="text-error">*</span></label>
             <Textarea className="mt-2" placeholder="Please provide a reason..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} />
           </div>
           <DialogFooter>

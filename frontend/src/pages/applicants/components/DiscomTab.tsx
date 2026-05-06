@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DateSelectPicker } from '@/components/ui/date-select-picker';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { applicantsService } from '@/services/applicants.service';
 import { formatDate, getStageName } from '@/utils/formatters';
@@ -40,16 +41,57 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-function F({ label, children }: { label: string; children: React.ReactNode }) {
+function F({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+  const req = label.endsWith(' *');
+  const text = req ? label.slice(0, -2) : label;
   return (
     <div>
-      <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">{label}</label>
+      <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">
+        {text}{req && <span className="text-error"> *</span>}
+      </label>
       <div className="mt-1">{children}</div>
+      {error && <p className="mt-1 text-[10px] text-error font-semibold">{error}</p>}
     </div>
   );
 }
 
+const MOBILE_RE = /^[6-9]\d{9}$/;
+
+function validateDiscom(section: 'discom' | 'survey' | null, form: Record<string, any>): Record<string, string> {
+  const e: Record<string, string> = {};
+  if (section === 'discom') {
+    if (form.jeContact && !MOBILE_RE.test(form.jeContact)) e.jeContact = 'Must be a valid 10-digit mobile number';
+    if (form.roofAreaSqft !== '' && form.roofAreaSqft !== undefined && Number(form.roofAreaSqft) <= 0)
+      e.roofAreaSqft = 'Must be greater than 0';
+  }
+  if (section === 'survey') {
+    if (form.roofAreaSqft !== '' && form.roofAreaSqft !== undefined && Number(form.roofAreaSqft) <= 0)
+      e.roofAreaSqft = 'Must be greater than 0';
+    if (form.recommendedCapacityKw !== '' && form.recommendedCapacityKw !== undefined && Number(form.recommendedCapacityKw) <= 0)
+      e.recommendedCapacityKw = 'Must be greater than 0';
+  }
+  return e;
+}
+
 type Section = 'discom' | 'survey' | null;
+
+function SectionActions({ isEditing, canEdit, saving, editDisabled, onEdit, onCancel, onSave }: {
+  isEditing: boolean; canEdit: boolean; saving: boolean; editDisabled: boolean;
+  onEdit: () => void; onCancel: () => void; onSave: () => void;
+}) {
+  if (!canEdit) return null;
+  if (isEditing) {
+    return (
+      <div className="flex gap-2">
+        <Button size="sm" variant="secondary" onClick={onCancel} disabled={saving}><X size={12} />Cancel</Button>
+        <Button size="sm" onClick={onSave} loading={saving}><Save size={12} />Save</Button>
+      </div>
+    );
+  }
+  return (
+    <Button size="sm" variant="secondary" onClick={onEdit} disabled={editDisabled}><Pencil size={12} />Edit</Button>
+  );
+}
 
 interface DiscomTabProps { applicant: Applicant; }
 
@@ -58,12 +100,29 @@ export function DiscomTab({ applicant }: DiscomTabProps) {
   const { user } = useAuthStore();
   const [editingSection, setEditingSection] = useState<Section>(null);
   const [form, setForm] = useState<Record<string, any>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [advanceOpen, setAdvanceOpen] = useState(false);
 
   const canEdit = user && ['admin', 'operations_staff'].includes(user.role);
   const guidance = STAGE_GUIDANCE[applicant.stage];
 
-  const set = (key: string, value: any) => setForm((prev) => ({ ...prev, [key]: value }));
+  const set = (key: string, value: any) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    if (errors[key]) setErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
+  };
+
+  const touch = (key: string, val: any) => {
+    setTouched((prev) => ({ ...prev, [key]: true }));
+    const errs = validateDiscom(editingSection, { ...form, [key]: val });
+    setErrors((prev) => { const n = { ...prev }; if (errs[key]) n[key] = errs[key]; else delete n[key]; return n; });
+  };
+
+  const fieldClass = (key: string) => {
+    if (errors[key]) return 'border-error';
+    if (touched[key] && form[key] !== '' && form[key] !== null && form[key] !== undefined) return 'border-primary';
+    return '';
+  };
 
   const startEdit = (section: Section) => {
     if (section === 'discom') {
@@ -86,13 +145,17 @@ export function DiscomTab({ applicant }: DiscomTabProps) {
         shadowAnalysis: applicant.shadowAnalysis ?? '',
       });
     }
+    setErrors({});
+    setTouched({});
     setEditingSection(section);
   };
 
-  const cancelEdit = () => { setEditingSection(null); setForm({}); };
+  const cancelEdit = () => { setEditingSection(null); setForm({}); setErrors({}); setTouched({}); };
 
   const saveMutation = useMutation({
     mutationFn: () => {
+      const errs = validateDiscom(editingSection, form);
+      if (Object.keys(errs).length > 0) { setErrors(errs); return Promise.reject(null); }
       const payload: Record<string, any> = {};
       Object.entries(form).forEach(([k, v]) => { payload[k] = v === '' ? null : v; });
       return applicantsService.updateApplicant(applicant.id, payload as any);
@@ -102,7 +165,10 @@ export function DiscomTab({ applicant }: DiscomTabProps) {
       queryClient.invalidateQueries({ queryKey: ['applicant', applicant.id] });
       cancelEdit();
     },
-    onError: (err: any) => toast.error(err?.response?.data?.error?.message || err?.response?.data?.message || 'Failed to save'),
+    onError: (err: any) => {
+      if (err === null) return;
+      toast.error(err?.response?.data?.error?.message || err?.response?.data?.message || 'Failed to save');
+    },
   });
 
   const advanceMutation = useMutation({
@@ -119,29 +185,6 @@ export function DiscomTab({ applicant }: DiscomTabProps) {
   });
 
   const missingFields = guidance?.fields.filter((f) => !(applicant as any)[f]) ?? [];
-
-  // Shared edit/cancel/save buttons for a section header
-  function SectionActions({ section }: { section: Section }) {
-    const isEditing = editingSection === section;
-    if (!canEdit) return null;
-    if (isEditing) {
-      return (
-        <div className="flex gap-2">
-          <Button size="sm" variant="secondary" onClick={cancelEdit} disabled={saveMutation.isPending}>
-            <X size={12} />Cancel
-          </Button>
-          <Button size="sm" onClick={() => saveMutation.mutate()} loading={saveMutation.isPending}>
-            <Save size={12} />Save
-          </Button>
-        </div>
-      );
-    }
-    return (
-      <Button size="sm" variant="secondary" onClick={() => startEdit(section)} disabled={editingSection !== null}>
-        <Pencil size={12} />Edit
-      </Button>
-    );
-  }
 
   return (
     <div className="space-y-4">
@@ -171,7 +214,13 @@ export function DiscomTab({ applicant }: DiscomTabProps) {
                 </div>
               )}
             </div>
-            <Button size="sm" onClick={() => setAdvanceOpen(true)} disabled={advanceMutation.isPending} className="shrink-0">
+            <Button
+              size="sm"
+              onClick={() => setAdvanceOpen(true)}
+              disabled={advanceMutation.isPending || missingFields.length > 0}
+              title={missingFields.length > 0 ? 'Fill in all required fields before advancing' : undefined}
+              className="shrink-0"
+            >
               <ChevronRight size={14} />{guidance.nextLabel}
             </Button>
           </div>
@@ -182,19 +231,21 @@ export function DiscomTab({ applicant }: DiscomTabProps) {
       <div className="bg-surface-container-lowest rounded-xl p-6">
         <div className="flex items-center justify-between mb-5">
           <h4 className="text-xs font-black uppercase tracking-widest text-on-surface-variant/50">DISCOM Portal Application</h4>
-          <SectionActions section="discom" />
+          <SectionActions isEditing={editingSection === 'discom'} canEdit={!!canEdit} saving={saveMutation.isPending} editDisabled={editingSection !== null} onEdit={() => startEdit('discom')} onCancel={cancelEdit} onSave={() => saveMutation.mutate()} />
         </div>
 
         {editingSection === 'discom' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <F label="Portal Application Date"><Input type="date" value={form.portalApplicationDate ?? ''} onChange={(e) => set('portalApplicationDate', e.target.value)} /></F>
-            <F label="JE Name"><Input value={form.jeName ?? ''} onChange={(e) => set('jeName', e.target.value)} placeholder="Junior Engineer name" /></F>
-            <F label="JE Contact"><Input maxLength={10} value={form.jeContact ?? ''} onChange={(e) => set('jeContact', e.target.value)} placeholder="10-digit mobile" /></F>
-            <F label="MRT Date"><Input type="date" value={form.mrtDate ?? ''} onChange={(e) => set('mrtDate', e.target.value)} /></F>
-            <F label="Inspection Date"><Input type="date" value={form.inspectionDate ?? ''} onChange={(e) => set('inspectionDate', e.target.value)} /></F>
+            <F label="Portal Application Date"><DateSelectPicker value={form.portalApplicationDate ?? ''} onChange={(v) => { set('portalApplicationDate', v); touch('portalApplicationDate', v); }} placeholder="Select date" /></F>
+            <F label="JE Name"><Input value={form.jeName ?? ''} onChange={(e) => set('jeName', e.target.value)} onBlur={(e) => touch('jeName', e.target.value)} placeholder="Junior Engineer name" className={fieldClass('jeName')} /></F>
+            <F label="JE Contact" error={errors.jeContact}>
+              <Input maxLength={10} value={form.jeContact ?? ''} onChange={(e) => set('jeContact', e.target.value.replace(/\D/g, ''))} onBlur={(e) => touch('jeContact', e.target.value.replace(/\D/g, ''))} placeholder="10-digit mobile" className={fieldClass('jeContact')} />
+            </F>
+            <F label="MRT Date"><DateSelectPicker value={form.mrtDate ?? ''} onChange={(v) => { set('mrtDate', v); touch('mrtDate', v); }} placeholder="Select date" /></F>
+            <F label="Inspection Date"><DateSelectPicker value={form.inspectionDate ?? ''} onChange={(v) => { set('inspectionDate', v); touch('inspectionDate', v); }} placeholder="Select date" /></F>
             <F label="Inspection Result">
-              <Select value={sv(form.inspectionResult)} onValueChange={(v) => set('inspectionResult', v)}>
-                <SelectTrigger><SelectValue placeholder="Select result" /></SelectTrigger>
+              <Select value={sv(form.inspectionResult)} onValueChange={(v) => { set('inspectionResult', v); touch('inspectionResult', v); }}>
+                <SelectTrigger className={fieldClass('inspectionResult')}><SelectValue placeholder="Select result" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="passed">Passed</SelectItem>
                   <SelectItem value="failed">Failed</SelectItem>
@@ -203,10 +254,10 @@ export function DiscomTab({ applicant }: DiscomTabProps) {
               </Select>
             </F>
             <div className="md:col-span-2">
-              <F label="DISCOM Reference No. (Approval Ref)"><Input value={form.discomRefNo ?? ''} onChange={(e) => set('discomRefNo', e.target.value)} placeholder="e.g. TPCODL/2024/001234" /></F>
+              <F label="DISCOM Reference No. (Approval Ref)"><Input value={form.discomRefNo ?? ''} onChange={(e) => set('discomRefNo', e.target.value)} onBlur={(e) => touch('discomRefNo', e.target.value)} placeholder="e.g. TPCODL/2024/001234" className={fieldClass('discomRefNo')} /></F>
             </div>
             <div className="md:col-span-2">
-              <F label="Net Meter Serial No."><Input value={form.netMeterSerialNo ?? ''} onChange={(e) => set('netMeterSerialNo', e.target.value)} placeholder="e.g. NM-2024-001234" /></F>
+              <F label="Net Meter Serial No."><Input value={form.netMeterSerialNo ?? ''} onChange={(e) => set('netMeterSerialNo', e.target.value)} onBlur={(e) => touch('netMeterSerialNo', e.target.value)} placeholder="e.g. NM-2024-001234" className={fieldClass('netMeterSerialNo')} /></F>
             </div>
           </div>
         ) : (
@@ -241,17 +292,21 @@ export function DiscomTab({ applicant }: DiscomTabProps) {
       <div className="bg-surface-container-lowest rounded-xl p-6">
         <div className="flex items-center justify-between mb-5">
           <h4 className="text-xs font-black uppercase tracking-widest text-on-surface-variant/50">Site Survey Summary</h4>
-          <SectionActions section="survey" />
+          <SectionActions isEditing={editingSection === 'survey'} canEdit={!!canEdit} saving={saveMutation.isPending} editDisabled={editingSection !== null} onEdit={() => startEdit('survey')} onCancel={cancelEdit} onSave={() => saveMutation.mutate()} />
         </div>
 
         {editingSection === 'survey' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <F label="Survey Date"><Input type="date" value={form.surveyDate ?? ''} onChange={(e) => set('surveyDate', e.target.value)} /></F>
-            <F label="Surveyed By"><Input value={form.surveyedBy ?? ''} onChange={(e) => set('surveyedBy', e.target.value)} placeholder="Staff name" /></F>
-            <F label="Roof Area (sqft)"><Input type="number" min={1} value={form.roofAreaSqft ?? ''} onChange={(e) => set('roofAreaSqft', e.target.value ? Number(e.target.value) : '')} placeholder="e.g. 500" /></F>
-            <F label="Recommended Capacity (kW)"><Input type="number" min={1} step={0.1} value={form.recommendedCapacityKw ?? ''} onChange={(e) => set('recommendedCapacityKw', e.target.value ? Number(e.target.value) : '')} placeholder="e.g. 5" /></F>
+            <F label="Survey Date"><DateSelectPicker value={form.surveyDate ?? ''} onChange={(v) => { set('surveyDate', v); touch('surveyDate', v); }} placeholder="Select survey date" /></F>
+            <F label="Surveyed By"><Input value={form.surveyedBy ?? ''} onChange={(e) => set('surveyedBy', e.target.value)} onBlur={(e) => touch('surveyedBy', e.target.value)} placeholder="Staff name" className={fieldClass('surveyedBy')} /></F>
+            <F label="Roof Area (sqft)" error={errors.roofAreaSqft}>
+              <Input type="number" min={1} value={form.roofAreaSqft ?? ''} onChange={(e) => set('roofAreaSqft', e.target.value ? Number(e.target.value) : '')} onBlur={(e) => touch('roofAreaSqft', e.target.value ? Number(e.target.value) : '')} placeholder="e.g. 500" className={fieldClass('roofAreaSqft')} />
+            </F>
+            <F label="Recommended Capacity (kW)" error={errors.recommendedCapacityKw}>
+              <Input type="number" min={1} step={0.1} value={form.recommendedCapacityKw ?? ''} onChange={(e) => set('recommendedCapacityKw', e.target.value ? Number(e.target.value) : '')} onBlur={(e) => touch('recommendedCapacityKw', e.target.value ? Number(e.target.value) : '')} placeholder="e.g. 5" className={fieldClass('recommendedCapacityKw')} />
+            </F>
             <div className="md:col-span-2">
-              <F label="Shadow Analysis Notes"><Input value={form.shadowAnalysis ?? ''} onChange={(e) => set('shadowAnalysis', e.target.value)} placeholder="Describe shading conditions" /></F>
+              <F label="Shadow Analysis Notes"><Input value={form.shadowAnalysis ?? ''} onChange={(e) => set('shadowAnalysis', e.target.value)} onBlur={(e) => touch('shadowAnalysis', e.target.value)} placeholder="Describe shading conditions" className={fieldClass('shadowAnalysis')} /></F>
             </div>
           </div>
         ) : (

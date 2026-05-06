@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Sun, Upload, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { validateFile } from '@/utils/validators';
@@ -68,10 +68,8 @@ export default function CustomerUploadPage() {
 
       <div className="relative w-full max-w-md">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 signature-gradient rounded-2xl mb-3 shadow-lg">
-            <Sun size={28} className="text-white" />
-          </div>
-          <h1 className="text-2xl font-black text-primary tracking-tighter font-headline">Suryam CRM</h1>
+          <img src="/images/solar.png" alt="Usolar CRM" className="w-14 h-14 object-contain mx-auto mb-3" />
+          <h1 className="text-2xl font-black text-primary tracking-tighter font-headline">Usolar CRM</h1>
           <p className="text-sm text-on-surface-variant/60">Secure Document Upload</p>
         </div>
 
@@ -82,7 +80,7 @@ export default function CustomerUploadPage() {
 
           <div className="bg-secondary-container/30 rounded-xl p-4">
             <p className="text-sm text-on-secondary-fixed-variant">
-              This is a secure link shared by Suryam Solar for you to upload your KYC or supporting documents. Your documents are encrypted and stored securely.
+              This is a secure link shared by Usolar for you to upload your KYC or supporting documents. Your documents are encrypted and stored securely.
             </p>
           </div>
 
@@ -90,7 +88,7 @@ export default function CustomerUploadPage() {
           <div className="flex items-start gap-3">
             <Checkbox id="consent" checked={consent} onCheckedChange={(v) => setConsent(!!v)} className="mt-0.5" />
             <label htmlFor="consent" className="text-sm text-on-surface-variant leading-relaxed cursor-pointer">
-              I consent to Suryam Solar storing my uploaded document for the purpose of processing my solar rooftop installation application. I understand this data will be kept securely and used only for this purpose.
+              I consent to Usolar storing my uploaded document for the purpose of processing my solar rooftop installation application. I understand this data will be kept securely and used only for this purpose.
             </label>
           </div>
 

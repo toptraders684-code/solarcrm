@@ -60,6 +60,8 @@ export class ApplicantsService {
       include: {
         assignedStaff: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true } },
+        addressState: { select: { id: true, name: true } },
+        addressDistrict: { select: { id: true, name: true } },
         documents: {
           orderBy: { uploadedAt: 'desc' },
         },
@@ -168,7 +170,6 @@ export class ApplicantsService {
     // Load all active master items for the selected discom + projectType
     const masterItems = await this.prisma.checklistMaster.findMany({
       where: {
-        companyId,
         discom,
         projectType,
         isActive: true,
@@ -233,16 +234,54 @@ export class ApplicantsService {
     if (!applicant) throw new NotFoundException('Applicant not found');
     if (applicant.stage >= 11) throw new BadRequestException('Project is already at the final stage');
 
-    // Check all mandatory checklist items for current stage are complete
-    const mandatoryIncomplete = await this.prisma.applicantChecklist.findFirst({
+    // Required fields per stage that must be filled before advancing
+    const STAGE_REQUIRED: Record<number, { field: string; label: string }[]> = {
+      3: [{ field: 'portalApplicationDate', label: 'Portal Application Date' }],
+      4: [{ field: 'mrtDate', label: 'MRT Date' }],
+      5: [{ field: 'inspectionDate', label: 'Inspection Date' }, { field: 'inspectionResult', label: 'Inspection Result' }],
+      7: [{ field: 'discomRefNo', label: 'DISCOM Reference No.' }],
+      9: [{ field: 'netMeterSerialNo', label: 'Net Meter Serial No.' }],
+    };
+    const requiredFields = STAGE_REQUIRED[applicant.stage] ?? [];
+    const missing = requiredFields.filter((r) => !(applicant as any)[r.field]);
+    if (missing.length > 0) {
+      const labels = missing.map((r) => r.label).join(', ');
+      throw new BadRequestException(`Fill in required fields before advancing: ${labels}`);
+    }
+
+    // Stage 1 (Lead Converted→Survey Done) needs Site Survey checklist (phaseOrder 2).
+    // Stage 2 (Survey Done→Documents Collected) needs Document Collection checklist (phaseOrder 1).
+    // Stages 3–10 align directly with their phaseOrder.
+    const STAGE_TO_PHASE: Record<number, number> = { 1: 2, 2: 1 };
+    const checklistPhase = STAGE_TO_PHASE[applicant.stage] ?? applicant.stage;
+
+    // Check mandatory checklist items for current stage are complete.
+    // Must look up master items first, because untouched items have no applicantChecklist row
+    // (so querying applicantChecklist directly would silently miss them).
+    const mandatoryMasterItems = await this.prisma.checklistMaster.findMany({
       where: {
-        applicantId: id,
-        isCompleted: false,
-        masterItem: { isMandatory: true, phaseOrder: applicant.stage },
+        discom: applicant.discom as any,
+        projectType: applicant.projectType as any,
+        isActive: true,
+        isMandatory: true,
+        phaseOrder: checklistPhase,
       },
     });
-    if (mandatoryIncomplete) {
-      throw new BadRequestException('All mandatory checklist items must be completed before advancing the stage');
+    if (mandatoryMasterItems.length > 0) {
+      const completedRecords = await this.prisma.applicantChecklist.findMany({
+        where: {
+          applicantId: id,
+          masterItemId: { in: mandatoryMasterItems.map((i) => i.id) },
+          isCompleted: true,
+        },
+        select: { masterItemId: true },
+      });
+      const completedIds = new Set(completedRecords.map((r) => r.masterItemId));
+      const uncompleted = mandatoryMasterItems.filter((i) => !completedIds.has(i.id));
+      if (uncompleted.length > 0) {
+        const names = uncompleted.map((i) => i.itemText).join(', ');
+        throw new BadRequestException(`Complete all mandatory checklist items before advancing: ${names}`);
+      }
     }
 
     const newStage = applicant.stage + 1;
@@ -286,7 +325,10 @@ export class ApplicantsService {
     const transactions = await this.prisma.transaction.findMany({
       where: { applicantId },
       orderBy: { transactionDate: 'desc' },
-      include: { createdBy: { select: { id: true, name: true } } },
+      include: {
+        createdBy: { select: { id: true, name: true } },
+        vendor: { select: { id: true, businessName: true } },
+      },
     });
 
     const approved = transactions.filter((t) => t.status === 'approved');
@@ -299,6 +341,9 @@ export class ApplicantsService {
     const totalVendorPayments = approved
       .filter((t) => t.type === 'vendor_payment')
       .reduce((sum, t) => sum + Number(t.amount), 0);
+    const totalExpenses = approved
+      .filter((t) => t.type === 'expense')
+      .reduce((sum, t) => sum + Number(t.amount), 0);
     const totalContract = Number(applicant.contractAmount ?? 0);
 
     return {
@@ -309,6 +354,7 @@ export class ApplicantsService {
         balanceDue: totalContract - totalReceived,
         totalSubsidy,
         totalVendorPayments,
+        totalExpenses,
       },
     };
   }

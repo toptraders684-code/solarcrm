@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Phone, Calendar, Pencil, Upload } from 'lucide-react';
@@ -224,7 +224,7 @@ export default function LeadsListPage() {
               <span className="ml-2 font-mono text-xs text-primary">{reassignTarget?.leadCode}</span>
             </p>
             <div>
-              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Assign To *</label>
+              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Assign To <span className="text-error">*</span></label>
               <Select value={reassignStaffId} onValueChange={setReassignStaffId}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Select staff member" /></SelectTrigger>
                 <SelectContent>

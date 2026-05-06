@@ -4,6 +4,7 @@ import { FileDown, BarChart2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageWrapper } from '@/components/shared/PageWrapper';
 import { Button } from '@/components/ui/button';
+import { DateSelectPicker } from '@/components/ui/date-select-picker';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -87,11 +88,11 @@ export default function ReportsPage() {
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Date From</label>
-                    <Input className="mt-1" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                    <DateSelectPicker className="mt-1" value={dateFrom} onChange={setDateFrom} placeholder="Select date" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Date To</label>
-                    <Input className="mt-1" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                    <DateSelectPicker className="mt-1" value={dateTo} onChange={setDateTo} placeholder="Select date" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">DISCOM (Optional)</label>

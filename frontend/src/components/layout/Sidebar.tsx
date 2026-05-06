@@ -7,8 +7,8 @@ import {
   Truck,
   BarChart2,
   Settings,
-  Sun,
   HelpCircle,
+  KeyRound,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
@@ -21,7 +21,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/leads', label: 'Leads', icon: FileText, roles: ['admin', 'operations_staff', 'field_technician'] },
   { to: '/applicants', label: 'Projects', icon: Users },
   { to: '/finance', label: 'Finance', icon: CreditCard, roles: ['admin', 'finance_manager', 'operations_staff'] },
@@ -66,11 +66,9 @@ export function Sidebar({ desktopCollapsed, mobileOpen, onDesktopToggle, onExpan
         )}
       >
         <div className={cn('flex items-center gap-2.5', desktopCollapsed && 'lg:mb-0')}>
-          <div className="w-8 h-8 signature-gradient rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
-            <Sun size={18} className="text-white" />
-          </div>
+          <img src="/images/solar.png" alt="Usolar" className="w-8 h-8 object-contain rounded-lg flex-shrink-0" />
           <div className={desktopCollapsed ? 'lg:hidden' : ''}>
-            <p className="text-xl font-black text-primary tracking-tighter leading-none">Suryam</p>
+            <p className="text-xl font-black text-primary tracking-tighter leading-none">Usolar</p>
             <p className="text-[10px] uppercase tracking-widest text-on-surface-variant/60 mt-0.5">Solar CRM</p>
           </div>
         </div>
@@ -79,11 +77,9 @@ export function Sidebar({ desktopCollapsed, mobileOpen, onDesktopToggle, onExpan
       {/* Logo — mobile (non-clickable) */}
       <div className={cn('mb-10 flex items-center px-8 lg:hidden')}>
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 signature-gradient rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
-            <Sun size={18} className="text-white" />
-          </div>
+          <img src="/images/solar.png" alt="Usolar" className="w-8 h-8 object-contain rounded-lg flex-shrink-0" />
           <div>
-            <p className="text-xl font-black text-primary tracking-tighter leading-none">Suryam</p>
+            <p className="text-xl font-black text-primary tracking-tighter leading-none">Usolar</p>
             <p className="text-[10px] uppercase tracking-widest text-on-surface-variant/60 mt-0.5">Solar CRM</p>
           </div>
         </div>
@@ -95,7 +91,7 @@ export function Sidebar({ desktopCollapsed, mobileOpen, onDesktopToggle, onExpan
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.to === '/'}
+            end={item.to === '/dashboard'}
             title={desktopCollapsed ? item.label : undefined}
             onClick={() => {
               // On mobile: close drawer after navigation
@@ -130,6 +126,22 @@ export function Sidebar({ desktopCollapsed, mobileOpen, onDesktopToggle, onExpan
 
       {/* Footer */}
       <div className={cn('mt-auto border-t border-black/5 flex flex-col gap-1 pt-4', desktopCollapsed ? 'lg:items-center lg:px-0 px-8' : 'px-8')}>
+        <NavLink
+          to="/change-password"
+          title={desktopCollapsed ? 'Change Password' : undefined}
+          onClick={() => { if (mobileOpen) onMobileClose(); }}
+          className={({ isActive }) =>
+            cn(
+              'flex items-center gap-3 transition-all py-2.5 text-sm',
+              desktopCollapsed && 'lg:justify-center lg:mx-2 lg:w-10 lg:rounded-xl',
+              isActive ? 'text-primary' : 'text-on-surface-variant/60 hover:text-primary'
+            )
+          }
+        >
+          <KeyRound size={18} />
+          <span className={desktopCollapsed ? 'lg:hidden' : ''}>Change Password</span>
+        </NavLink>
+
         <NavLink
           to="/support"
           title={desktopCollapsed ? 'Support' : undefined}

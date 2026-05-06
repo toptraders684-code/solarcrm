@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AuthUser } from '@/types';
+import { queryClient } from '@/main';
 
 interface AuthState {
   user: AuthUser | null;
@@ -28,6 +29,7 @@ export const useAuthStore = create<AuthState>()(
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         set({ user: null, accessToken: null });
+        queryClient.clear();
       },
 
       isAdmin: () => get().user?.role === 'admin',

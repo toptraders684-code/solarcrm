@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Sun, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,7 +45,7 @@ export default function LoginPage() {
       const res = await authService.login(values.email, values.password);
       setAuth(res.user, res.accessToken, res.refreshToken);
       toast.success(`Welcome back, ${res.user.name}!`);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Login failed';
       toast.error(Array.isArray(msg) ? msg[0] : msg);
@@ -69,7 +69,7 @@ export default function LoginPage() {
       const res = await authService.verifyOtp(otpMobile, values.otp);
       setAuth(res.user, res.accessToken, res.refreshToken);
       toast.success(`Welcome back, ${res.user.name}!`);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Invalid OTP';
       toast.error(Array.isArray(msg) ? msg[0] : msg);
@@ -87,10 +87,8 @@ export default function LoginPage() {
       <div className="relative w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 signature-gradient rounded-2xl mb-4 shadow-lg">
-            <Sun size={32} className="text-white" />
-          </div>
-          <h1 className="text-3xl font-black text-primary tracking-tighter font-headline">Suryam CRM</h1>
+          <img src="/images/solar.png" alt="Usolar CRM" className="w-16 h-16 object-contain mx-auto mb-4" />
+          <h1 className="text-3xl font-black text-primary tracking-tighter font-headline">Usolar CRM</h1>
           <p className="mt-1 text-sm text-on-surface-variant/60">Solar Rooftop Installation Management</p>
         </div>
 
@@ -169,9 +167,15 @@ export default function LoginPage() {
           </Tabs>
         </div>
 
-        <p className="text-center text-xs text-on-surface-variant/40 mt-6">
-          Suryam CRM &copy; {new Date().getFullYear()} &mdash; Solar EPC Management
-        </p>
+        <div className="flex items-center justify-center mt-6 gap-4">
+          <Link to="/" className="flex items-center gap-1.5 text-xs text-on-surface-variant/50 hover:text-primary transition-colors">
+            <ArrowLeft size={12} /> Back to Home
+          </Link>
+          <span className="text-on-surface-variant/20">·</span>
+          <p className="text-xs text-on-surface-variant/40">
+            Usolar CRM &copy; {new Date().getFullYear()}
+          </p>
+        </div>
       </div>
     </div>
   );

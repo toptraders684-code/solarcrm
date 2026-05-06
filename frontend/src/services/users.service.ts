@@ -35,6 +35,16 @@ export const usersService = {
     return data;
   },
 
+  deleteUser: async (id: string): Promise<{ message: string }> => {
+    const { data } = await api.delete(`/users/${id}`);
+    return data;
+  },
+
+  changePassword: async (currentPassword: string, newPassword: string): Promise<{ message: string }> => {
+    const { data } = await api.patch('/users/me/password', { currentPassword, newPassword });
+    return data;
+  },
+
   getStaff: async (): Promise<{ data: User[] }> => {
     const { data } = await api.get('/users/staff');
     return data;

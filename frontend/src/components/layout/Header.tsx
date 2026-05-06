@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Search, LogOut, CheckCircle2, AlertTriangle, Info, Wallet, Menu } from 'lucide-react';
+import { Bell, LogOut, CheckCircle2, AlertTriangle, Info, Wallet, Menu, Sun, Moon } from 'lucide-react';
+import { useTheme } from '@/hooks/useTheme';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth.service';
@@ -33,6 +34,7 @@ export function Header({ onMobileToggle }: HeaderProps) {
   const navigate = useNavigate();
   const notif = useDropdown();
   const menu = useDropdown();
+  const { theme, toggle: toggleTheme } = useTheme();
   const [notifications, setNotifications] = useState(SAMPLE_NOTIFICATIONS);
 
   const unreadCount = notifications.filter((n) => n.unread).length;
@@ -48,7 +50,7 @@ export function Header({ onMobileToggle }: HeaderProps) {
     try { await authService.logout(); } catch { /* ignore */ }
     clearAuth();
     toast.success('Logged out');
-    navigate('/login');
+    navigate('/');
   };
 
   return (
@@ -61,20 +63,17 @@ export function Header({ onMobileToggle }: HeaderProps) {
         <Menu size={20} />
       </button>
 
-      {/* Search */}
-      <div className="flex items-center flex-1 max-w-md">
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50" size={18} />
-          <input
-            className="w-full pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-xl text-sm focus:ring-2 focus:ring-primary-container/20 outline-none placeholder:text-on-surface-variant/40"
-            placeholder="Search projects, leads, documents..."
-            type="text"
-          />
-        </div>
-      </div>
-
       {/* Right */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 ml-auto">
+
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          className="w-9 h-9 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container-low hover:text-primary transition-colors"
+        >
+          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
 
         {/* Notifications */}
         <div ref={notif.ref} className="relative">

@@ -1,29 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Circle, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { applicantsService } from '@/services/applicants.service';
 import { formatDate } from '@/utils/formatters';
 import type { ApplicantChecklist, Applicant } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 
-const DISCOMS = ['tpcodl', 'tpnodl', 'tpsodl', 'tpwodl'];
-const PROJECT_TYPES = ['residential', 'commercial'];
+interface ChecklistTabProps { applicantId: string; applicant: Applicant; focusStage?: number; }
 
-interface ChecklistTabProps { applicantId: string; applicant: Applicant; }
-
-export function ChecklistTab({ applicantId, applicant }: ChecklistTabProps) {
+export function ChecklistTab({ applicantId, applicant, focusStage }: ChecklistTabProps) {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
 
-  const [selectedDiscom, setSelectedDiscom] = useState<string>(applicant.discom ?? 'tpcodl');
-  const [selectedProjectType, setSelectedProjectType] = useState<string>(applicant.projectType ?? 'residential');
+  const discom = applicant.discom ?? '';
+  const projectType = applicant.projectType ?? '';
 
   const { data, isLoading } = useQuery({
-    queryKey: ['applicant-checklist', applicantId, selectedDiscom, selectedProjectType],
-    queryFn: () => applicantsService.getChecklist(applicantId, selectedDiscom, selectedProjectType),
+    queryKey: ['applicant-checklist', applicantId, discom, projectType],
+    queryFn: () => applicantsService.getChecklist(applicantId, discom, projectType),
   });
 
   const items = data?.data ?? [];
@@ -44,39 +40,51 @@ export function ChecklistTab({ applicantId, applicant }: ChecklistTabProps) {
     return acc;
   }, {});
 
+  // phaseOrder 2 (Site Survey) comes before phaseOrder 1 (Document Collection) per workflow
+  const PHASE_DISPLAY_ORDER: Record<number, number> = { 1: 2, 2: 1 };
+  const phaseDisplayOrder = (phaseItems: ApplicantChecklist[]) => {
+    const po = phaseItems[0]?.masterItem?.phaseOrder ?? 99;
+    return PHASE_DISPLAY_ORDER[po] ?? po;
+  };
+
   const completedCount = items.filter((i) => i.isCompleted).length;
   const totalCount = items.length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
-  // All phases collapsed by default; toggle to expand
+  // Expand the phase for focusStage when data loads (or focusStage changes)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const togglePhase = (phase: string) =>
     setExpanded((prev) => ({ ...prev, [phase]: !prev[phase] }));
 
+  const stageToFocus = focusStage ?? applicant.stage;
+  const prevFocusRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (items.length === 0) return;
+    if (prevFocusRef.current === stageToFocus) return;
+    prevFocusRef.current = stageToFocus;
+    const phasesToOpen: Record<string, boolean> = {};
+    items.forEach((item) => {
+      if (item.masterItem?.phaseOrder === stageToFocus) {
+        phasesToOpen[item.masterItem.phaseName ?? 'General'] = true;
+      }
+    });
+    if (Object.keys(phasesToOpen).length > 0) {
+      setExpanded((prev) => ({ ...prev, ...phasesToOpen }));
+    }
+  }, [items, stageToFocus]);
+
   return (
     <div className="space-y-4">
-      {/* DISCOM + Project Type selector */}
-      <div className="bg-surface-container-lowest rounded-xl p-4 flex flex-wrap gap-4 items-center">
+      {/* Fixed DISCOM + Project Type — set from lead, not editable here */}
+      <div className="bg-surface-container-lowest rounded-xl px-4 py-3 flex flex-wrap gap-4 items-center">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest whitespace-nowrap">DISCOM</span>
-          <Select value={selectedDiscom} onValueChange={setSelectedDiscom}>
-            <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {DISCOMS.map((d) => <SelectItem key={d} value={d} className="text-xs">{d.toUpperCase()}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <span className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest">DISCOM</span>
+          <span className="text-xs font-semibold text-on-surface">{discom ? discom.toUpperCase() : '—'}</span>
         </div>
+        <div className="h-4 w-px bg-outline-variant/20" />
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest whitespace-nowrap">Project Type</span>
-          <Select value={selectedProjectType} onValueChange={setSelectedProjectType}>
-            <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {PROJECT_TYPES.map((t) => <SelectItem key={t} value={t} className="text-xs capitalize">{t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="ml-auto text-xs text-on-surface-variant/60">
-          Checklist for <strong className="text-on-surface">{selectedDiscom.toUpperCase()}</strong> / <strong className="text-on-surface capitalize">{selectedProjectType}</strong>
+          <span className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest">Project Type</span>
+          <span className="text-xs font-semibold text-on-surface capitalize">{projectType || '—'}</span>
         </div>
       </div>
 
@@ -97,7 +105,7 @@ export function ChecklistTab({ applicantId, applicant }: ChecklistTabProps) {
             </div>
           </div>
 
-          {Object.entries(grouped).map(([phase, phaseItems]) => {
+          {Object.entries(grouped).sort(([, a], [, b]) => phaseDisplayOrder(a) - phaseDisplayOrder(b)).map(([phase, phaseItems]) => {
             const sorted = [...phaseItems].sort(
               (a, b) => (a.masterItem?.itemOrder ?? 0) - (b.masterItem?.itemOrder ?? 0)
             );
@@ -189,7 +197,7 @@ export function ChecklistTab({ applicantId, applicant }: ChecklistTabProps) {
 
           {items.length === 0 && (
             <p className="text-sm text-on-surface-variant/50 text-center py-8">
-              No checklist items found for {selectedDiscom.toUpperCase()} / {selectedProjectType}.
+              No checklist items found for {discom.toUpperCase()} / {projectType}.
             </p>
           )}
         </div>

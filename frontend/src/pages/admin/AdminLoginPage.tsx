@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Sun, Lock, Eye, EyeOff } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,7 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   if (user?.role === 'super_admin') {
-    navigate('/admin/documents', { replace: true });
+    navigate('/admin/companies', { replace: true });
     return null;
   }
 
@@ -32,7 +32,7 @@ export default function AdminLoginPage() {
       }
       setAuth(res.user, res.accessToken, res.refreshToken);
       toast.success('Welcome, Super Admin');
-      navigate('/admin/documents');
+      navigate('/admin/companies');
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Login failed';
       toast.error(Array.isArray(msg) ? msg[0] : msg);
@@ -46,10 +46,8 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 signature-gradient rounded-2xl flex items-center justify-center shadow-lg mb-4">
-            <Sun size={28} className="text-white" />
-          </div>
-          <h1 className="text-2xl font-black text-primary tracking-tight">Suryam CRM</h1>
+          <img src="/images/solar.png" alt="Usolar CRM" className="w-14 h-14 object-contain mb-4" />
+          <h1 className="text-2xl font-black text-primary tracking-tight">Usolar CRM</h1>
           <p className="text-xs text-on-surface-variant/60 uppercase tracking-widest mt-1">Super Admin Panel</p>
         </div>
 
@@ -102,6 +100,11 @@ export default function AdminLoginPage() {
         <p className="text-center text-xs text-on-surface-variant/40 mt-6">
           This panel is for system administrators only.
         </p>
+        <div className="flex justify-center mt-4">
+          <Link to="/" className="flex items-center gap-1.5 text-xs text-on-surface-variant/50 hover:text-primary transition-colors">
+            <ArrowLeft size={13} />Back to Home
+          </Link>
+        </div>
       </div>
     </div>
   );

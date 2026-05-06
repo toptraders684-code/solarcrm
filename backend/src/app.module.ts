@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
@@ -15,20 +16,23 @@ import { StorageModule } from './storage/storage.module';
 import { AuditModule } from './audit/audit.module';
 import { MasterModule } from './master/master.module';
 import { DocumentMasterModule } from './document-master/document-master.module';
+import { CompaniesModule } from './companies/companies.module';
+import { MasterDataModule } from './master-data/master-data.module';
+import { ActivityLogModule } from './activity-log/activity-log.module';
+import { ActivityLogInterceptor } from './activity-log/activity-log.interceptor';
 import configuration from './config/configuration';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: process.env.NODE_ENV === 'production' ? '.env' : '.env.example',
       load: [configuration],
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'public'),
       exclude: ['/api/v1/*path'],
-      serveStaticOptions: {
-        fallthrough: true,
-      },
+      serveStaticOptions: { fallthrough: true },
     }),
     PrismaModule,
     AuthModule,
@@ -43,6 +47,15 @@ import configuration from './config/configuration';
     AuditModule,
     MasterModule,
     DocumentMasterModule,
+    CompaniesModule,
+    MasterDataModule,
+    ActivityLogModule,
+  ],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ActivityLogInterceptor,
+    },
   ],
 })
 export class AppModule {}

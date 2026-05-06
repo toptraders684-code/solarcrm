@@ -7,7 +7,7 @@ datasource db {
 }
 
 // ─────────────────────────────────────────────
-// ENUMS
+// ENUMS (only fixed system enums remain)
 // ─────────────────────────────────────────────
 
 enum UserRole {
@@ -23,27 +23,6 @@ enum UserStatus {
   pending_approval
   active
   inactive
-}
-
-enum Discom {
-  tpcodl
-  tpnodl
-  tpsodl
-  tpwodl
-}
-
-enum ProjectType {
-  residential
-  commercial
-}
-
-enum LeadSource {
-  walk_in
-  referral
-  online
-  camp
-  channel_partner
-  other
 }
 
 enum FinancePreference {
@@ -88,33 +67,13 @@ enum TransactionType {
   customer_receipt
   vendor_payment
   subsidy
-}
-
-enum PaymentMethod {
-  cash
-  cheque
-  bank_transfer
-  upi
-  other
+  expense
 }
 
 enum TransactionStatus {
   pending_approval
   approved
   rejected
-}
-
-enum VendorType {
-  material_supplier
-  labour_installer
-  transport_logistics
-  channel_partner
-  district_partner
-  block_partner
-  installation_partner
-  transport_partner
-  insurance_partner
-  netmeter_partner
 }
 
 enum DocType {
@@ -151,7 +110,77 @@ enum ProjectActivityType {
 }
 
 // ─────────────────────────────────────────────
-// MASTER TABLES
+// MASTER LOOKUP TABLES (superadmin-managed)
+// ─────────────────────────────────────────────
+
+model MasterDiscom {
+  id        String   @id @default(uuid())
+  name      String   @unique @db.VarChar(100)
+  code      String   @unique @db.VarChar(50)
+  isActive  Boolean  @default(true) @map("is_active")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("master_discoms")
+}
+
+model MasterLeadSource {
+  id        String   @id @default(uuid())
+  name      String   @unique @db.VarChar(100)
+  code      String   @unique @db.VarChar(50)
+  isActive  Boolean  @default(true) @map("is_active")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("master_lead_sources")
+}
+
+model MasterVendorType {
+  id        String   @id @default(uuid())
+  name      String   @unique @db.VarChar(100)
+  code      String   @unique @db.VarChar(50)
+  isActive  Boolean  @default(true) @map("is_active")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("master_vendor_types")
+}
+
+model MasterPaymentMethod {
+  id        String   @id @default(uuid())
+  name      String   @unique @db.VarChar(100)
+  code      String   @unique @db.VarChar(50)
+  isActive  Boolean  @default(true) @map("is_active")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("master_payment_methods")
+}
+
+model MasterProjectType {
+  id        String   @id @default(uuid())
+  name      String   @unique @db.VarChar(100)
+  code      String   @unique @db.VarChar(50)
+  isActive  Boolean  @default(true) @map("is_active")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("master_project_types")
+}
+
+model MasterStage {
+  id          String   @id @default(uuid())
+  stageNumber Int      @unique @map("stage_number")
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("master_stages")
+}
+
+// ─────────────────────────────────────────────
+// GEO MASTER TABLES
 // ─────────────────────────────────────────────
 
 model MasterState {
@@ -195,6 +224,7 @@ model Company {
   addressCity    String?  @map("address_city") @db.VarChar(200)
   addressPincode String?  @map("address_pincode") @db.VarChar(6)
   logoKey        String?  @map("logo_key") @db.VarChar(500)
+  status         String   @default("active") @db.VarChar(20)
   settingsJson   Json?    @default("{}") @map("settings_json")
   createdAt      DateTime @default(now()) @map("created_at")
 
@@ -239,6 +269,7 @@ model User {
   createdTransactions  Transaction[]        @relation("CreatedTransactions")
   refreshTokens        RefreshToken[]
   auditLogs            AuditLog[]
+  activityLogs         UserActivityLog[]
 
   @@unique([companyId, mobile])
   @@map("users")
@@ -265,10 +296,10 @@ model Lead {
   addressStateId       String?            @map("address_state_id")
   addressState         MasterState?       @relation(fields: [addressStateId], references: [id])
   addressPincode       String?            @map("address_pincode") @db.VarChar(6)
-  discom               Discom
-  projectType          ProjectType        @map("project_type")
+  discom               String             @db.VarChar(50)
+  projectType          String             @map("project_type") @db.VarChar(50)
   estimatedCapacityKw  Decimal?           @map("estimated_capacity_kw") @db.Decimal(6, 2)
-  leadSource           LeadSource         @map("lead_source")
+  leadSource           String             @map("lead_source") @db.VarChar(50)
   financePreference    FinancePreference? @map("finance_preference")
   assignedStaffId      String             @map("assigned_staff_id")
   assignedStaff        User               @relation("AssignedLeads", fields: [assignedStaffId], references: [id])
@@ -324,89 +355,80 @@ model ProjectActivity {
 // ─────────────────────────────────────────────
 
 model Applicant {
-  id                    String             @id @default(uuid())
-  companyId             String             @map("company_id")
-  company               Company            @relation(fields: [companyId], references: [id])
-  applicantCode         String             @map("applicant_code") @db.VarChar(20)
-  discomRefNo           String?            @map("discom_ref_no") @db.VarChar(100)
-  leadId                String             @map("lead_id")
-  assignedStaffId       String             @map("assigned_staff_id")
-  assignedStaff         User               @relation("AssignedApplicants", fields: [assignedStaffId], references: [id])
-  customerName          String             @map("customer_name") @db.VarChar(200)
+  id                    String          @id @default(uuid())
+  companyId             String          @map("company_id")
+  company               Company         @relation(fields: [companyId], references: [id])
+  applicantCode         String          @map("applicant_code") @db.VarChar(20)
+  discomRefNo           String?         @map("discom_ref_no") @db.VarChar(100)
+  leadId                String          @map("lead_id")
+  assignedStaffId       String          @map("assigned_staff_id")
+  assignedStaff         User            @relation("AssignedApplicants", fields: [assignedStaffId], references: [id])
+  customerName          String          @map("customer_name") @db.VarChar(200)
 
-  // PII tokens
-  mobileToken           String?            @map("mobile_token") @db.VarChar(200)
-  aadhaarToken          String?            @map("aadhaar_token") @db.VarChar(200)
-  panToken              String?            @map("pan_token") @db.VarChar(200)
-  bankAccountToken      String?            @map("bank_account_token") @db.VarChar(200)
+  mobileToken           String?         @map("mobile_token") @db.VarChar(200)
+  aadhaarToken          String?         @map("aadhaar_token") @db.VarChar(200)
+  panToken              String?         @map("pan_token") @db.VarChar(200)
+  bankAccountToken      String?         @map("bank_account_token") @db.VarChar(200)
 
-  // Address
-  addressHouse          String?            @map("address_house") @db.VarChar(200)
-  addressStreet         String?            @map("address_street") @db.VarChar(200)
-  addressVillage        String?            @map("address_village") @db.VarChar(200)
-  addressDistrictId     String?            @map("address_district_id")
-  addressDistrict       MasterDistrict?    @relation(fields: [addressDistrictId], references: [id])
-  addressStateId        String?            @map("address_state_id")
-  addressState          MasterState?       @relation(fields: [addressStateId], references: [id])
-  addressPincode        String?            @map("address_pincode") @db.VarChar(6)
-  gpsLatitude           Decimal?           @map("gps_latitude") @db.Decimal(10, 7)
-  gpsLongitude          Decimal?           @map("gps_longitude") @db.Decimal(10, 7)
+  addressHouse          String?         @map("address_house") @db.VarChar(200)
+  addressStreet         String?         @map("address_street") @db.VarChar(200)
+  addressVillage        String?         @map("address_village") @db.VarChar(200)
+  addressDistrictId     String?         @map("address_district_id")
+  addressDistrict       MasterDistrict? @relation(fields: [addressDistrictId], references: [id])
+  addressStateId        String?         @map("address_state_id")
+  addressState          MasterState?    @relation(fields: [addressStateId], references: [id])
+  addressPincode        String?         @map("address_pincode") @db.VarChar(6)
+  gpsLatitude           Decimal?        @map("gps_latitude") @db.Decimal(10, 7)
+  gpsLongitude          Decimal?        @map("gps_longitude") @db.Decimal(10, 7)
 
-  // Personal
-  dateOfBirth           DateTime?          @map("date_of_birth") @db.Date
-  gender                String?            @db.VarChar(10)
-  alternateMobile       String?            @map("alternate_mobile") @db.VarChar(10)
-  email                 String?            @db.VarChar(200)
-  whatsappNumber        String?            @map("whatsapp_number") @db.VarChar(10)
+  dateOfBirth           DateTime?       @map("date_of_birth") @db.Date
+  gender                String?         @db.VarChar(10)
+  alternateMobile       String?         @map("alternate_mobile") @db.VarChar(10)
+  email                 String?         @db.VarChar(200)
+  whatsappNumber        String?         @map("whatsapp_number") @db.VarChar(10)
 
-  // Installation
-  discom                Discom
-  projectType           ProjectType        @map("project_type")
-  systemCapacityKw      Decimal?           @map("system_capacity_kw") @db.Decimal(6, 2)
-  roofType              String?            @map("roof_type") @db.VarChar(50)
-  sanctionedLoadKw      Decimal?           @map("sanctioned_load_kw") @db.Decimal(6, 2)
-  existingConsumerNo    String?            @map("existing_consumer_no") @db.VarChar(50)
+  discom                String          @db.VarChar(50)
+  projectType           String          @map("project_type") @db.VarChar(50)
+  systemCapacityKw      Decimal?        @map("system_capacity_kw") @db.Decimal(6, 2)
+  roofType              String?         @map("roof_type") @db.VarChar(50)
+  sanctionedLoadKw      Decimal?        @map("sanctioned_load_kw") @db.Decimal(6, 2)
+  existingConsumerNo    String?         @map("existing_consumer_no") @db.VarChar(50)
 
-  // Finance
-  contractAmount        Decimal?           @map("contract_amount") @db.Decimal(12, 2)
+  contractAmount        Decimal?        @map("contract_amount") @db.Decimal(12, 2)
   financeMode           FinancePreference? @map("finance_mode")
-  bankName              String?            @map("bank_name") @db.VarChar(200)
-  loanAmount            Decimal?           @map("loan_amount") @db.Decimal(12, 2)
-  loanSanctionedDate    DateTime?          @map("loan_sanctioned_date") @db.Date
-  overpaymentRule       OverpaymentRule    @default(warn) @map("overpayment_rule")
+  bankName              String?         @map("bank_name") @db.VarChar(200)
+  loanAmount            Decimal?        @map("loan_amount") @db.Decimal(12, 2)
+  loanSanctionedDate    DateTime?       @map("loan_sanctioned_date") @db.Date
+  overpaymentRule       OverpaymentRule @default(warn) @map("overpayment_rule")
 
-  // Survey
-  surveyDate            DateTime?          @map("survey_date") @db.Date
-  surveyedBy            String?            @map("surveyed_by") @db.VarChar(200)
-  roofAreaSqft          Decimal?           @map("roof_area_sqft") @db.Decimal(8, 2)
-  shadowAnalysis        String?            @map("shadow_analysis") @db.Text
-  recommendedCapacityKw Decimal?           @map("recommended_capacity_kw") @db.Decimal(6, 2)
+  surveyDate            DateTime?       @map("survey_date") @db.Date
+  surveyedBy            String?         @map("surveyed_by") @db.VarChar(200)
+  roofAreaSqft          Decimal?        @map("roof_area_sqft") @db.Decimal(8, 2)
+  shadowAnalysis        String?         @map("shadow_analysis") @db.Text
+  recommendedCapacityKw Decimal?        @map("recommended_capacity_kw") @db.Decimal(6, 2)
 
-  // DISCOM Application
-  portalApplicationDate DateTime?          @map("portal_application_date") @db.Date
-  jeName                String?            @map("je_name") @db.VarChar(200)
-  jeContact             String?            @map("je_contact") @db.VarChar(10)
-  mrtDate               DateTime?          @map("mrt_date") @db.Date
-  inspectionDate        DateTime?          @map("inspection_date") @db.Date
-  inspectionResult      String?            @map("inspection_result") @db.VarChar(50)
-  netMeterSerialNo      String?            @map("net_meter_serial_no") @db.VarChar(100)
+  portalApplicationDate DateTime?       @map("portal_application_date") @db.Date
+  jeName                String?         @map("je_name") @db.VarChar(200)
+  jeContact             String?         @map("je_contact") @db.VarChar(10)
+  mrtDate               DateTime?       @map("mrt_date") @db.Date
+  inspectionDate        DateTime?       @map("inspection_date") @db.Date
+  inspectionResult      String?         @map("inspection_result") @db.VarChar(50)
+  netMeterSerialNo      String?         @map("net_meter_serial_no") @db.VarChar(100)
 
-  // Subsidy
-  expectedSubsidyAmount Decimal?           @map("expected_subsidy_amount") @db.Decimal(12, 2)
-  actualSubsidyReceived Decimal?           @map("actual_subsidy_received") @db.Decimal(12, 2)
-  subsidyReceivedDate   DateTime?          @map("subsidy_received_date") @db.Date
-  discomBankReference   String?            @map("discom_bank_reference") @db.VarChar(100)
+  expectedSubsidyAmount Decimal?        @map("expected_subsidy_amount") @db.Decimal(12, 2)
+  actualSubsidyReceived Decimal?        @map("actual_subsidy_received") @db.Decimal(12, 2)
+  subsidyReceivedDate   DateTime?       @map("subsidy_received_date") @db.Date
+  discomBankReference   String?         @map("discom_bank_reference") @db.VarChar(100)
 
-  // Stage
-  stage                 Int                @default(1)
-  stageUpdatedAt        DateTime?          @map("stage_updated_at")
-  consentGiven          Boolean            @default(false) @map("consent_given")
-  consentTimestamp      DateTime?          @map("consent_timestamp")
+  stage                 Int             @default(1)
+  stageUpdatedAt        DateTime?       @map("stage_updated_at")
+  consentGiven          Boolean         @default(false) @map("consent_given")
+  consentTimestamp      DateTime?       @map("consent_timestamp")
 
-  deletedAt             DateTime?          @map("deleted_at")
-  createdAt             DateTime           @default(now()) @map("created_at")
-  createdById           String             @map("created_by")
-  createdBy             User               @relation("CreatedApplicants", fields: [createdById], references: [id])
+  deletedAt             DateTime?       @map("deleted_at")
+  createdAt             DateTime        @default(now()) @map("created_at")
+  createdById           String          @map("created_by")
+  createdBy             User            @relation("CreatedApplicants", fields: [createdById], references: [id])
 
   leadsConvertedFrom  Lead[]               @relation("ConvertedFromLead")
   checklists          ApplicantChecklist[]
@@ -442,21 +464,20 @@ model PiiVault {
 }
 
 // ─────────────────────────────────────────────
-// CHECKLIST
+// CHECKLIST (global — no company scope)
 // ─────────────────────────────────────────────
 
 model ChecklistMaster {
-  id          String      @id @default(uuid())
-  companyId   String      @map("company_id")
-  discom      Discom
-  projectType ProjectType @map("project_type")
-  phaseName   String      @map("phase_name") @db.VarChar(100)
-  phaseOrder  Int         @map("phase_order")
-  itemText    String      @map("item_text") @db.Text
-  itemOrder   Int         @map("item_order")
-  isMandatory Boolean     @default(false) @map("is_mandatory")
-  isActive    Boolean     @default(true) @map("is_active")
-  createdAt   DateTime    @default(now()) @map("created_at")
+  id          String   @id @default(uuid())
+  discom      String   @db.VarChar(50)
+  projectType String   @map("project_type") @db.VarChar(50)
+  phaseName   String   @map("phase_name") @db.VarChar(100)
+  phaseOrder  Int      @map("phase_order")
+  itemText    String   @map("item_text") @db.Text
+  itemOrder   Int      @map("item_order")
+  isMandatory Boolean  @default(false) @map("is_mandatory")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
 
   applicantChecklists ApplicantChecklist[]
 
@@ -481,12 +502,12 @@ model ApplicantChecklist {
 }
 
 // ─────────────────────────────────────────────
-// DOCUMENT MASTER
+// DOCUMENT MASTER (global — no company scope)
 // ─────────────────────────────────────────────
 
 model DocumentMaster {
   id             String   @id @default(uuid())
-  discom         Discom
+  discom         String   @db.VarChar(50)
   title          String   @db.VarChar(200)
   docType        DocType  @default(upload) @map("doc_type")
   sortOrder      Int      @map("sort_order")
@@ -506,11 +527,11 @@ model DocumentMaster {
 // ─────────────────────────────────────────────
 
 model Document {
-  id            String          @id @default(uuid())
-  applicantId   String          @map("applicant_id")
-  applicant     Applicant       @relation(fields: [applicantId], references: [id])
-  masterItemId  String?         @map("master_item_id")
-  masterItem    DocumentMaster? @relation(fields: [masterItemId], references: [id])
+  id            String           @id @default(uuid())
+  applicantId   String           @map("applicant_id")
+  applicant     Applicant        @relation(fields: [applicantId], references: [id])
+  masterItemId  String?          @map("master_item_id")
+  masterItem    DocumentMaster?  @relation(fields: [masterItemId], references: [id])
   category      DocumentCategory
   docName       String           @map("doc_name") @db.VarChar(200)
   fileKey       String?          @map("file_key") @db.VarChar(500)
@@ -537,7 +558,7 @@ model Transaction {
   applicant       Applicant         @relation(fields: [applicantId], references: [id])
   type            TransactionType
   amount          Decimal           @db.Decimal(12, 2)
-  paymentMethod   PaymentMethod     @map("payment_method")
+  paymentMethod   String            @map("payment_method") @db.VarChar(50)
   transactionDate DateTime          @map("transaction_date") @db.Date
   description     String?           @db.Text
   referenceNumber String?           @map("reference_number") @db.VarChar(100)
@@ -562,28 +583,28 @@ model Transaction {
 // ─────────────────────────────────────────────
 
 model Vendor {
-  id               String       @id @default(uuid())
-  companyId        String       @map("company_id")
-  company          Company      @relation(fields: [companyId], references: [id])
-  businessName     String       @map("business_name") @db.VarChar(200)
-  contactPerson    String?      @map("contact_person") @db.VarChar(200)
-  mobile           String?      @db.VarChar(10)
-  email            String?      @db.VarChar(200)
-  addressHouse     String?      @map("address_house") @db.VarChar(200)
-  addressStreet    String?      @map("address_street") @db.VarChar(200)
-  addressVillage   String?      @map("address_village") @db.VarChar(200)
-  addressDistrict  String?      @map("address_district") @db.VarChar(100)
-  addressState     String?      @map("address_state") @db.VarChar(100)
-  addressPincode   String?      @map("address_pincode") @db.VarChar(6)
-  vendorTypes      VendorType[] @map("vendor_types")
-  gstin            String?      @db.VarChar(15)
-  panToken         String?      @map("pan_token") @db.VarChar(200)
-  bankAccountToken String?      @map("bank_account_token") @db.VarChar(200)
-  ifscCode         String?      @map("ifsc_code") @db.VarChar(11)
-  empanelmentDate  DateTime?    @map("empanelment_date") @db.Date
-  isActive         Boolean      @default(true) @map("is_active")
-  deletedAt        DateTime?    @map("deleted_at")
-  createdAt        DateTime     @default(now()) @map("created_at")
+  id               String    @id @default(uuid())
+  companyId        String    @map("company_id")
+  company          Company   @relation(fields: [companyId], references: [id])
+  businessName     String    @map("business_name") @db.VarChar(200)
+  contactPerson    String?   @map("contact_person") @db.VarChar(200)
+  mobile           String?   @db.VarChar(10)
+  email            String?   @db.VarChar(200)
+  addressHouse     String?   @map("address_house") @db.VarChar(200)
+  addressStreet    String?   @map("address_street") @db.VarChar(200)
+  addressVillage   String?   @map("address_village") @db.VarChar(200)
+  addressDistrict  String?   @map("address_district") @db.VarChar(100)
+  addressState     String?   @map("address_state") @db.VarChar(100)
+  addressPincode   String?   @map("address_pincode") @db.VarChar(6)
+  vendorTypes      String[]  @map("vendor_types")
+  gstin            String?   @db.VarChar(15)
+  panToken         String?   @map("pan_token") @db.VarChar(200)
+  bankAccountToken String?   @map("bank_account_token") @db.VarChar(200)
+  ifscCode         String?   @map("ifsc_code") @db.VarChar(11)
+  empanelmentDate  DateTime? @map("empanelment_date") @db.Date
+  isActive         Boolean   @default(true) @map("is_active")
+  deletedAt        DateTime? @map("deleted_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
 
   applicantVendors ApplicantVendor[]
   transactions     Transaction[]
@@ -653,6 +674,32 @@ model OtpAttempt {
   createdAt DateTime  @default(now()) @map("created_at")
 
   @@map("otp_attempts")
+}
+
+// ─────────────────────────────────────────────
+// USER ACTIVITY LOGS
+// ─────────────────────────────────────────────
+
+model UserActivityLog {
+  id          String   @id @default(uuid())
+  userId      String?  @map("user_id")
+  user        User?    @relation(fields: [userId], references: [id])
+  companyId   String?  @map("company_id")
+  action      String   @db.VarChar(100)
+  module      String?  @db.VarChar(50)
+  entityId    String?  @map("entity_id") @db.VarChar(100)
+  ipAddress   String?  @map("ip_address") @db.VarChar(45)
+  userAgent   String?  @map("user_agent") @db.VarChar(500)
+  method      String?  @db.VarChar(10)
+  path        String?  @db.VarChar(300)
+  statusCode  Int?     @map("status_code")
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId], map: "idx_activity_log_user")
+  @@index([companyId, createdAt(sort: Desc)], map: "idx_activity_log_company_date")
+  @@index([createdAt(sort: Desc)], map: "idx_activity_log_date")
+  @@map("user_activity_logs")
 }
 
 // ─────────────────────────────────────────────

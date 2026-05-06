@@ -9,6 +9,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { DateSelectPicker } from '@/components/ui/date-select-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
@@ -33,9 +34,13 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
 }
 
 function F({ label, children }: { label: string; children: React.ReactNode }) {
+  const req = label.endsWith(' *');
+  const text = req ? label.slice(0, -2) : label;
   return (
     <div>
-      <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">{label}</label>
+      <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">
+        {text}{req && <span className="text-error"> *</span>}
+      </label>
       <div className="mt-1">{children}</div>
     </div>
   );
@@ -403,7 +408,7 @@ export default function LeadDetailPage() {
                   </Select>
                 </F>
                 <F label="Follow Up Date">
-                  <Input type="date" value={form.followUpDate ?? ''} onChange={(e) => set('followUpDate', e.target.value)} />
+                  <DateSelectPicker value={form.followUpDate ?? ''} onChange={(v) => set('followUpDate', v)} placeholder="Select date" />
                 </F>
               </div>
             ) : (
@@ -475,7 +480,7 @@ export default function LeadDetailPage() {
             </div>
             <div>
               <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Next Follow-up Date</label>
-              <Input className="mt-1" type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} />
+              <DateSelectPicker className="mt-1" value={followUpDate} onChange={setFollowUpDate} placeholder="Select follow-up date" />
             </div>
           </div>
           <DialogFooter>

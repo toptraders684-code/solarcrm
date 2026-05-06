@@ -1,5 +1,5 @@
 import { IsString, IsEnum, IsOptional, IsNumber, Min, IsDateString } from 'class-validator';
-import { Discom, ProjectType, LeadSource, FinancePreference, LeadStatus, LeadClosureReason } from '@prisma/client';
+import { FinancePreference, LeadStatus, LeadClosureReason } from '@prisma/client';
 
 export class UpdateLeadDto {
   @IsOptional()
@@ -15,16 +15,16 @@ export class UpdateLeadDto {
   email?: string;
 
   @IsOptional()
-  @IsEnum(Discom)
-  discom?: Discom;
+  @IsString()
+  discom?: string;
 
   @IsOptional()
-  @IsEnum(ProjectType)
-  projectType?: ProjectType;
+  @IsString()
+  projectType?: string;
 
   @IsOptional()
-  @IsEnum(LeadSource)
-  leadSource?: LeadSource;
+  @IsString()
+  leadSource?: string;
 
   @IsOptional()
   @IsNumber()

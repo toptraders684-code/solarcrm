@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ChevronRight, Pencil } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Pencil, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageWrapper } from '@/components/shared/PageWrapper';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,7 @@ export default function ApplicantDetailPage() {
   const { user } = useAuthStore();
   const [advanceOpen, setAdvanceOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('details');
 
   const { data, isLoading } = useQuery({
     queryKey: ['applicant', id],
@@ -36,15 +37,68 @@ export default function ApplicantDetailPage() {
 
   const applicant = data?.data;
 
+  // Required data fields that must be filled before advancing each stage
+  const STAGE_REQUIRED: Record<number, { field: string; label: string }[]> = {
+    3: [{ field: 'portalApplicationDate', label: 'Portal Application Date' }],
+    4: [{ field: 'mrtDate', label: 'MRT Date' }],
+    5: [{ field: 'inspectionDate', label: 'Inspection Date' }, { field: 'inspectionResult', label: 'Inspection Result' }],
+    7: [{ field: 'discomRefNo', label: 'DISCOM Reference No.' }],
+    9: [{ field: 'netMeterSerialNo', label: 'Net Meter Serial No.' }],
+  };
+  const missingFields = applicant
+    ? (STAGE_REQUIRED[applicant.stage] ?? []).filter((r) => !(applicant as any)[r.field])
+    : [];
+
+  // Stage 1→2 needs Site Survey checklist (phaseOrder 2); stage 2→3 needs Document Collection (phaseOrder 1); others align directly
+  const STAGE_TO_PHASE: Record<number, number> = { 1: 2, 2: 1 };
+  const checklistPhase = applicant ? (STAGE_TO_PHASE[applicant.stage] ?? applicant.stage) : 0;
+
+  // Fetch checklist to know mandatory incomplete items for the current stage
+  const { data: checklistData } = useQuery({
+    queryKey: ['applicant-checklist', id, applicant?.discom, applicant?.projectType],
+    queryFn: () => applicantsService.getChecklist(id!, applicant!.discom, applicant!.projectType),
+    enabled: !!applicant,
+  });
+  const mandatoryIncomplete = (checklistData?.data ?? []).filter(
+    (item) => item.masterItem?.isMandatory && item.masterItem?.phaseOrder === checklistPhase && !item.isCompleted
+  );
+
+  // Which tab to focus when an advance error points to specific fields/checklist
+  const DISCOM_FIELD_LABELS = ['Portal Application Date', 'MRT Date', 'Inspection Date', 'Inspection Result', 'DISCOM Reference No.', 'Net Meter Serial No.'];
+
   const advanceMutation = useMutation({
     mutationFn: () => applicantsService.advanceStage(id!),
     onSuccess: () => {
-      toast.success('Stage advanced successfully');
+      toast.success(`Advanced to: ${getStageName((applicant?.stage ?? 0) + 1)}`);
       queryClient.invalidateQueries({ queryKey: ['applicant', id] });
       setAdvanceOpen(false);
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message || 'Cannot advance stage — check mandatory checklist items');
+      const raw = err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message ?? '';
+      const errText: string = Array.isArray(raw) ? raw[0] : raw;
+      const stageName = getStageName(applicant?.stage ?? 0);
+      const nextName  = getStageName((applicant?.stage ?? 0) + 1);
+
+      let userMsg = errText;
+      let targetTab = 'checklist';
+
+      if (errText.includes('Fill in required fields') || DISCOM_FIELD_LABELS.some((f) => errText.includes(f))) {
+        userMsg = `To advance to "${nextName}", fill in: ${errText.replace('Fill in required fields before advancing: ', '')}`;
+        targetTab = 'discom';
+      } else if (errText.includes('checklist')) {
+        userMsg = `Complete all mandatory checklist items for "${stageName}" before advancing to "${nextName}".`;
+        targetTab = 'checklist';
+      } else if (errText.includes('final stage')) {
+        userMsg = 'This project is already at the final stage.';
+      } else if (errText) {
+        userMsg = errText;
+      } else {
+        userMsg = `Cannot advance from "${stageName}" — check required fields and checklist.`;
+      }
+
+      toast.error(userMsg, { duration: 6000 });
+      setAdvanceOpen(false);
+      setActiveTab(targetTab);
     },
   });
 
@@ -106,7 +160,7 @@ export default function ApplicantDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="details">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="discom">DISCOM Application</TabsTrigger>
@@ -133,7 +187,7 @@ export default function ApplicantDetailPage() {
         </TabsContent>
 
         <TabsContent value="checklist" className="mt-4">
-          <ChecklistTab applicantId={id!} applicant={applicant} />
+          <ChecklistTab applicantId={id!} applicant={applicant} focusStage={checklistPhase} />
         </TabsContent>
 
         <TabsContent value="finance" className="mt-4">
@@ -146,9 +200,38 @@ export default function ApplicantDetailPage() {
       <ConfirmDialog
         open={advanceOpen}
         onOpenChange={setAdvanceOpen}
-        title={`Advance to Stage ${(applicant.stage ?? 0) + 1}?`}
-        description={`This will move the project from "${getStageName(applicant.stage)}" to "${getStageName(applicant.stage + 1)}". All mandatory checklist items must be complete.`}
+        title={`Advance to Stage ${(applicant.stage ?? 0) + 1}: ${getStageName(applicant.stage + 1)}?`}
+        description={
+          <div className="space-y-3 text-sm">
+            <p className="text-on-surface-variant">
+              Moving from <strong>{getStageName(applicant.stage)}</strong> → <strong>{getStageName(applicant.stage + 1)}</strong>
+            </p>
+            {(missingFields.length > 0 || mandatoryIncomplete.length > 0) ? (
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-black uppercase tracking-widest text-error/80">Blocking items</p>
+                {missingFields.map((f) => (
+                  <div key={f.field} className="flex items-center gap-2 text-error text-xs font-medium">
+                    <AlertCircle size={13} className="shrink-0" />
+                    <span>{f.label} not filled — go to <strong>DISCOM Application</strong> tab</span>
+                  </div>
+                ))}
+                {mandatoryIncomplete.map((item) => (
+                  <div key={item.masterItemId} className="flex items-center gap-2 text-error text-xs font-medium">
+                    <AlertCircle size={13} className="shrink-0" />
+                    <span>{item.masterItem?.itemText} — go to <strong>Checklist</strong> tab</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-primary text-xs font-semibold">
+                <CheckCircle2 size={13} className="shrink-0" />
+                All required fields and mandatory checklist items are complete.
+              </div>
+            )}
+          </div>
+        }
         confirmLabel="Advance Stage"
+        confirmDisabled={missingFields.length > 0 || mandatoryIncomplete.length > 0}
         onConfirm={() => advanceMutation.mutate()}
         loading={advanceMutation.isPending}
       />

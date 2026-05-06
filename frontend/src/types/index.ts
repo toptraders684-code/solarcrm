@@ -11,7 +11,7 @@ export type FinancePreference = 'self' | 'govt_bank' | 'private_bank';
 export type LeadStatus = 'new' | 'in_progress' | 'converted' | 'closed';
 export type LeadClosureReason = 'not_interested' | 'no_roof_space' | 'financial_issue' | 'competitor' | 'unreachable' | 'other';
 export type DocumentCategory = 'kyc' | 'technical' | 'discom';
-export type TransactionType = 'customer_receipt' | 'vendor_payment' | 'subsidy';
+export type TransactionType = 'customer_receipt' | 'vendor_payment' | 'subsidy' | 'expense';
 export type PaymentMethod = 'cash' | 'cheque' | 'bank_transfer' | 'upi' | 'other';
 export type TransactionStatus = 'pending_approval' | 'approved' | 'rejected';
 export type VendorType = 'channel_partner' | 'district_partner' | 'block_partner' | 'installation_partner' | 'transport_partner' | 'insurance_partner' | 'netmeter_partner';
@@ -320,6 +320,7 @@ export interface TransactionSummary {
   balanceDue: number;
   totalSubsidy: number;
   totalVendorPayments: number;
+  totalExpenses?: number;
 }
 
 // ─────────────────────────────────────────────

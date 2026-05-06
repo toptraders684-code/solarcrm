@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { DateSelectPicker } from '@/components/ui/date-select-picker';
 import { applicantsService } from '@/services/applicants.service';
 import { formatDate } from '@/utils/formatters';
 import type { ProjectActivity, ProjectActivityType } from '@/types';
@@ -201,7 +202,7 @@ export function ProjectActivityTimeline({ applicantId, activities }: ProjectActi
           <DialogHeader><DialogTitle>Log Activity</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Activity Type *</label>
+              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Activity Type <span className="text-error">*</span></label>
               <Select value={activityType} onValueChange={(v) => setActivityType(v as ProjectActivityType)}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Select activity type" /></SelectTrigger>
                 <SelectContent>
@@ -222,12 +223,7 @@ export function ProjectActivityTimeline({ applicantId, activities }: ProjectActi
             </div>
             <div>
               <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Follow-up Date</label>
-              <Input
-                className="mt-1"
-                type="date"
-                value={followUpDate}
-                onChange={(e) => setFollowUpDate(e.target.value)}
-              />
+              <DateSelectPicker className="mt-1" value={followUpDate} onChange={setFollowUpDate} placeholder="Select follow-up date" />
             </div>
           </div>
           <DialogFooter>

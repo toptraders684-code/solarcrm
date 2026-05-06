@@ -13,7 +13,7 @@ export function ProtectedLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (user.role === 'super_admin') {

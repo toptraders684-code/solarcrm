@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -18,11 +20,20 @@ export class UsersService {
     private emailService: EmailService,
   ) {}
 
-  async findAll(companyId: string, query: any) {
+  async findAll(companyId: string, query: any, callerRole = 'admin') {
     const { limit = 25, after, role, status, q } = query;
 
-    const where: any = { companyId, deletedAt: null, role: { not: 'super_admin' } };
-    if (role) where.role = role;
+    const where: any = { companyId, deletedAt: null };
+
+    if (role) {
+      where.role = role;
+    } else if (callerRole === 'super_admin') {
+      where.role = { not: 'super_admin' };
+    } else {
+      // Regular admin/staff cannot see admin or super_admin accounts
+      where.role = { notIn: ['super_admin', 'admin'] };
+    }
+
     if (status) where.status = status;
     if (q) {
       where.OR = [
@@ -123,6 +134,21 @@ export class UsersService {
     return { id: updated.id, name: updated.name, status: updated.status };
   }
 
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.prisma.user.findFirst({ where: { id: userId, deletedAt: null } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) throw new UnauthorizedException('Current password is incorrect');
+
+    if (newPassword.length < 8) throw new BadRequestException('New password must be at least 8 characters');
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash: hash } });
+
+    return { message: 'Password changed successfully' };
+  }
+
   async remove(id: string, companyId: string, deletedBy: string) {
     await this.findOne(id, companyId);
 
@@ -156,8 +182,11 @@ export class UsersService {
     return { data: staff };
   }
 
-  async approveUser(id: string, companyId: string, approvedBy: string) {
-    const user = await this.findOne(id, companyId);
+  async approveUser(id: string, companyId: string | null, approvedBy: string) {
+    const where: any = { id, deletedAt: null };
+    if (companyId) where.companyId = companyId;
+    const user = await this.prisma.user.findFirst({ where });
+    if (!user) throw new NotFoundException('User not found');
 
     const updated = await this.prisma.user.update({
       where: { id },
@@ -175,7 +204,7 @@ export class UsersService {
       beforeJson: user as any,
       afterJson: { status: 'active' },
       userId: approvedBy,
-      companyId,
+      companyId: companyId ?? updated.companyId,
     });
 
     return { id: updated.id, name: updated.name, status: updated.status };

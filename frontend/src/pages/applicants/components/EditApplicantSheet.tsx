@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DateSelectPicker } from '@/components/ui/date-select-picker';
 import { applicantsService } from '@/services/applicants.service';
 import { masterService } from '@/services/master.service';
 import { usersService } from '@/services/users.service';
@@ -14,9 +15,13 @@ import type { Applicant } from '@/types';
 
 // ── Field wrapper defined OUTSIDE the component so React doesn't remount on every render ──
 function F({ label, children }: { label: string; children: React.ReactNode }) {
+  const req = label.endsWith(' *');
+  const text = req ? label.slice(0, -2) : label;
   return (
     <div>
-      <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">{label}</label>
+      <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">
+        {text}{req && <span className="text-error"> *</span>}
+      </label>
       <div className="mt-1">{children}</div>
     </div>
   );
@@ -157,7 +162,7 @@ export function EditApplicantSheet({ open, onOpenChange, applicant }: Props) {
                 </Select>
               </F>
               <F label="Date of Birth">
-                <Input type="date" value={form.dateOfBirth ?? ''} onChange={(e) => set('dateOfBirth', e.target.value)} />
+                <DateSelectPicker value={form.dateOfBirth ?? ''} onChange={(v) => set('dateOfBirth', v)} placeholder="Date of birth" />
               </F>
               <F label="Assigned Staff">
                 <Select value={sv(form.assignedStaffId)} onValueChange={(v) => set('assignedStaffId', v)}>
@@ -295,7 +300,7 @@ export function EditApplicantSheet({ open, onOpenChange, applicant }: Props) {
                 <Input type="number" step="1" value={form.loanAmount ?? ''} onChange={(e) => set('loanAmount', e.target.value)} />
               </F>
               <F label="Loan Sanctioned Date">
-                <Input type="date" value={form.loanSanctionedDate ?? ''} onChange={(e) => set('loanSanctionedDate', e.target.value)} />
+                <DateSelectPicker value={form.loanSanctionedDate ?? ''} onChange={(v) => set('loanSanctionedDate', v)} placeholder="Loan sanctioned date" />
               </F>
               <F label="Overpayment Rule">
                 <Select value={sv(form.overpaymentRule) ?? 'warn'} onValueChange={(v) => set('overpaymentRule', v)}>
@@ -314,7 +319,7 @@ export function EditApplicantSheet({ open, onOpenChange, applicant }: Props) {
             <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-widest">Site Survey</p>
             <div className="grid grid-cols-2 gap-3">
               <F label="Survey Date">
-                <Input type="date" value={form.surveyDate ?? ''} onChange={(e) => set('surveyDate', e.target.value)} />
+                <DateSelectPicker value={form.surveyDate ?? ''} onChange={(v) => set('surveyDate', v)} placeholder="Survey date" />
               </F>
               <F label="Surveyed By">
                 <Input value={form.surveyedBy ?? ''} onChange={(e) => set('surveyedBy', e.target.value)} />
@@ -335,7 +340,7 @@ export function EditApplicantSheet({ open, onOpenChange, applicant }: Props) {
             <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-widest pt-2">DISCOM Application</p>
             <div className="grid grid-cols-2 gap-3">
               <F label="Portal Application Date">
-                <Input type="date" value={form.portalApplicationDate ?? ''} onChange={(e) => set('portalApplicationDate', e.target.value)} />
+                <DateSelectPicker value={form.portalApplicationDate ?? ''} onChange={(v) => set('portalApplicationDate', v)} placeholder="Portal application date" />
               </F>
               <F label="JE Name">
                 <Input value={form.jeName ?? ''} onChange={(e) => set('jeName', e.target.value)} />
@@ -344,10 +349,10 @@ export function EditApplicantSheet({ open, onOpenChange, applicant }: Props) {
                 <Input maxLength={10} value={form.jeContact ?? ''} onChange={(e) => set('jeContact', e.target.value)} />
               </F>
               <F label="MRT Date">
-                <Input type="date" value={form.mrtDate ?? ''} onChange={(e) => set('mrtDate', e.target.value)} />
+                <DateSelectPicker value={form.mrtDate ?? ''} onChange={(v) => set('mrtDate', v)} placeholder="MRT date" />
               </F>
               <F label="Inspection Date">
-                <Input type="date" value={form.inspectionDate ?? ''} onChange={(e) => set('inspectionDate', e.target.value)} />
+                <DateSelectPicker value={form.inspectionDate ?? ''} onChange={(v) => set('inspectionDate', v)} placeholder="Inspection date" />
               </F>
               <F label="Inspection Result">
                 <Select value={sv(form.inspectionResult)} onValueChange={(v) => set('inspectionResult', v)}>

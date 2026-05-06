@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Phone, Mail, MessageCircle, FileText, Sun, Zap, Shield, CreditCard } from 'lucide-react';
+import { ChevronDown, ChevronUp, Phone, Mail, MessageCircle, FileText, Zap, Shield, CreditCard, Sun } from 'lucide-react';
 import { PageWrapper } from '@/components/shared/PageWrapper';
 
 const FAQS = [
@@ -78,7 +78,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 
 export default function SupportPage() {
   return (
-    <PageWrapper title="Support" subtitle="Help, FAQs, and quick links for Suryam Solar CRM">
+    <PageWrapper title="Support" subtitle="Help, FAQs, and quick links for Usolar CRM">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* FAQ — left 2/3 */}
@@ -150,10 +150,8 @@ export default function SupportPage() {
 
           {/* App version */}
           <div className="bg-surface-container-lowest rounded-xl p-4 text-center">
-            <div className="w-10 h-10 signature-gradient rounded-xl flex items-center justify-center mx-auto mb-2 shadow-sm">
-              <Sun size={20} className="text-white" />
-            </div>
-            <p className="text-sm font-black text-primary">Suryam Solar CRM</p>
+            <img src="/images/solar.png" alt="Usolar CRM" className="w-10 h-10 object-contain mx-auto mb-2" />
+            <p className="text-sm font-black text-primary">Usolar CRM</p>
             <p className="text-xs text-on-surface-variant/60 mt-0.5">Version 1.0.0 · Build 2026</p>
           </div>
         </div>

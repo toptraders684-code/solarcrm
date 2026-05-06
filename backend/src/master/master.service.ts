@@ -27,22 +27,37 @@ export class MasterService {
     return { data: districts };
   }
 
-  getEnums() {
+  async getEnums() {
+    const [discoms, leadSources, vendorTypes, paymentMethods, projectTypes, stages] = await Promise.all([
+      this.prisma.masterDiscom.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' }, select: { code: true, name: true } }),
+      this.prisma.masterLeadSource.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' }, select: { code: true, name: true } }),
+      this.prisma.masterVendorType.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' }, select: { code: true, name: true } }),
+      this.prisma.masterPaymentMethod.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' }, select: { code: true, name: true } }),
+      this.prisma.masterProjectType.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' }, select: { code: true, name: true } }),
+      this.prisma.masterStage.findMany({ where: { isActive: true }, orderBy: { stageNumber: 'asc' }, select: { stageNumber: true, name: true } }),
+    ]);
+
     return {
       userRoles: ['admin', 'operations_staff', 'field_technician', 'finance_manager', 'vendor'],
       userStatuses: ['pending_approval', 'active', 'inactive'],
-      discoms: ['tpcodl', 'tpnodl', 'tpsodl', 'tpwodl'],
-      projectTypes: ['residential', 'commercial'],
-      leadSources: ['walk_in', 'referral', 'online', 'camp', 'channel_partner', 'other'],
+      discoms: discoms.map((d) => d.code),
+      discomItems: discoms,
+      projectTypes: projectTypes.map((t) => t.code),
+      projectTypeItems: projectTypes,
+      leadSources: leadSources.map((s) => s.code),
+      leadSourceItems: leadSources,
       financePreferences: ['self', 'govt_bank', 'private_bank'],
       leadStatuses: ['new', 'in_progress', 'converted', 'closed'],
       leadClosureReasons: ['not_interested', 'no_roof_space', 'financial_issue', 'competitor', 'unreachable', 'other'],
       documentCategories: ['kyc', 'technical', 'discom'],
-      transactionTypes: ['customer_receipt', 'vendor_payment', 'subsidy'],
-      paymentMethods: ['cash', 'cheque', 'bank_transfer', 'upi', 'other'],
+      transactionTypes: ['customer_receipt', 'vendor_payment', 'subsidy', 'expense'],
+      paymentMethods: paymentMethods.map((m) => m.code),
+      paymentMethodItems: paymentMethods,
       transactionStatuses: ['pending_approval', 'approved', 'rejected'],
-      vendorTypes: ['material_supplier', 'labour_installer', 'transport_logistics'],
+      vendorTypes: vendorTypes.map((v) => v.code),
+      vendorTypeItems: vendorTypes,
       outcomeTypes: ['contacted', 'not_reachable', 'meeting_scheduled', 'site_visit_done', 'document_collected', 'other'],
+      stages,
     };
   }
 }

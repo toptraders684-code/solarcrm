@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, ChevronRight, Package } from 'lucide-react';
 import { toast } from 'sonner';
@@ -166,7 +166,7 @@ export function ProcurementTab({ applicant }: ProcurementTabProps) {
           <DialogHeader><DialogTitle>Assign Vendor to Project</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Vendor *</label>
+              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Vendor <span className="text-error">*</span></label>
               <Select value={selectedVendorId} onValueChange={setSelectedVendorId}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Select a vendor" /></SelectTrigger>
                 <SelectContent>

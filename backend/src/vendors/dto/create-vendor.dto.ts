@@ -1,8 +1,6 @@
-import { IsString, IsArray, IsEnum, IsOptional, IsEmail } from 'class-validator';
+import { IsString, IsArray, IsOptional, IsEmail } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { VendorType } from '@prisma/client';
 
-// Convert empty strings to undefined so @IsOptional() skips validation
 const emptyToUndefined = () => Transform(({ value }) => (value === '' ? undefined : value));
 
 export class CreateVendorDto {
@@ -13,8 +11,8 @@ export class CreateVendorDto {
   contactPerson?: string;
 
   @IsArray()
-  @IsEnum(VendorType, { each: true })
-  vendorTypes: VendorType[];
+  @IsString({ each: true })
+  vendorTypes: string[];
 
   @IsOptional() @IsString()
   mobile?: string;

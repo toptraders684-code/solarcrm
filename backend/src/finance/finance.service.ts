@@ -13,13 +13,14 @@ export class FinanceService {
   ) {}
 
   async findAll(companyId: string, query: any) {
-    const { limit = 25, after, status, applicantId } = query;
+    const { limit = 25, after, status, type, applicantId } = query;
 
     // Transaction doesn't have companyId — filter via applicant
     const where: any = {
       applicant: { companyId },
     };
     if (status) where.status = status;
+    if (type) where.type = type;
     if (applicantId) where.applicantId = applicantId;
     if (after) where.id = { gt: after };
 
@@ -30,6 +31,7 @@ export class FinanceService {
       include: {
         applicant: { select: { id: true, applicantCode: true, customerName: true } },
         createdBy: { select: { id: true, name: true } },
+        vendor: { select: { id: true, businessName: true } },
       },
     });
 
@@ -141,7 +143,7 @@ export class FinanceService {
   }
 
   async getSummary(companyId: string) {
-    const [received, subsidy, vendorPayments, pendingCount] = await Promise.all([
+    const [received, subsidy, vendorPayments, expenses, pendingCount] = await Promise.all([
       this.prisma.transaction.aggregate({
         where: { status: 'approved', type: 'customer_receipt', applicant: { companyId } },
         _sum: { amount: true },
@@ -154,6 +156,10 @@ export class FinanceService {
         where: { status: 'approved', type: 'vendor_payment', applicant: { companyId } },
         _sum: { amount: true },
       }),
+      this.prisma.transaction.aggregate({
+        where: { status: 'approved', type: 'expense', applicant: { companyId } },
+        _sum: { amount: true },
+      }),
       this.prisma.transaction.count({
         where: { status: 'pending_approval', applicant: { companyId } },
       }),
@@ -164,6 +170,7 @@ export class FinanceService {
         totalReceived: Number(received._sum.amount ?? 0),
         totalSubsidy: Number(subsidy._sum.amount ?? 0),
         totalVendorPayments: Number(vendorPayments._sum.amount ?? 0),
+        totalExpenses: Number(expenses._sum.amount ?? 0),
         pendingCount,
       },
     };

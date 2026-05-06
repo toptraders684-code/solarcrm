@@ -1,6 +1,6 @@
 import { IsString, IsEnum, IsOptional, IsNumber, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Discom, ProjectType, FinancePreference } from '@prisma/client';
+import { FinancePreference } from '@prisma/client';
 
 export class UpdateApplicantDto {
   // Basic
@@ -23,8 +23,8 @@ export class UpdateApplicantDto {
   @IsOptional() @Type(() => Number) @IsNumber() gpsLongitude?: number;
 
   // Installation
-  @IsOptional() @IsEnum(Discom) discom?: Discom;
-  @IsOptional() @IsEnum(ProjectType) projectType?: ProjectType;
+  @IsOptional() @IsString() discom?: string;
+  @IsOptional() @IsString() projectType?: string;
   @IsOptional() @Type(() => Number) @IsNumber() @Min(0) systemCapacityKw?: number;
   @IsOptional() @Type(() => Number) @IsNumber() @Min(0) sanctionedLoadKw?: number;
   @IsOptional() @IsString() roofType?: string;

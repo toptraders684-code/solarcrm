@@ -7,6 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../notifications/email.service';
+import { ActivityLogService } from '../activity-log/activity-log.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
@@ -18,6 +19,7 @@ export class AuthService {
     private jwtService: JwtService,
     private config: ConfigService,
     private emailService: EmailService,
+    private activityLog: ActivityLogService,
   ) {}
 
   async requestOtp(email: string): Promise<{ message: string }> {
@@ -61,6 +63,7 @@ export class AuthService {
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
       await this.handleFailedAttempt(user.id, user.failedLoginCount);
+      this.activityLog.log({ userId: user.id, companyId: user.companyId, action: 'LOGIN_FAILED', module: 'auth', ipAddress, description: 'Wrong password' });
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -70,6 +73,7 @@ export class AuthService {
       data: { failedLoginCount: 0, lockedUntil: null },
     });
 
+    this.activityLog.log({ userId: user.id, companyId: user.companyId, action: 'LOGIN', module: 'auth', ipAddress });
     return this.generateTokens(user);
   }
 
@@ -101,10 +105,11 @@ export class AuthService {
 
   async logout(refreshToken: string) {
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-    await this.prisma.refreshToken.updateMany({
-      where: { tokenHash },
-      data: { revokedAt: new Date() },
-    });
+    const record = await this.prisma.refreshToken.findFirst({ where: { tokenHash }, include: { user: true } });
+    await this.prisma.refreshToken.updateMany({ where: { tokenHash }, data: { revokedAt: new Date() } });
+    if (record?.user) {
+      this.activityLog.log({ userId: record.user.id, companyId: record.user.companyId, action: 'LOGOUT', module: 'auth' });
+    }
     return { message: 'Logged out successfully' };
   }
 

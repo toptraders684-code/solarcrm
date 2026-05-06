@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Phone } from 'lucide-react';
@@ -152,7 +152,7 @@ export default function VendorsListPage() {
           <SheetHeader><SheetTitle>Add New Vendor</SheetTitle></SheetHeader>
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
             <div>
-              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Business Name *</label>
+              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Business Name <span className="text-error">*</span></label>
               <Input className="mt-1" placeholder="Company / firm name" {...register('businessName', { required: true })} />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -174,7 +174,7 @@ export default function VendorsListPage() {
               <Input className="mt-1" {...register('addressVillage')} />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest mb-2 block">Vendor Types *</label>
+              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest mb-2 block">Vendor Types <span className="text-error">*</span></label>
               {VENDOR_TYPES.map((t) => (
                 <div key={t} className="flex items-center gap-2 py-1.5">
                   <Checkbox id={t} checked={selectedTypes.includes(t)}
@@ -189,11 +189,11 @@ export default function VendorsListPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">GSTIN</label>
-                <Input className="mt-1" placeholder="15-char GST" {...register('gstin')} />
+                <Input className="mt-1" placeholder="15-char GST number" maxLength={15} {...register('gstin')} />
               </div>
               <div>
                 <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">IFSC Code</label>
-                <Input className="mt-1" placeholder="AAAA0AAAAAA" {...register('ifscCode')} />
+                <Input className="mt-1" placeholder="e.g. SBIN0001234" maxLength={11} {...register('ifscCode')} />
               </div>
             </div>
             <div className="flex gap-3 pt-4 border-t border-surface-container-low">

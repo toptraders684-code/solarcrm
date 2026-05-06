@@ -1,5 +1,5 @@
 import { IsString, IsEnum, IsOptional, Length, IsNumber, Min } from 'class-validator';
-import { Discom, ProjectType, LeadSource, FinancePreference } from '@prisma/client';
+import { FinancePreference } from '@prisma/client';
 
 export class CreateLeadDto {
   @IsString()
@@ -16,14 +16,14 @@ export class CreateLeadDto {
   @IsString()
   alternateMobile?: string;
 
-  @IsEnum(Discom)
-  discom: Discom;
+  @IsString()
+  discom: string;
 
-  @IsEnum(ProjectType)
-  projectType: ProjectType;
+  @IsString()
+  projectType: string;
 
-  @IsEnum(LeadSource)
-  leadSource: LeadSource;
+  @IsString()
+  leadSource: string;
 
   @IsOptional()
   @IsNumber()

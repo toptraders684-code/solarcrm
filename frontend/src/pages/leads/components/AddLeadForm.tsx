@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { DateSelectPicker } from '@/components/ui/date-select-picker';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createLeadSchema, type CreateLeadFormData } from '@/utils/validators';
@@ -46,9 +47,15 @@ export function AddLeadForm({ onSuccess, onCancel }: AddLeadFormProps) {
     }
   });
 
-  const L = ({ children }: { children: React.ReactNode }) => (
-    <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">{children}</label>
-  );
+  const L = ({ children }: { children: React.ReactNode }) => {
+    const text = typeof children === 'string' && children.endsWith(' *') ? children.slice(0, -2) : children;
+    const req = typeof children === 'string' && children.endsWith(' *');
+    return (
+      <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">
+        {text}{req && <span className="text-error"> *</span>}
+      </label>
+    );
+  };
 
   return (
     <form onSubmit={onSubmit} className="mt-6 space-y-4 overflow-y-auto max-h-[calc(100vh-160px)] pr-1">
@@ -179,7 +186,7 @@ export function AddLeadForm({ onSuccess, onCancel }: AddLeadFormProps) {
 
       <div>
         <L>Follow Up Date</L>
-        <Input className="mt-1" type="date" {...register('followUpDate')} />
+        <DateSelectPicker className="mt-1" value={watch('followUpDate') ?? ''} onChange={(v) => setValue('followUpDate', v)} placeholder="Select follow-up date" />
       </div>
 
       <div className="flex gap-3 pt-4 border-t border-surface-container-low">

@@ -31,6 +31,34 @@
   --color-error-container: #ffdad6;
 }
 
+/* ── Dark mode overrides ───────────────────────────────────────────────── */
+.dark {
+  --color-primary: #4fc87f;
+  --color-primary-container: #1a5c35;
+  --color-on-primary: #003919;
+  --color-on-primary-container: #b8f5d0;
+
+  --color-surface: #121712;
+  --color-surface-container: #1e231e;
+  --color-surface-container-low: #1a1f1a;
+  --color-surface-container-high: #262b26;
+  --color-surface-container-highest: #2e342e;
+  --color-surface-container-lowest: #0e120e;
+
+  --color-on-surface: #e1e3e1;
+  --color-on-surface-variant: #c1ccc1;
+  --color-outline-variant: #3d4d3e;
+
+  --color-secondary-container: #1e3248;
+  --color-on-secondary-fixed-variant: #b0c4da;
+
+  --color-tertiary-container: #5c2010;
+  --color-on-tertiary-container: #ffb59a;
+
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+}
+
 @layer base {
   body {
     @apply bg-surface text-on-surface font-sans;
