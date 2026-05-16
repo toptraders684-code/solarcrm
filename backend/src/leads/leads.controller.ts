@@ -27,19 +27,19 @@ export class LeadsController {
   constructor(private leadsService: LeadsService) {}
 
   @Get()
-  @Roles('admin', 'operations_staff', 'field_technician')
+  @Roles('admin', 'operations_staff', 'field_technician', 'vendor')
   findAll(@CurrentUser() user: any, @Query() query: any) {
-    return this.leadsService.findAll(user.companyId, query);
+    return this.leadsService.findAll(user.companyId, query, user);
   }
 
   @Post()
-  @Roles('admin', 'operations_staff', 'field_technician')
+  @Roles('admin', 'operations_staff', 'field_technician', 'vendor')
   create(@Body() dto: CreateLeadDto, @CurrentUser() user: any) {
     return this.leadsService.create(dto, user.companyId, user.id);
   }
 
   @Get(':id')
-  @Roles('admin', 'operations_staff', 'field_technician')
+  @Roles('admin', 'operations_staff', 'field_technician', 'vendor')
   async findOne(@Param('id') id: string, @CurrentUser() user: any) {
     const data = await this.leadsService.findOne(id, user.companyId);
     return { data };

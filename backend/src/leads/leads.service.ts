@@ -19,7 +19,22 @@ export class LeadsService {
     private emailService: EmailService,
   ) {}
 
-  async findAll(companyId: string, query: any) {
+  private applyVendorHierarchyFilter(where: any, caller: any) {
+    if (caller?.role !== 'vendor' || !caller?.vendorId) return;
+    const { id, vendorId, vendorLevel } = caller;
+    let filter: any;
+    if (vendorLevel === 'H3') {
+      filter = { createdById: id };
+    } else if (vendorLevel === 'H2') {
+      filter = { OR: [{ createdById: id }, { createdBy: { vendorId, vendorLevel: 'H3' } }] };
+    } else {
+      // H1 or main vendor account — all records under this vendor
+      filter = { createdBy: { vendorId } };
+    }
+    where.AND = where.AND ? [...where.AND, filter] : [filter];
+  }
+
+  async findAll(companyId: string, query: any, caller?: any) {
     const { limit = 25, after, status, discom, assignedStaffId, q, sort = 'createdAt', order = 'desc' } = query;
 
     const where: any = { companyId, deletedAt: null };
@@ -27,6 +42,8 @@ export class LeadsService {
     if (discom) where.discom = discom;
     if (assignedStaffId) where.assignedStaffId = assignedStaffId;
     if (after) where.id = { gt: after };
+
+    this.applyVendorHierarchyFilter(where, caller);
 
     if (q) {
       where.OR = [

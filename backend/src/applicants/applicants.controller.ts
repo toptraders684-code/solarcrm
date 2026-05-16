@@ -3,6 +3,7 @@ import {
   Get,
   Patch,
   Post,
+  Delete,
   Body,
   Param,
   Query,
@@ -11,10 +12,13 @@ import {
   UploadedFile,
   UseInterceptors,
   Res,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { ApplicantsService } from './applicants.service';
+import { DocumentGeneratorService } from '../documents/document-generator.service';
 import { UpdateApplicantDto } from './dto/update-applicant.dto';
 import { StageChangeDto } from './dto/stage-change.dto';
 import { CreateActivityDto } from './dto/create-activity.dto';
@@ -23,19 +27,28 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
+function buildDocFilename(title: string, ext: string): string {
+  const safe = title.replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_');
+  const dt = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
+  return `${safe}_${dt}.${ext}`;
+}
+
 @Controller('applicants')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ApplicantsController {
-  constructor(private applicantsService: ApplicantsService) {}
+  constructor(
+    private applicantsService: ApplicantsService,
+    private docGenerator: DocumentGeneratorService,
+  ) {}
 
   @Get()
-  @Roles('admin', 'operations_staff', 'finance_manager')
+  @Roles('admin', 'operations_staff', 'finance_manager', 'vendor')
   findAll(@CurrentUser() user: any, @Query() query: any) {
-    return this.applicantsService.findAll(user.companyId, query);
+    return this.applicantsService.findAll(user.companyId, query, user);
   }
 
   @Get(':id')
-  @Roles('admin', 'operations_staff', 'finance_manager', 'field_technician')
+  @Roles('admin', 'operations_staff', 'finance_manager', 'field_technician', 'vendor')
   async findOne(@Param('id') id: string, @CurrentUser() user: any) {
     const data = await this.applicantsService.findOne(id, user.companyId);
     return { data };
@@ -72,7 +85,7 @@ export class ApplicantsController {
   }
 
   @Get(':id/documents')
-  @Roles('admin', 'operations_staff', 'finance_manager', 'field_technician')
+  @Roles('admin', 'operations_staff', 'finance_manager', 'field_technician', 'vendor')
   listDocuments(@Param('id') id: string, @CurrentUser() user: any) {
     return this.applicantsService.listDocuments(id, user.companyId);
   }
@@ -97,8 +110,25 @@ export class ApplicantsController {
     return this.applicantsService.uploadDocument(id, file, body, user.companyId, user.id);
   }
 
+  @Get(':id/documents/generate/:masterItemId')
+  @Roles('admin', 'operations_staff', 'finance_manager', 'field_technician', 'vendor')
+  async generateDocument(
+    @Param('id') id: string,
+    @Param('masterItemId') masterItemId: string,
+    @CurrentUser() user: any,
+    @Res() res: Response,
+  ) {
+    const { buffer, title } = await this.docGenerator.generate(id, masterItemId, user.companyId);
+    const filename = buildDocFilename(title, 'pdf');
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="${filename}"`,
+    });
+    res.send(buffer);
+  }
+
   @Get(':id/documents/:docId')
-  @Roles('admin', 'operations_staff', 'finance_manager')
+  @Roles('admin', 'operations_staff', 'finance_manager', 'vendor')
   async downloadDocument(
     @Param('id') id: string,
     @Param('docId') docId: string,
@@ -136,5 +166,49 @@ export class ApplicantsController {
   generateUploadLink(@Param('id') id: string, @CurrentUser() user: any, @Req() req: any) {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     return this.applicantsService.generateUploadLink(id, user.companyId, user.id, baseUrl);
+  }
+
+  // ── Installation Details ──
+
+  @Patch(':id/installation')
+  @Roles('admin', 'operations_staff')
+  @HttpCode(HttpStatus.OK)
+  upsertInstallation(@Param('id') id: string, @Body() body: any, @CurrentUser() user: any) {
+    return this.applicantsService.upsertInstallation(id, user.companyId, body);
+  }
+
+  @Post(':id/other-materials')
+  @Roles('admin', 'operations_staff')
+  addOtherMaterial(@Param('id') id: string, @Body() body: any, @CurrentUser() user: any) {
+    return this.applicantsService.addOtherMaterial(id, user.companyId, body);
+  }
+
+  @Patch(':id/other-materials/:matId')
+  @Roles('admin', 'operations_staff')
+  @HttpCode(HttpStatus.OK)
+  updateOtherMaterial(@Param('id') id: string, @Param('matId') matId: string, @Body() body: any, @CurrentUser() user: any) {
+    return this.applicantsService.updateOtherMaterial(matId, id, user.companyId, body);
+  }
+
+  @Delete(':id/other-materials/:matId')
+  @Roles('admin', 'operations_staff')
+  @HttpCode(HttpStatus.OK)
+  deleteOtherMaterial(@Param('id') id: string, @Param('matId') matId: string, @CurrentUser() user: any) {
+    return this.applicantsService.deleteOtherMaterial(matId, id, user.companyId);
+  }
+
+  // ── Project Status ──
+
+  @Patch(':id/project-status')
+  @Roles('admin', 'operations_staff')
+  @HttpCode(HttpStatus.OK)
+  updateProjectStatus(@Param('id') id: string, @Body() body: { status: string }, @CurrentUser() user: any) {
+    return this.applicantsService.updateProjectStatus(id, user.companyId, body.status, user.id);
+  }
+
+  @Get(':id/status-history')
+  @Roles('admin', 'operations_staff', 'finance_manager', 'field_technician', 'vendor')
+  getStatusHistory(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.applicantsService.getStatusHistory(id, user.companyId);
   }
 }

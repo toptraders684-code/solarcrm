@@ -5,6 +5,17 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
+import * as path from 'path';
+
+function buildDocFilename(title: string, mimeOrPath: string): string {
+  const safe = title.replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_');
+  const dt = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
+  const ext = mimeOrPath.includes('pdf') ? 'pdf'
+    : mimeOrPath.includes('png') ? 'png'
+    : mimeOrPath.includes('jpeg') || mimeOrPath.includes('jpg') ? 'jpg'
+    : path.extname(mimeOrPath).replace('.', '') || 'pdf';
+  return `${safe}_${dt}.${ext}`;
+}
 import { DocumentMasterService } from './document-master.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -55,8 +66,9 @@ export class DocumentMasterController {
   @Get(':id/file')
   async downloadFile(@Param('id') id: string, @Res() res: Response) {
     const { buffer, item } = await this.service.getMasterFile(id);
+    const filename = buildDocFilename(item.title, item.masterFileMime || item.masterFilePath || 'pdf');
     res.set('Content-Type', item.masterFileMime || 'application/octet-stream');
-    res.set('Content-Disposition', `inline; filename="${encodeURIComponent(item.title)}"`);
+    res.set('Content-Disposition', `inline; filename="${filename}"`);
     res.send(buffer);
   }
 }

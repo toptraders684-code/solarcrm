@@ -9,6 +9,7 @@ import { DateSelectPicker } from '@/components/ui/date-select-picker';
 import { applicantsService } from '@/services/applicants.service';
 import { masterService } from '@/services/master.service';
 import { formatDate, toTitleCase, formatCapacity } from '@/utils/formatters';
+import { InstallationSection } from './InstallationSection';
 import type { Applicant } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import { ProjectActivityTimeline } from './ProjectActivityTimeline';
@@ -19,9 +20,9 @@ function sv(v: any): string | undefined { return v || undefined; }
 
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-surface-container-low last:border-0">
-      <span className="text-xs text-on-surface-variant/60 font-medium flex-shrink-0">{label}</span>
-      <span className="text-sm font-semibold text-on-surface text-right">{children ?? '—'}</span>
+    <div className="flex flex-col gap-0.5 py-2 border-b border-surface-container-low">
+      <span className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">{label}</span>
+      <span className="text-sm font-semibold text-on-surface">{children ?? '—'}</span>
     </div>
   );
 }
@@ -30,12 +31,14 @@ function F({ label, error, children }: { label: string; error?: string; children
   const req = label.endsWith(' *');
   const text = req ? label.slice(0, -2) : label;
   return (
-    <div>
+    <div className="flex flex-col gap-1">
       <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">
         {text}{req && <span className="text-error"> *</span>}
       </label>
-      <div className="mt-1">{children}</div>
-      {error && <p className="mt-1 text-[10px] text-error font-semibold">{error}</p>}
+      <div>
+        {children}
+        {error && <p className="mt-1 text-[10px] text-error font-semibold">{error}</p>}
+      </div>
     </div>
   );
 }
@@ -65,12 +68,6 @@ function validate(section: Section, form: Record<string, any>): Record<string, s
       if (isNaN(lng) || lng < -180 || lng > 180) e.gpsLongitude = 'Longitude must be between -180 and 180';
     }
   }
-  if (section === 'installation') {
-    if (form.systemCapacityKw !== '' && form.systemCapacityKw !== undefined && Number(form.systemCapacityKw) <= 0)
-      e.systemCapacityKw = 'Must be greater than 0';
-    if (form.sanctionedLoadKw !== '' && form.sanctionedLoadKw !== undefined && Number(form.sanctionedLoadKw) <= 0)
-      e.sanctionedLoadKw = 'Must be greater than 0';
-  }
   if (section === 'survey') {
     if (form.roofAreaSqft !== '' && form.roofAreaSqft !== undefined && Number(form.roofAreaSqft) <= 0)
       e.roofAreaSqft = 'Must be greater than 0';
@@ -90,7 +87,7 @@ function validate(section: Section, form: Record<string, any>): Record<string, s
 const SECTION_FIELDS: Record<string, string[]> = {
   personal: ['dateOfBirth', 'gender', 'email', 'whatsappNumber', 'alternateMobile'],
   address: ['addressHouse', 'addressStreet', 'addressVillage', 'addressStateId', 'addressDistrictId', 'addressPincode', 'gpsLatitude', 'gpsLongitude'],
-  installation: ['systemCapacityKw', 'sanctionedLoadKw', 'roofType', 'existingConsumerNo', 'discomRefNo'],
+  installation: [],
   survey: ['surveyDate', 'surveyedBy', 'roofAreaSqft', 'recommendedCapacityKw', 'shadowAnalysis'],
   discom: ['portalApplicationDate', 'jeName', 'jeContact', 'mrtDate', 'inspectionDate', 'inspectionResult', 'netMeterSerialNo'],
   finance: ['financeMode', 'bankName', 'loanAmount', 'loanSanctionedDate', 'overpaymentRule'],
@@ -229,14 +226,6 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
         gpsLatitude: applicant.gpsLatitude ?? '',
         gpsLongitude: applicant.gpsLongitude ?? '',
       });
-    } else if (section === 'installation') {
-      setForm({
-        systemCapacityKw: applicant.systemCapacityKw ?? '',
-        sanctionedLoadKw: applicant.sanctionedLoadKw ?? '',
-        roofType: applicant.roofType ?? '',
-        existingConsumerNo: applicant.existingConsumerNo ?? '',
-        discomRefNo: applicant.discomRefNo ?? '',
-      });
     } else if (section === 'survey') {
       setForm({
         surveyDate: applicant.surveyDate ? applicant.surveyDate.slice(0, 10) : '',
@@ -303,7 +292,7 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
           onToggle={() => toggleSection('personal')} onEdit={() => startEdit('personal')}
           onCancel={cancelEdit} onSave={() => saveMutation.mutate()}>
           {editingSection === 'personal' ? (
-            <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
               <F label="Date of Birth">
                 <DateSelectPicker value={form.dateOfBirth ?? ''} onChange={(v) => { set('dateOfBirth', v); touch('dateOfBirth', v); }} className={fieldClass('dateOfBirth')} />
               </F>
@@ -328,13 +317,13 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
               </F>
             </div>
           ) : (
-            <>
+            <div className="grid grid-cols-2 gap-x-4">
               <InfoRow label="Date of Birth">{formatDate(applicant.dateOfBirth)}</InfoRow>
               <InfoRow label="Gender">{applicant.gender ? toTitleCase(applicant.gender) : null}</InfoRow>
               <InfoRow label="Email">{applicant.email}</InfoRow>
               <InfoRow label="WhatsApp">{applicant.whatsappNumber}</InfoRow>
               <InfoRow label="Alternate Mobile">{applicant.alternateMobile}</InfoRow>
-            </>
+            </div>
           )}
         </AccordionCard>
 
@@ -346,7 +335,7 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
           onToggle={() => toggleSection('address')} onEdit={() => startEdit('address')}
           onCancel={cancelEdit} onSave={() => saveMutation.mutate()}>
           {editingSection === 'address' ? (
-            <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
               <F label="House / Plot No."><Input value={form.addressHouse ?? ''} onChange={(e) => set('addressHouse', e.target.value)} onBlur={(e) => touch('addressHouse', e.target.value)} placeholder="House or plot number" className={fieldClass('addressHouse')} /></F>
               <F label="Street / Lane"><Input value={form.addressStreet ?? ''} onChange={(e) => set('addressStreet', e.target.value)} onBlur={(e) => touch('addressStreet', e.target.value)} placeholder="Street name" className={fieldClass('addressStreet')} /></F>
               <F label="Village / Town"><Input value={form.addressVillage ?? ''} onChange={(e) => set('addressVillage', e.target.value)} onBlur={(e) => touch('addressVillage', e.target.value)} placeholder="Village or town" className={fieldClass('addressVillage')} /></F>
@@ -365,17 +354,15 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
               <F label="Pincode" error={errors.addressPincode}>
                 <Input maxLength={6} value={form.addressPincode ?? ''} onChange={(e) => set('addressPincode', e.target.value.replace(/\D/g, ''))} onBlur={(e) => touch('addressPincode', e.target.value.replace(/\D/g, ''))} placeholder="6-digit pincode" className={fieldClass('addressPincode')} />
               </F>
-              <div className="grid grid-cols-2 gap-3">
-                <F label="GPS Latitude" error={errors.gpsLatitude}>
-                  <Input type="number" step="any" value={form.gpsLatitude ?? ''} onChange={(e) => set('gpsLatitude', e.target.value ? Number(e.target.value) : '')} onBlur={(e) => touch('gpsLatitude', e.target.value ? Number(e.target.value) : '')} placeholder="e.g. 20.296" className={fieldClass('gpsLatitude')} />
-                </F>
-                <F label="GPS Longitude" error={errors.gpsLongitude}>
-                  <Input type="number" step="any" value={form.gpsLongitude ?? ''} onChange={(e) => set('gpsLongitude', e.target.value ? Number(e.target.value) : '')} onBlur={(e) => touch('gpsLongitude', e.target.value ? Number(e.target.value) : '')} placeholder="e.g. 85.824" className={fieldClass('gpsLongitude')} />
-                </F>
-              </div>
+              <F label="GPS Latitude" error={errors.gpsLatitude}>
+                <Input type="number" step="any" value={form.gpsLatitude ?? ''} onChange={(e) => set('gpsLatitude', e.target.value ? Number(e.target.value) : '')} onBlur={(e) => touch('gpsLatitude', e.target.value ? Number(e.target.value) : '')} placeholder="e.g. 20.296" className={fieldClass('gpsLatitude')} />
+              </F>
+              <F label="GPS Longitude" error={errors.gpsLongitude}>
+                <Input type="number" step="any" value={form.gpsLongitude ?? ''} onChange={(e) => set('gpsLongitude', e.target.value ? Number(e.target.value) : '')} onBlur={(e) => touch('gpsLongitude', e.target.value ? Number(e.target.value) : '')} placeholder="e.g. 85.824" className={fieldClass('gpsLongitude')} />
+              </F>
             </div>
           ) : (
-            <>
+            <div className="grid grid-cols-2 gap-x-4">
               <InfoRow label="House / Plot">{applicant.addressHouse}</InfoRow>
               <InfoRow label="Street">{applicant.addressStreet}</InfoRow>
               <InfoRow label="Village">{applicant.addressVillage}</InfoRow>
@@ -383,7 +370,7 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
               <InfoRow label="District">{applicant.addressDistrict?.name}</InfoRow>
               <InfoRow label="Pincode">{applicant.addressPincode}</InfoRow>
               {applicant.gpsLatitude && <InfoRow label="GPS">{applicant.gpsLatitude}, {applicant.gpsLongitude}</InfoRow>}
-            </>
+            </div>
           )}
         </AccordionCard>
 
@@ -395,7 +382,7 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
           onToggle={() => toggleSection('survey')} onEdit={() => startEdit('survey')}
           onCancel={cancelEdit} onSave={() => saveMutation.mutate()}>
           {editingSection === 'survey' ? (
-            <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
               <F label="Survey Date">
                 <DateSelectPicker value={form.surveyDate ?? ''} onChange={(v) => { set('surveyDate', v); touch('surveyDate', v); }} placeholder="Select survey date" />
               </F>
@@ -409,53 +396,23 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
               <F label="Shadow Analysis Notes"><Input value={form.shadowAnalysis ?? ''} onChange={(e) => set('shadowAnalysis', e.target.value)} onBlur={(e) => touch('shadowAnalysis', e.target.value)} placeholder="Describe shading conditions" className={fieldClass('shadowAnalysis')} /></F>
             </div>
           ) : (
-            <>
+            <div className="grid grid-cols-2 gap-x-4">
               <InfoRow label="Survey Date">{formatDate(applicant.surveyDate)}</InfoRow>
               <InfoRow label="Surveyed By">{applicant.surveyedBy}</InfoRow>
               <InfoRow label="Roof Area">{applicant.roofAreaSqft ? `${applicant.roofAreaSqft} sqft` : null}</InfoRow>
               <InfoRow label="Recommended Capacity">{formatCapacity(applicant.recommendedCapacityKw)}</InfoRow>
               {applicant.shadowAnalysis && <InfoRow label="Shadow Analysis">{applicant.shadowAnalysis}</InfoRow>}
-            </>
+            </div>
           )}
         </AccordionCard>
 
         {/* Installation Details */}
         <AccordionCard title="Installation Details"
-          summary={<FieldsProgress applicant={applicant} section="installation" />}
-          isOpen={!!expanded['installation']} isEditing={editingSection === 'installation'}
-          canEdit={canEdit('installation')} saving={saveMutation.isPending} editDisabled={editingSection !== null}
-          onToggle={() => toggleSection('installation')} onEdit={() => startEdit('installation')}
-          onCancel={cancelEdit} onSave={() => saveMutation.mutate()}>
-          {editingSection === 'installation' ? (
-            <div className="space-y-4">
-              <F label="System Capacity (kW)" error={errors.systemCapacityKw}>
-                <Input type="number" min={0.1} step={0.1} value={form.systemCapacityKw ?? ''} onChange={(e) => set('systemCapacityKw', e.target.value ? Number(e.target.value) : '')} onBlur={(e) => touch('systemCapacityKw', e.target.value ? Number(e.target.value) : '')} placeholder="e.g. 5" className={fieldClass('systemCapacityKw')} />
-              </F>
-              <F label="Sanctioned Load (kW)" error={errors.sanctionedLoadKw}>
-                <Input type="number" min={0.1} step={0.1} value={form.sanctionedLoadKw ?? ''} onChange={(e) => set('sanctionedLoadKw', e.target.value ? Number(e.target.value) : '')} onBlur={(e) => touch('sanctionedLoadKw', e.target.value ? Number(e.target.value) : '')} placeholder="e.g. 3" className={fieldClass('sanctionedLoadKw')} />
-              </F>
-              <F label="Roof Type">
-                <Select value={sv(form.roofType)} onValueChange={(v) => { set('roofType', v); touch('roofType', v); }}>
-                  <SelectTrigger className={fieldClass('roofType')}><SelectValue placeholder="Select roof type" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="rcc">RCC / Concrete</SelectItem>
-                    <SelectItem value="metal">Metal / Tin Sheet</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </F>
-              <F label="Consumer No. (DISCOM)"><Input value={form.existingConsumerNo ?? ''} onChange={(e) => set('existingConsumerNo', e.target.value)} onBlur={(e) => touch('existingConsumerNo', e.target.value)} placeholder="Existing consumer number" className={fieldClass('existingConsumerNo')} /></F>
-              <F label="DISCOM Ref No."><Input value={form.discomRefNo ?? ''} onChange={(e) => set('discomRefNo', e.target.value)} onBlur={(e) => touch('discomRefNo', e.target.value)} placeholder="e.g. TPCODL/2024/001234" className={fieldClass('discomRefNo')} /></F>
-            </div>
-          ) : (
-            <>
-              <InfoRow label="System Capacity">{formatCapacity(applicant.systemCapacityKw)}</InfoRow>
-              <InfoRow label="Sanctioned Load">{formatCapacity(applicant.sanctionedLoadKw)}</InfoRow>
-              <InfoRow label="Roof Type">{applicant.roofType ? toTitleCase(applicant.roofType) : null}</InfoRow>
-              <InfoRow label="Consumer No.">{applicant.existingConsumerNo}</InfoRow>
-              <InfoRow label="DISCOM Ref No.">{applicant.discomRefNo}</InfoRow>
-            </>
-          )}
+          summary={undefined}
+          isOpen={!!expanded['installation']} isEditing={false}
+          canEdit={false} saving={false} editDisabled={false}
+          onToggle={() => toggleSection('installation')} onEdit={() => {}} onCancel={() => {}} onSave={() => {}}>
+          <InstallationSection applicant={applicant} />
         </AccordionCard>
 
         {/* DISCOM Application */}
@@ -466,7 +423,7 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
           onToggle={() => toggleSection('discom')} onEdit={() => startEdit('discom')}
           onCancel={cancelEdit} onSave={() => saveMutation.mutate()}>
           {editingSection === 'discom' ? (
-            <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
               <F label="Portal Application Date">
                 <DateSelectPicker value={form.portalApplicationDate ?? ''} onChange={(v) => { set('portalApplicationDate', v); touch('portalApplicationDate', v); }} placeholder="Select date" />
               </F>
@@ -493,7 +450,7 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
               <F label="Net Meter Serial No."><Input value={form.netMeterSerialNo ?? ''} onChange={(e) => set('netMeterSerialNo', e.target.value)} onBlur={(e) => touch('netMeterSerialNo', e.target.value)} placeholder="e.g. NM-2024-001234" className={fieldClass('netMeterSerialNo')} /></F>
             </div>
           ) : (
-            <>
+            <div className="grid grid-cols-2 gap-x-4">
               <InfoRow label="Portal Application">{formatDate(applicant.portalApplicationDate)}</InfoRow>
               <InfoRow label="JE Name">{applicant.jeName}</InfoRow>
               <InfoRow label="JE Contact">{applicant.jeContact}</InfoRow>
@@ -501,7 +458,7 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
               <InfoRow label="Inspection Date">{formatDate(applicant.inspectionDate)}</InfoRow>
               <InfoRow label="Inspection Result">{applicant.inspectionResult ? toTitleCase(applicant.inspectionResult) : null}</InfoRow>
               <InfoRow label="Net Meter S/N">{applicant.netMeterSerialNo}</InfoRow>
-            </>
+            </div>
           )}
         </AccordionCard>
 
@@ -513,7 +470,7 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
           onToggle={() => toggleSection('finance')} onEdit={() => startEdit('finance')}
           onCancel={cancelEdit} onSave={() => saveMutation.mutate()}>
           {editingSection === 'finance' ? (
-            <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
               <F label="Finance Mode">
                 <Select value={sv(form.financeMode)} onValueChange={(v) => { set('financeMode', v); touch('financeMode', v); }}>
                   <SelectTrigger className={fieldClass('financeMode')}><SelectValue placeholder="Select finance mode" /></SelectTrigger>
@@ -542,13 +499,13 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
               </F>
             </div>
           ) : (
-            <>
+            <div className="grid grid-cols-2 gap-x-4">
               <InfoRow label="Finance Mode">{applicant.financeMode ? toTitleCase(applicant.financeMode) : null}</InfoRow>
               <InfoRow label="Bank Name">{applicant.bankName}</InfoRow>
               <InfoRow label="Loan Amount">{applicant.loanAmount ? `₹${applicant.loanAmount.toLocaleString('en-IN')}` : null}</InfoRow>
               <InfoRow label="Loan Sanctioned">{formatDate(applicant.loanSanctionedDate)}</InfoRow>
               <InfoRow label="Overpayment Rule">{toTitleCase(applicant.overpaymentRule)}</InfoRow>
-            </>
+            </div>
           )}
         </AccordionCard>
 

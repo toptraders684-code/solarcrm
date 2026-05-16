@@ -1,5 +1,5 @@
 import api from './api';
-import type { Applicant, PaginatedResponse, Document, Transaction, TransactionSummary, ApplicantChecklist } from '@/types';
+import type { Applicant, PaginatedResponse, Document, Transaction, TransactionSummary, ApplicantChecklist, InstallationDetails, OtherMaterial } from '@/types';
 
 export interface ApplicantFilters {
   page?: number;
@@ -55,6 +55,13 @@ export const applicantsService = {
     return data;
   },
 
+  generateDocument: async (applicantId: string, masterItemId: string): Promise<Blob> => {
+    const { data } = await api.get(`/applicants/${applicantId}/documents/generate/${masterItemId}`, {
+      responseType: 'blob',
+    });
+    return data;
+  },
+
   generateUploadLink: async (id: string): Promise<{ link: string; token: string; expiresAt: string }> => {
     const { data } = await api.post(`/applicants/${id}/upload-link`);
     return data;
@@ -97,5 +104,35 @@ export const applicantsService = {
   ) => {
     const { data } = await api.post(`/applicants/${id}/activities`, dto);
     return data;
+  },
+
+  upsertInstallation: async (id: string, data: Partial<InstallationDetails>) => {
+    const { data: res } = await api.patch(`/applicants/${id}/installation`, data);
+    return res as { data: InstallationDetails };
+  },
+
+  addOtherMaterial: async (id: string, data: { item: string; size?: string; lengthQty?: string; make?: string }) => {
+    const { data: res } = await api.post(`/applicants/${id}/other-materials`, data);
+    return res as { data: OtherMaterial };
+  },
+
+  updateOtherMaterial: async (id: string, matId: string, data: Partial<OtherMaterial>) => {
+    const { data: res } = await api.patch(`/applicants/${id}/other-materials/${matId}`, data);
+    return res as { data: OtherMaterial };
+  },
+
+  deleteOtherMaterial: async (id: string, matId: string) => {
+    const { data: res } = await api.delete(`/applicants/${id}/other-materials/${matId}`);
+    return res;
+  },
+
+  updateProjectStatus: async (id: string, status: string) => {
+    const { data: res } = await api.patch(`/applicants/${id}/project-status`, { status });
+    return res as { data: { projectStatus: string } };
+  },
+
+  getStatusHistory: async (id: string) => {
+    const { data: res } = await api.get(`/applicants/${id}/status-history`);
+    return res as { data: import('@/types').ProjectStatusHistory[] };
   },
 };

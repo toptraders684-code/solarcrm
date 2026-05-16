@@ -15,6 +15,7 @@ import {
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateVendorUserDto } from './dto/create-vendor-user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -31,6 +32,8 @@ export class UsersController {
     return this.usersService.findAll(user.companyId, query, user.role);
   }
 
+  // ── Static routes MUST come before :id routes ──
+
   @Get('staff')
   @Roles('admin', 'operations_staff', 'field_technician', 'finance_manager')
   getStaff(@CurrentUser() user: any) {
@@ -46,6 +49,21 @@ export class UsersController {
   ) {
     return this.usersService.changePassword(user.id, body.currentPassword, body.newPassword);
   }
+
+  @Get('vendor-team')
+  @Roles('admin', 'vendor')
+  getVendorTeam(@CurrentUser() user: any, @Query() query: any) {
+    const vendorId = user.role === 'admin' ? (query.vendorId ?? null) : (user.vendorId ?? null);
+    return this.usersService.getVendorTeam(user.companyId, vendorId);
+  }
+
+  @Post('vendor-team')
+  @Roles('admin', 'vendor')
+  createVendorUser(@Body() dto: CreateVendorUserDto, @CurrentUser() user: any) {
+    return this.usersService.createVendorUser(dto, user.companyId, user.role, user.vendorId ?? null, user.id);
+  }
+
+  // ── Parametric routes ──
 
   @Post(':id/approve')
   @Roles('admin', 'super_admin')

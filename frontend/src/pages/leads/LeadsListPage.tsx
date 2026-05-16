@@ -29,7 +29,7 @@ export default function LeadsListPage() {
   const [discomFilter, setDiscomFilter] = useState('');
   const [page, setPage] = useState(1);
 
-  const canAddLead = user && ['admin', 'operations_staff', 'field_technician'].includes(user.role);
+  const canAddLead = user && ['admin', 'operations_staff', 'field_technician', 'vendor'].includes(user.role);
   const canReassign = user && ['admin', 'operations_staff'].includes(user.role);
 
   const [reassignTarget, setReassignTarget] = useState<Lead | null>(null);

@@ -22,6 +22,8 @@ export interface CreateVendorDto {
   gstin?: string;
   ifscCode?: string;
   empanelmentDate?: string;
+  loginMobile?: string;
+  loginPassword?: string;
 }
 
 export const vendorsService = {

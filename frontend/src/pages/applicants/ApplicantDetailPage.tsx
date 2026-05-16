@@ -5,6 +5,7 @@ import { ArrowLeft, ChevronRight, Pencil, CheckCircle2, AlertCircle } from 'luci
 import { toast } from 'sonner';
 import { PageWrapper } from '@/components/shared/PageWrapper';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
@@ -16,9 +17,22 @@ import { DiscomTab } from './components/DiscomTab';
 import { ProcurementTab } from './components/ProcurementTab';
 import { DetailsTab } from './components/DetailsTab';
 import { EditApplicantSheet } from './components/EditApplicantSheet';
+import { StatusHistoryTab } from './components/StatusHistoryTab';
 import { applicantsService } from '@/services/applicants.service';
 import { formatDate, getStageName, toTitleCase, formatCapacity } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
+
+const PROJECT_STATUSES = [
+  'Active',
+  'On Hold',
+  'Material Ordered',
+  'Installation Scheduled',
+  'Installation Complete',
+  'Inspection Pending',
+  'Subsidy Pending',
+  'Completed',
+  'Cancelled',
+];
 
 export default function ApplicantDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +42,7 @@ export default function ApplicantDetailPage() {
   const [advanceOpen, setAdvanceOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
+  const [pendingStatus, setPendingStatus] = useState<string>('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['applicant', id],
@@ -65,6 +80,17 @@ export default function ApplicantDetailPage() {
 
   // Which tab to focus when an advance error points to specific fields/checklist
   const DISCOM_FIELD_LABELS = ['Portal Application Date', 'MRT Date', 'Inspection Date', 'Inspection Result', 'DISCOM Reference No.', 'Net Meter Serial No.'];
+
+  const statusMutation = useMutation({
+    mutationFn: (status: string) => applicantsService.updateProjectStatus(id!, status),
+    onSuccess: (_, status) => {
+      toast.success(`Status updated to "${status}"`);
+      queryClient.invalidateQueries({ queryKey: ['applicant', id] });
+      queryClient.invalidateQueries({ queryKey: ['status-history', id] });
+      setPendingStatus('');
+    },
+    onError: () => toast.error('Failed to update status'),
+  });
 
   const advanceMutation = useMutation({
     mutationFn: () => applicantsService.advanceStage(id!),
@@ -157,6 +183,40 @@ export default function ApplicantDetailPage() {
         )}
         <span className="text-xs text-on-surface-variant/60">Assigned: {applicant.assignedStaff?.name ?? '—'}</span>
         <span className="text-xs text-on-surface-variant/60">Stage updated: {formatDate(applicant.stageUpdatedAt)}</span>
+
+        {/* Status update — pushed to right */}
+        <div className="ml-auto flex items-center gap-2">
+          {applicant.projectStatus && !pendingStatus && (
+            <span className="px-2.5 py-1 bg-primary/10 text-primary rounded-lg text-xs font-bold">
+              {applicant.projectStatus}
+            </span>
+          )}
+          {canEdit && (
+            <>
+              <Select
+                value={pendingStatus || applicant.projectStatus || ''}
+                onValueChange={setPendingStatus}
+              >
+                <SelectTrigger className="h-8 text-xs w-48">
+                  <SelectValue placeholder="Set project status…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROJECT_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                disabled={!pendingStatus || pendingStatus === applicant.projectStatus || statusMutation.isPending}
+                loading={statusMutation.isPending}
+                onClick={() => pendingStatus && statusMutation.mutate(pendingStatus)}
+              >
+                Update
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -168,6 +228,7 @@ export default function ApplicantDetailPage() {
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="checklist">Checklist</TabsTrigger>
           <TabsTrigger value="finance">Finance</TabsTrigger>
+          <TabsTrigger value="status-history">Status History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="mt-4">
@@ -192,6 +253,10 @@ export default function ApplicantDetailPage() {
 
         <TabsContent value="finance" className="mt-4">
           <FinanceTab applicantId={id!} />
+        </TabsContent>
+
+        <TabsContent value="status-history" className="mt-4">
+          <StatusHistoryTab applicantId={id!} />
         </TabsContent>
       </Tabs>
 

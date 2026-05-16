@@ -62,10 +62,6 @@ export function EditApplicantSheet({ open, onOpenChange, applicant }: Props) {
         gpsLongitude: applicant.gpsLongitude ?? '',
         discom: applicant.discom ?? '',
         projectType: applicant.projectType ?? '',
-        systemCapacityKw: applicant.systemCapacityKw ?? '',
-        sanctionedLoadKw: applicant.sanctionedLoadKw ?? '',
-        roofType: applicant.roofType ?? '',
-        existingConsumerNo: applicant.existingConsumerNo ?? '',
         discomRefNo: applicant.discomRefNo ?? '',
         contractAmount: applicant.contractAmount ?? '',
         financeMode: applicant.financeMode ?? '',
@@ -250,26 +246,6 @@ export function EditApplicantSheet({ open, onOpenChange, applicant }: Props) {
                     <SelectItem value="commercial">Commercial</SelectItem>
                   </SelectContent>
                 </Select>
-              </F>
-              <F label="System Capacity (kW)">
-                <Input type="number" step="0.01" placeholder="e.g. 3.00" value={form.systemCapacityKw ?? ''} onChange={(e) => set('systemCapacityKw', e.target.value)} />
-              </F>
-              <F label="Sanctioned Load (kW)">
-                <Input type="number" step="0.01" value={form.sanctionedLoadKw ?? ''} onChange={(e) => set('sanctionedLoadKw', e.target.value)} />
-              </F>
-              <F label="Roof Type">
-                <Select value={sv(form.roofType)} onValueChange={(v) => set('roofType', v)}>
-                  <SelectTrigger><SelectValue placeholder="Select roof type" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="rcc">RCC</SelectItem>
-                    <SelectItem value="tin">Tin / Metal Sheet</SelectItem>
-                    <SelectItem value="asbestos">Asbestos</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </F>
-              <F label="Existing Consumer No.">
-                <Input value={form.existingConsumerNo ?? ''} onChange={(e) => set('existingConsumerNo', e.target.value)} />
               </F>
               <div className="col-span-2">
                 <F label="DISCOM Reference No.">

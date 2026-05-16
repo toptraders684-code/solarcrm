@@ -9,6 +9,16 @@ export interface CreateUserDto {
   role: string;
 }
 
+export interface CreateVendorUserDto {
+  name: string;
+  mobile: string;
+  email?: string;
+  password: string;
+  vendorLevel: 'H1' | 'H2' | 'H3';
+  vendorId?: string;
+  parentVendorUserId?: string;
+}
+
 export const usersService = {
   getUsers: async (params: { page?: number; limit?: number; role?: string; status?: string } = {}): Promise<PaginatedResponse<User>> => {
     const { data } = await api.get('/users', { params });
@@ -47,6 +57,16 @@ export const usersService = {
 
   getStaff: async (): Promise<{ data: User[] }> => {
     const { data } = await api.get('/users/staff');
+    return data;
+  },
+
+  createVendorUser: async (dto: CreateVendorUserDto): Promise<{ data: User }> => {
+    const { data } = await api.post('/users/vendor-team', dto);
+    return data;
+  },
+
+  getVendorTeam: async (vendorId?: string): Promise<{ data: User[] }> => {
+    const { data } = await api.get('/users/vendor-team', { params: vendorId ? { vendorId } : {} });
     return data;
   },
 };

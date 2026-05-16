@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Upload, Eye, FileText, X, Zap } from 'lucide-react';
+import { Upload, Eye, FileText, X, Zap, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { applicantsService } from '@/services/applicants.service';
@@ -19,8 +19,16 @@ export function DocumentsTab({ applicantId, discom }: DocumentsTabProps) {
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<Record<string, File>>({});
   const [uploadingId, setUploadingId] = useState<string | null>(null);
-  const [viewFile, setViewFile] = useState<{ url: string; mimeType: string; title: string } | null>(null);
+  const [viewFile, setViewFile] = useState<{ url: string; mimeType: string; title: string; filename: string } | null>(null);
   const [loadingViewId, setLoadingViewId] = useState<string | null>(null);
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+
+  const buildFilename = (title: string, mimeType = 'application/pdf') => {
+    const safe = title.replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_');
+    const dt = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
+    const ext = mimeType.includes('pdf') ? 'pdf' : mimeType.includes('png') ? 'png' : mimeType.includes('jpeg') ? 'jpg' : 'pdf';
+    return `${safe}_${dt}.${ext}`;
+  };
 
   const { data: masterData, isLoading: masterLoading } = useQuery({
     queryKey: ['document-master', discom],
@@ -84,11 +92,25 @@ export function DocumentsTab({ applicantId, discom }: DocumentsTabProps) {
     try {
       const blob = await applicantsService.downloadDocument(applicantId, doc.id);
       const url = URL.createObjectURL(blob);
-      setViewFile({ url, mimeType: doc.mimeType || 'application/pdf', title });
+      const mime = doc.mimeType || 'application/pdf';
+      setViewFile({ url, mimeType: mime, title, filename: buildFilename(title, mime) });
     } catch {
       toast.error('Failed to load file');
     } finally {
       setLoadingViewId(null);
+    }
+  };
+
+  const handleGenerate = async (master: DocumentMaster) => {
+    setGeneratingId(master.id);
+    try {
+      const blob = await applicantsService.generateDocument(applicantId, master.id);
+      const url = URL.createObjectURL(blob);
+      setViewFile({ url, mimeType: 'application/pdf', title: master.title, filename: buildFilename(master.title) });
+    } catch {
+      toast.error('Failed to generate document');
+    } finally {
+      setGeneratingId(null);
     }
   };
 
@@ -97,7 +119,8 @@ export function DocumentsTab({ applicantId, discom }: DocumentsTabProps) {
     try {
       const blob = await documentMasterService.getMasterFile(master.id);
       const url = URL.createObjectURL(blob);
-      setViewFile({ url, mimeType: master.masterFileMime || 'application/pdf', title: master.title });
+      const mime = master.masterFileMime || 'application/pdf';
+      setViewFile({ url, mimeType: mime, title: master.title, filename: buildFilename(master.title, mime) });
     } catch {
       toast.error('File not available');
     } finally {
@@ -166,11 +189,11 @@ export function DocumentsTab({ applicantId, discom }: DocumentsTabProps) {
                   <td className="px-4 py-3">
                     {master.docType === 'generate' ? (
                       <button
-                        disabled
-                        title="Auto-generate coming soon"
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary-container text-on-secondary-fixed-variant text-xs font-semibold opacity-60 cursor-not-allowed"
+                        onClick={() => handleGenerate(master)}
+                        disabled={generatingId === master.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary-container text-on-secondary-fixed-variant text-xs font-semibold hover:opacity-80 disabled:opacity-60 transition-opacity"
                       >
-                        <Zap size={12} />Generate Document
+                        <Zap size={12} />{generatingId === master.id ? 'Generating…' : 'Generate Document'}
                       </button>
                     ) : master.docType === 'view' ? (
                       <button
@@ -256,7 +279,17 @@ export function DocumentsTab({ applicantId, discom }: DocumentsTabProps) {
       <Dialog open={!!viewFile} onOpenChange={(open) => { if (!open) closeView(); }}>
         <DialogContent className="max-w-3xl" style={{ height: '80vh' }}>
           <DialogHeader>
-            <DialogTitle className="truncate pr-8">{viewFile?.title}</DialogTitle>
+            <DialogTitle className="truncate pr-16">{viewFile?.title}</DialogTitle>
+            {viewFile && (
+              <a
+                href={viewFile.url}
+                download={viewFile.filename}
+                className="absolute right-10 top-4 p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant/60 hover:text-on-surface transition-colors"
+                title="Download"
+              >
+                <Download size={16} />
+              </a>
+            )}
           </DialogHeader>
           <div className="flex-1 overflow-hidden rounded-lg bg-surface-container" style={{ height: 'calc(80vh - 80px)' }}>
             {viewFile?.mimeType?.startsWith('image/') ? (

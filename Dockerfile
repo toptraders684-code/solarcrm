@@ -38,8 +38,8 @@ COPY --from=backend-builder /app/backend/prisma.config.ts ./prisma.config.ts
 COPY --from=backend-builder /app/backend/public ./public
 
 # Uploads directory (Railway Volume will be mounted here)
-RUN mkdir -p /app/backend/uploads
+RUN mkdir -p /app/backend/uploads/applicants /app/backend/uploads/master /app/backend/uploads/generated
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node prisma/seed.js && node dist/src/main"]
+CMD ["sh", "-c", "mkdir -p /app/backend/uploads/applicants /app/backend/uploads/master /app/backend/uploads/generated && npx prisma migrate deploy && node prisma/seed.js && node dist/src/main"]

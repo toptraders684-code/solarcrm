@@ -358,7 +358,7 @@ async function main() {
       { discom: 'tpcodl', title: 'Geo Tag Photo Panel & Invertor', docType: 'upload', sortOrder: 12 },
       { discom: 'tpcodl', title: 'GST Tax Invoice', docType: 'generate', sortOrder: 13 },
       { discom: 'tpcodl', title: 'Installation TPCODL', docType: 'upload', sortOrder: 14 },
-      { discom: 'tpcodl', title: 'Joint Inspection Report', docType: 'upload', sortOrder: 15 },
+      { discom: 'tpcodl', title: 'Joint Inspection Report', docType: 'generate', sortOrder: 15 },
       { discom: 'tpcodl', title: 'Metafin Warranty Card', docType: 'upload', sortOrder: 16 },
       { discom: 'tpcodl', title: 'Net Meter Agreement', docType: 'generate', sortOrder: 17 },
       { discom: 'tpcodl', title: 'Net Meter Money Receipt', docType: 'upload', sortOrder: 18 },

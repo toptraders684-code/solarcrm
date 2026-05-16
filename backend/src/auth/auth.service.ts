@@ -40,8 +40,11 @@ export class AuthService {
     return { message: 'If this email exists, an OTP has been sent.' };
   }
 
-  async login(email: string, password: string, ipAddress: string) {
-    const user = await this.prisma.user.findFirst({ where: { email } });
+  async login(identifier: string, password: string, ipAddress: string) {
+    const isMobile = /^\d{10}$/.test(identifier.trim());
+    const user = await this.prisma.user.findFirst({
+      where: isMobile ? { mobile: identifier.trim() } : { email: identifier.trim() },
+    });
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
     if (user.status === 'inactive') {
@@ -137,6 +140,8 @@ export class AuthService {
         name: user.name,
         role: user.role,
         companyId: user.companyId,
+        vendorId: user.vendorId ?? undefined,
+        vendorLevel: user.vendorLevel ?? undefined,
       },
     };
   }

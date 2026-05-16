@@ -25,7 +25,21 @@ export class ApplicantsService {
     private storage: StorageService,
   ) {}
 
-  async findAll(companyId: string, query: any) {
+  private applyVendorHierarchyFilter(where: any, caller: any) {
+    if (caller?.role !== 'vendor' || !caller?.vendorId) return;
+    const { id, vendorId, vendorLevel } = caller;
+    let filter: any;
+    if (vendorLevel === 'H3') {
+      filter = { createdById: id };
+    } else if (vendorLevel === 'H2') {
+      filter = { OR: [{ createdById: id }, { createdBy: { vendorId, vendorLevel: 'H3' } }] };
+    } else {
+      filter = { createdBy: { vendorId } };
+    }
+    where.AND = where.AND ? [...where.AND, filter] : [filter];
+  }
+
+  async findAll(companyId: string, query: any, caller?: any) {
     const { limit = 25, after, discom, stage, assignedStaffId, q, sort = 'createdAt', order = 'desc' } = query;
 
     const where: any = { companyId, deletedAt: null };
@@ -33,6 +47,8 @@ export class ApplicantsService {
     if (stage) where.stage = parseInt(stage);
     if (assignedStaffId) where.assignedStaffId = assignedStaffId;
     if (after) where.id = { gt: after };
+
+    this.applyVendorHierarchyFilter(where, caller);
 
     if (q) {
       where.OR = [
@@ -75,6 +91,8 @@ export class ApplicantsService {
           include: { createdBy: { select: { id: true, name: true } } },
           orderBy: { createdAt: 'asc' },
         },
+        installationDetails: true,
+        otherMaterials: { orderBy: { itemNo: 'asc' } },
       },
     });
     if (!applicant) throw new NotFoundException('Applicant not found');
@@ -480,5 +498,77 @@ export class ApplicantsService {
     }
 
     return { link, token, expiresAt };
+  }
+
+  async upsertInstallation(applicantId: string, companyId: string, data: any) {
+    const applicant = await this.prisma.applicant.findFirst({ where: { id: applicantId, companyId, deletedAt: null } });
+    if (!applicant) throw new NotFoundException('Applicant not found');
+
+    if (data.dispatchDate) data.dispatchDate = new Date(data.dispatchDate);
+    else if (data.dispatchDate === '') data.dispatchDate = null;
+
+    const result = await this.prisma.installationDetails.upsert({
+      where: { applicantId },
+      create: { id: uuidv4(), applicantId, ...data },
+      update: data,
+    });
+    return { data: result };
+  }
+
+  async addOtherMaterial(applicantId: string, companyId: string, data: any) {
+    const applicant = await this.prisma.applicant.findFirst({ where: { id: applicantId, companyId, deletedAt: null } });
+    if (!applicant) throw new NotFoundException('Applicant not found');
+
+    const agg = await this.prisma.otherMaterial.aggregate({ where: { applicantId }, _max: { itemNo: true } });
+    const itemNo = (agg._max.itemNo ?? 0) + 1;
+
+    const result = await this.prisma.otherMaterial.create({ data: { id: uuidv4(), applicantId, itemNo, ...data } });
+    return { data: result };
+  }
+
+  async updateOtherMaterial(matId: string, applicantId: string, companyId: string, data: any) {
+    const applicant = await this.prisma.applicant.findFirst({ where: { id: applicantId, companyId, deletedAt: null } });
+    if (!applicant) throw new NotFoundException('Applicant not found');
+
+    const result = await this.prisma.otherMaterial.update({ where: { id: matId }, data });
+    return { data: result };
+  }
+
+  async deleteOtherMaterial(matId: string, applicantId: string, companyId: string) {
+    const applicant = await this.prisma.applicant.findFirst({ where: { id: applicantId, companyId, deletedAt: null } });
+    if (!applicant) throw new NotFoundException('Applicant not found');
+
+    await this.prisma.otherMaterial.delete({ where: { id: matId } });
+    return { message: 'Deleted' };
+  }
+
+  async updateProjectStatus(applicantId: string, companyId: string, status: string, userId: string) {
+    const applicant = await this.prisma.applicant.findFirst({ where: { id: applicantId, companyId, deletedAt: null } });
+    if (!applicant) throw new NotFoundException('Applicant not found');
+
+    await this.prisma.$transaction([
+      this.prisma.applicant.update({
+        where: { id: applicantId },
+        data: { projectStatus: status },
+      }),
+      this.prisma.projectStatusHistory.create({
+        data: { id: uuidv4(), applicantId, status, changedById: userId },
+      }),
+    ]);
+
+    return { data: { projectStatus: status } };
+  }
+
+  async getStatusHistory(applicantId: string, companyId: string) {
+    const applicant = await this.prisma.applicant.findFirst({ where: { id: applicantId, companyId, deletedAt: null } });
+    if (!applicant) throw new NotFoundException('Applicant not found');
+
+    const history = await this.prisma.projectStatusHistory.findMany({
+      where: { applicantId },
+      include: { changedBy: { select: { id: true, name: true } } },
+      orderBy: { changedAt: 'desc' },
+    });
+
+    return { data: history };
   }
 }

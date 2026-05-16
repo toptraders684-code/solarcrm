@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CreateVendorDto } from './dto/create-vendor.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class VendorsService {
@@ -55,33 +56,63 @@ export class VendorsService {
   }
 
   async create(dto: CreateVendorDto, companyId: string, userId: string) {
-    const vendor = await this.prisma.vendor.create({
-      data: {
-        businessName: dto.businessName,
-        contactPerson: dto.contactPerson,
-        vendorTypes: dto.vendorTypes,
-        mobile: dto.mobile,
-        email: dto.email,
-        addressVillage: dto.addressVillage,
-        addressDistrict: dto.addressDistrict,
-        addressState: dto.addressState,
-        gstin: dto.gstin,
-        ifscCode: dto.ifscCode,
-        empanelmentDate: dto.empanelmentDate ? new Date(dto.empanelmentDate) : undefined,
-        companyId,
-      },
-    });
+    // If login credentials are provided, check for mobile uniqueness before writing anything
+    if (dto.loginMobile && dto.loginPassword) {
+      const existing = await this.prisma.user.findFirst({ where: { mobile: dto.loginMobile, companyId } });
+      if (existing) throw new ConflictException('Login mobile is already in use by another user');
+    }
+
+    const vendorData = {
+      businessName: dto.businessName,
+      contactPerson: dto.contactPerson,
+      vendorTypes: dto.vendorTypes,
+      mobile: dto.mobile,
+      email: dto.email,
+      addressVillage: dto.addressVillage,
+      addressDistrict: dto.addressDistrict,
+      addressState: dto.addressState,
+      gstin: dto.gstin,
+      ifscCode: dto.ifscCode,
+      empanelmentDate: dto.empanelmentDate ? new Date(dto.empanelmentDate) : undefined,
+      companyId,
+    };
+
+    let vendor: any;
+    let loginUser: any;
+
+    if (dto.loginMobile && dto.loginPassword) {
+      const passwordHash = await bcrypt.hash(dto.loginPassword, 12);
+      [vendor, loginUser] = await this.prisma.$transaction(async (tx) => {
+        const v = await tx.vendor.create({ data: vendorData });
+        const u = await tx.user.create({
+          data: {
+            name: dto.contactPerson || dto.businessName,
+            mobile: dto.loginMobile!,
+            passwordHash,
+            role: 'vendor',
+            vendorLevel: null,
+            vendorId: v.id,
+            companyId,
+            status: 'active',
+            ipWhitelist: [],
+          },
+        });
+        return [v, u];
+      });
+    } else {
+      vendor = await this.prisma.vendor.create({ data: vendorData });
+    }
 
     await this.audit.log({
       entityType: 'Vendor',
       entityId: vendor.id,
       action: 'CREATE',
-      afterJson: { id: vendor.id, businessName: vendor.businessName },
+      afterJson: { id: vendor.id, businessName: vendor.businessName, loginCreated: !!loginUser },
       userId,
       companyId,
     });
 
-    return vendor;
+    return { ...vendor, loginCreated: !!loginUser };
   }
 
   async update(id: string, dto: Partial<CreateVendorDto>, companyId: string, userId: string) {

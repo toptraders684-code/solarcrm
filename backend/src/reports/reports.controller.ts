@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Res } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, Res } from '@nestjs/common';
 import { ReportsService } from './reports.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -15,6 +15,23 @@ export class ReportsController {
   @Roles('admin', 'operations_staff', 'field_technician', 'finance_manager', 'vendor')
   getDashboard(@CurrentUser() user: any) {
     return this.reportsService.getDashboardStats(user.companyId);
+  }
+
+  @Get('generate')
+  @Roles('admin', 'operations_staff', 'finance_manager', 'vendor')
+  generate(@Query() query: any, @CurrentUser() user: any) {
+    return this.reportsService.generateReport(query, user.companyId);
+  }
+
+  @Get('download')
+  @Roles('admin', 'operations_staff', 'finance_manager', 'vendor')
+  async download(@Query() query: any, @CurrentUser() user: any, @Res() res: Response) {
+    const { buffer, filename } = await this.reportsService.downloadReport(query, user.companyId);
+    res.set({
+      'Content-Type': 'text/csv',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    });
+    res.send(buffer);
   }
 
   @Post('preview')

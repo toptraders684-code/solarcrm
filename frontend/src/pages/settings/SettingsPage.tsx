@@ -1,21 +1,32 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, UserCheck, UserX, Users, Eye, EyeOff, Pencil, Trash2 } from 'lucide-react';
+import { Plus, UserCheck, UserX, Users, Eye, EyeOff, Pencil, Trash2, UserPlus } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Navigate } from 'react-router-dom';
 import { PageWrapper } from '@/components/shared/PageWrapper';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { usersService } from '@/services/users.service';
+import { usersService, CreateVendorUserDto } from '@/services/users.service';
+import { vendorsService } from '@/services/vendors.service';
 import { formatDate, toTitleCase } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
 import type { User } from '@/types';
+
+const VENDOR_LEVEL_COLORS: Record<string, string> = {
+  H1: 'bg-purple-100 text-purple-800',
+  H2: 'bg-blue-100 text-blue-800',
+  H3: 'bg-green-100 text-green-800',
+};
+
+const EMPTY_VENDOR_USER: CreateVendorUserDto = { name: '', mobile: '', email: '', password: '', vendorLevel: 'H3', vendorId: '' };
 
 const ROLES = ['operations_staff', 'field_technician', 'finance_manager'];
 
@@ -39,6 +50,11 @@ export default function SettingsPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
 
+  const [vendorUserOpen, setVendorUserOpen] = useState(false);
+  const [vendorUserForm, setVendorUserForm] = useState<CreateVendorUserDto>(EMPTY_VENDOR_USER);
+  const [vendorUserErrors, setVendorUserErrors] = useState<Record<string, string>>({});
+  const [showVendorPwd, setShowVendorPwd] = useState(false);
+
   if (user?.role !== 'admin') return <Navigate to="/" replace />;
 
   const { data, isLoading } = useQuery({
@@ -46,6 +62,18 @@ export default function SettingsPage() {
     queryFn: () => usersService.getUsers({ limit: 100 }),
   });
   const users = data?.data ?? [];
+
+  const { data: vendorsData } = useQuery({
+    queryKey: ['vendors-list'],
+    queryFn: () => vendorsService.getVendors({ limit: 200 }),
+  });
+  const vendorsList = vendorsData?.data ?? [];
+
+  const { data: vendorTeamData, isLoading: vendorTeamLoading } = useQuery({
+    queryKey: ['vendor-team-all'],
+    queryFn: () => usersService.getVendorTeam(),
+  });
+  const vendorTeamMembers: User[] = vendorTeamData?.data ?? [];
 
   // ── Add form ──────────────────────────────────────────────────────────────
   const { register: regAdd, handleSubmit: submitAdd, setValue: setAddVal, reset: resetAdd, formState: { errors: addErr, isSubmitting: addSubmitting } } = useForm({
@@ -120,6 +148,37 @@ export default function SettingsPage() {
     },
     onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to delete user'),
   });
+
+  const createVendorUserMutation = useMutation({
+    mutationFn: (dto: CreateVendorUserDto) => usersService.createVendorUser(dto),
+    onSuccess: () => {
+      toast.success('Vendor user created');
+      queryClient.invalidateQueries({ queryKey: ['vendor-team-all'] });
+      setVendorUserOpen(false);
+      setVendorUserForm(EMPTY_VENDOR_USER);
+      setVendorUserErrors({});
+      setShowVendorPwd(false);
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message;
+      toast.error(Array.isArray(msg) ? msg[0] : (msg || 'Failed to create vendor user'));
+    },
+  });
+
+  function validateVendorUser() {
+    const e: Record<string, string> = {};
+    if (!vendorUserForm.name.trim()) e.name = 'Name is required';
+    if (!/^\d{10}$/.test(vendorUserForm.mobile)) e.mobile = 'Mobile must be 10 digits';
+    if (!vendorUserForm.vendorId) e.vendorId = 'Please select a vendor';
+    if (vendorUserForm.password.length < 8) e.password = 'Password must be at least 8 characters';
+    setVendorUserErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  function submitVendorUser() {
+    if (!validateVendorUser()) return;
+    createVendorUserMutation.mutate({ ...vendorUserForm, email: vendorUserForm.email?.trim() || undefined });
+  }
 
   const pendingUsers = users.filter((u: User) => u.status === 'pending_approval');
   const activeUsers  = users.filter((u: User) => u.status !== 'pending_approval');
@@ -369,6 +428,156 @@ export default function SettingsPage() {
         onConfirm={() => deleteMutation.mutate()}
         loading={deleteMutation.isPending}
       />
+
+      {/* ── Vendor Users Section ── */}
+      <div className="bg-surface-container-lowest rounded-xl overflow-hidden">
+        <div className="p-6 border-b border-surface-container-low flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <UserPlus size={20} className="text-primary" />
+            <h3 className="text-lg font-bold text-on-surface font-headline">Vendor Team Members</h3>
+          </div>
+          <Button size="sm" onClick={() => setVendorUserOpen(true)}>
+            <UserPlus size={14} className="mr-1.5" />
+            Add Vendor User
+          </Button>
+        </div>
+        <table className="w-full text-left">
+          <thead>
+            <tr className="bg-surface-container-low text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">
+              <th className="px-6 py-4">Name</th>
+              <th className="px-4 py-4">Mobile</th>
+              <th className="px-4 py-4">Level</th>
+              <th className="px-4 py-4">Vendor</th>
+              <th className="px-4 py-4">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-surface-container-low">
+            {vendorTeamLoading
+              ? [...Array(3)].map((_, i) => (
+                  <tr key={i}>{[...Array(5)].map((_, j) => <td key={j} className="px-4 py-4"><Skeleton className="h-4" /></td>)}</tr>
+                ))
+              : vendorTeamMembers.length === 0
+                ? <tr><td colSpan={5} className="px-6 py-8 text-center text-sm text-on-surface-variant/50">No vendor users yet</td></tr>
+                : vendorTeamMembers.map((u) => {
+                    const vendor = vendorsList.find((v) => v.id === u.vendorId);
+                    return (
+                      <tr key={u.id} className="hover:bg-surface-container-low/50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-bold text-on-surface">{u.name}</td>
+                        <td className="px-4 py-4 text-sm text-on-surface-variant">{u.mobile}</td>
+                        <td className="px-4 py-4">
+                          {u.vendorLevel && (
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${VENDOR_LEVEL_COLORS[u.vendorLevel] ?? ''}`}>
+                              {u.vendorLevel}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 text-sm text-on-surface-variant">{vendor?.businessName ?? '—'}</td>
+                        <td className="px-4 py-4"><StatusBadge status={u.status} /></td>
+                      </tr>
+                    );
+                  })
+            }
+          </tbody>
+        </table>
+      </div>
+
+      {/* ── Add Vendor User Dialog ── */}
+      <Dialog open={vendorUserOpen} onOpenChange={setVendorUserOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Vendor User</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3 pt-2">
+            <div className="col-span-2 flex flex-col gap-1">
+              <Label>Full Name <span className="text-destructive">*</span></Label>
+              <Input value={vendorUserForm.name} onChange={(e) => setVendorUserForm({ ...vendorUserForm, name: e.target.value })} placeholder="Enter full name" />
+              {vendorUserErrors.name && <p className="text-xs text-destructive">{vendorUserErrors.name}</p>}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <Label>Mobile <span className="text-destructive">*</span></Label>
+              <Input
+                value={vendorUserForm.mobile}
+                onChange={(e) => setVendorUserForm({ ...vendorUserForm, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                placeholder="10-digit mobile"
+              />
+              {vendorUserErrors.mobile && <p className="text-xs text-destructive">{vendorUserErrors.mobile}</p>}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <Label>Level <span className="text-destructive">*</span></Label>
+              <Select
+                value={vendorUserForm.vendorLevel}
+                onValueChange={(v) => setVendorUserForm({ ...vendorUserForm, vendorLevel: v as 'H1' | 'H2' | 'H3' })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="H1">H1 — Senior</SelectItem>
+                  <SelectItem value="H2">H2 — Mid</SelectItem>
+                  <SelectItem value="H3">H3 — Field</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="col-span-2 flex flex-col gap-1">
+              <Label>Vendor <span className="text-destructive">*</span></Label>
+              <Select
+                value={vendorUserForm.vendorId}
+                onValueChange={(v) => setVendorUserForm({ ...vendorUserForm, vendorId: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select vendor…" /></SelectTrigger>
+                <SelectContent>
+                  {vendorsList.filter((v) => v.isActive).map((v) => (
+                    <SelectItem key={v.id} value={v.id}>{v.businessName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {vendorUserErrors.vendorId && <p className="text-xs text-destructive">{vendorUserErrors.vendorId}</p>}
+            </div>
+
+            <div className="col-span-2 flex flex-col gap-1">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={vendorUserForm.email ?? ''}
+                onChange={(e) => setVendorUserForm({ ...vendorUserForm, email: e.target.value })}
+                placeholder="Optional"
+              />
+            </div>
+
+            <div className="col-span-2 flex flex-col gap-1">
+              <Label>Password <span className="text-destructive">*</span></Label>
+              <div className="relative">
+                <Input
+                  type={showVendorPwd ? 'text' : 'password'}
+                  value={vendorUserForm.password}
+                  onChange={(e) => setVendorUserForm({ ...vendorUserForm, password: e.target.value })}
+                  placeholder="Min 8 characters"
+                  className="pr-10"
+                />
+                <button type="button" onClick={() => setShowVendorPwd((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40 hover:text-on-surface-variant">
+                  {showVendorPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {vendorUserErrors.password && <p className="text-xs text-destructive">{vendorUserErrors.password}</p>}
+            </div>
+          </div>
+
+          <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+            <p><strong>H1:</strong> Sees all records in this vendor account</p>
+            <p><strong>H2:</strong> Sees own records + H3 members' records</p>
+            <p><strong>H3:</strong> Sees only own created records</p>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => { setVendorUserOpen(false); setVendorUserForm(EMPTY_VENDOR_USER); setVendorUserErrors({}); setShowVendorPwd(false); }}>Cancel</Button>
+            <Button onClick={submitVendorUser} disabled={createVendorUserMutation.isPending}>
+              {createVendorUserMutation.isPending ? 'Creating…' : 'Add Vendor User'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageWrapper>
   );
 }

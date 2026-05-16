@@ -12,7 +12,7 @@ import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/store/authStore';
 
 const emailLoginSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  identifier: z.string().min(1, 'Email or mobile is required'),
   password: z.string().min(1, 'Password is required'),
 });
 
@@ -42,7 +42,7 @@ export default function LoginPage() {
 
   const handleEmailLogin = emailForm.handleSubmit(async (values) => {
     try {
-      const res = await authService.login(values.email, values.password);
+      const res = await authService.login(values.identifier, values.password);
       setAuth(res.user, res.accessToken, res.refreshToken);
       toast.success(`Welcome back, ${res.user.name}!`);
       navigate('/dashboard');
@@ -100,17 +100,17 @@ export default function LoginPage() {
 
           <Tabs defaultValue="password">
             <TabsList className="w-full mb-6">
-              <TabsTrigger value="password" className="flex-1 text-xs">Email & Password</TabsTrigger>
+              <TabsTrigger value="password" className="flex-1 text-xs">Email / Mobile</TabsTrigger>
               <TabsTrigger value="otp" className="flex-1 text-xs">Mobile OTP</TabsTrigger>
             </TabsList>
 
-            {/* Email + Password */}
+            {/* Email / Mobile + Password */}
             <TabsContent value="password">
               <form onSubmit={handleEmailLogin} className="space-y-4">
                 <div>
-                  <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Email Address</label>
-                  <Input className="mt-1" type="email" placeholder="admin@suryamcrm.in" {...emailForm.register('email')} />
-                  <FieldError msg={emailForm.formState.errors.email?.message as string} />
+                  <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Email or Mobile</label>
+                  <Input className="mt-1" type="text" placeholder="email@example.com or 9876543210" {...emailForm.register('identifier')} />
+                  <FieldError msg={emailForm.formState.errors.identifier?.message as string} />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Password</label>

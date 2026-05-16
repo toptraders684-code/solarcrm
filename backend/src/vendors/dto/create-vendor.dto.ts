@@ -1,4 +1,4 @@
-import { IsString, IsArray, IsOptional, IsEmail } from 'class-validator';
+import { IsString, IsArray, IsOptional, IsEmail, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 const emptyToUndefined = () => Transform(({ value }) => (value === '' ? undefined : value));
@@ -39,4 +39,11 @@ export class CreateVendorDto {
 
   @IsOptional() @IsString()
   empanelmentDate?: string;
+
+  // Optional login account for the vendor
+  @IsOptional() @IsString()
+  loginMobile?: string;
+
+  @IsOptional() @IsString() @MinLength(8)
+  loginPassword?: string;
 }

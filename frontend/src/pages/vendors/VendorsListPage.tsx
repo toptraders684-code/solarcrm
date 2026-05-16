@@ -1,7 +1,7 @@
 ﻿import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Phone } from 'lucide-react';
+import { Plus, Search, Phone, Eye, EyeOff } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { PageWrapper } from '@/components/shared/PageWrapper';
@@ -41,6 +41,7 @@ export default function VendorsListPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
+  const [showLoginPwd, setShowLoginPwd] = useState(false);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [page, setPage] = useState(1);
@@ -55,18 +56,35 @@ export default function VendorsListPage() {
   const vendors = data?.data ?? [];
   const meta = data?.meta;
 
-  const { register, handleSubmit, setValue, watch, reset, formState: { isSubmitting } } = useForm({
-    defaultValues: { businessName: '', contactPerson: '', mobile: '', email: '', addressVillage: '', vendorTypes: [] as string[], gstin: '', ifscCode: '' },
+  const { register, handleSubmit, setValue, watch, reset, formState: { isSubmitting, errors } } = useForm({
+    defaultValues: { businessName: '', contactPerson: '', mobile: '', email: '', addressVillage: '', vendorTypes: [] as string[], gstin: '', ifscCode: '', loginMobile: '', loginPassword: '' },
   });
 
   const selectedTypes = watch('vendorTypes');
+  const loginMobile = watch('loginMobile');
+  const loginPassword = watch('loginPassword');
 
   const onSubmit = handleSubmit(async (values) => {
+    const hasLogin = values.loginMobile?.trim() || values.loginPassword?.trim();
+    if (hasLogin && !/^\d{10}$/.test(values.loginMobile ?? '')) {
+      toast.error('Login mobile must be 10 digits');
+      return;
+    }
+    if (hasLogin && (values.loginPassword?.length ?? 0) < 8) {
+      toast.error('Login password must be at least 8 characters');
+      return;
+    }
     try {
-      await vendorsService.createVendor({ ...values, vendorTypes: values.vendorTypes as any });
-      toast.success('Vendor added successfully');
+      const result = await vendorsService.createVendor({
+        ...values,
+        vendorTypes: values.vendorTypes as any,
+        loginMobile: values.loginMobile?.trim() || undefined,
+        loginPassword: values.loginPassword?.trim() || undefined,
+      });
+      const loginMsg = (result as any).loginCreated ? ' Login account created.' : '';
+      toast.success(`Vendor added successfully.${loginMsg}`);
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
-      setAddOpen(false); reset();
+      setAddOpen(false); reset(); setShowLoginPwd(false);
     } catch (err: any) {
       toast.error(err?.response?.data?.error?.message || err?.response?.data?.message || 'Failed to add vendor');
     }
@@ -196,8 +214,54 @@ export default function VendorsListPage() {
                 <Input className="mt-1" placeholder="e.g. SBIN0001234" maxLength={11} {...register('ifscCode')} />
               </div>
             </div>
+
+            {/* Login account section */}
+            <div className="border-t border-surface-container-low pt-4 space-y-3">
+              <div>
+                <p className="text-[10px] font-black text-primary uppercase tracking-widest">Login Account</p>
+                <p className="text-xs text-on-surface-variant/60 mt-0.5">
+                  Set credentials so this vendor can log into the system. Leave blank to skip.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Login Mobile</label>
+                  <Input
+                    className="mt-1"
+                    placeholder="10-digit mobile"
+                    maxLength={10}
+                    {...register('loginMobile')}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Password</label>
+                  <div className="relative mt-1">
+                    <Input
+                      type={showLoginPwd ? 'text' : 'password'}
+                      placeholder="Min 8 characters"
+                      className="pr-10"
+                      autoComplete="new-password"
+                      {...register('loginPassword')}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPwd((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40 hover:text-on-surface-variant transition-colors"
+                    >
+                      {showLoginPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {(loginMobile || loginPassword) && (
+                <p className="text-[10px] text-on-surface-variant/50">
+                  Login name will be set to Contact Person (or Business Name if blank).
+                </p>
+              )}
+            </div>
+
             <div className="flex gap-3 pt-4 border-t border-surface-container-low">
-              <Button type="button" variant="secondary" onClick={() => setAddOpen(false)} className="flex-1">Cancel</Button>
+              <Button type="button" variant="secondary" onClick={() => { setAddOpen(false); reset(); setShowLoginPwd(false); }} className="flex-1">Cancel</Button>
               <Button type="submit" className="flex-1" loading={isSubmitting}>Add Vendor</Button>
             </div>
           </form>

@@ -173,6 +173,102 @@ Accordion order aligned to project workflow (stages 1 → 11):
 
 ---
 
+---
+
+## Session: Railway Deployment Fixes (May 2026)
+
+### 12. Fix `calendar.tsx` — react-day-picker v9 API
+
+**File:** `frontend/src/components/ui/calendar.tsx`
+
+- `IconLeft` / `IconRight` were removed in react-day-picker v9.
+- Replaced with the new unified `Chevron` component that accepts an `orientation` prop.
+- This was causing the Docker build to fail with a TypeScript compilation error, blocking all Railway deployments.
+
+---
+
+### 13. Fix `seed.js` — ChecklistMaster no longer has `companyId`
+
+**File:** `backend/prisma/seed.js`
+
+**Problem:** Migration `20260505000000_master_data_multitenancy` dropped `company_id` from the `checklist_master` table (checklists are now global, not per-company). The seed script still queried `prisma.checklistMaster.count({ where: { companyId: ... } })` and passed `companyId` in `create()`, causing a `PrismaClientValidationError` on every container startup. The seed crashed, the `&&` chain stopped, and NestJS never started.
+
+**Fix:**
+- Changed count check to `prisma.checklistMaster.count()` (no filter).
+- Removed `companyId` from `checklistMaster.create()` data payload.
+
+---
+
+---
+
+## Session: Vendor Roles, Document Generation & File Naming (May 2026)
+
+### 14. Vendor Role — Lead, Project, Document & Report Access
+
+**Files:** `frontend/src/pages/leads/LeadsListPage.tsx`, `backend/src/reports/reports.controller.ts`, `backend/src/reports/reports.service.ts`
+
+- `vendor` role can now add Leads (added `'vendor'` to `canAddLead` check in `LeadsListPage`).
+- Reports were broken for all roles — frontend called `GET /reports/generate` and `GET /reports/download` but backend only had `POST /reports/preview`. Fixed by adding the correct GET endpoints with full implementations for all 8 report types: `lead_summary`, `conversion_funnel`, `stage_aging`, `project_profitability`, `subsidy_tracker`, `vendor_payment`, `staff_performance`, `discom_wise`.
+
+---
+
+### 15. Documents Tab — 3 Upload Folders + View & Generate
+
+**Files:**
+- `backend/src/documents/document-generator.service.ts` (NEW)
+- `backend/src/applicants/applicants.controller.ts`
+- `backend/src/applicants/applicants.module.ts`
+- `backend/src/document-master/document-master.controller.ts`
+- `frontend/src/pages/applicants/components/DocumentsTab.tsx`
+- `frontend/src/services/applicants.service.ts`
+- `Dockerfile`, `backend/prisma/seed.js`, `backend/prisma/migrations/20260516000005_joint_inspection_generate_type/`
+
+#### Upload folder structure
+Three separate `uploads/` subdirectories:
+- `uploads/applicants/` — user-uploaded documents (docType `upload`)
+- `uploads/master/` — static admin-uploaded files (docType `view`)
+- `uploads/generated/` — placeholder for future cached generated PDFs
+
+Dockerfile now creates all three at both build time (`RUN mkdir -p`) and container startup (`CMD mkdir -p`) to ensure they exist even when a Railway volume is mounted over `uploads/`.
+
+#### Solar Wiring Diagram (docType `view`)
+Row 21 in the tpcodl document list. Admin uploads a static PDF via `POST /document-master/:id/file`. The file is stored at `uploads/master/{id}/view/{filename}` and the DB columns `master_file_path` + `master_file_mime` are set. On Railway, the file must be uploaded through the admin UI after first deploy (it cannot be bundled in the Docker image since uploads live on a Railway Volume).
+
+#### Joint Inspection Report (docType `generate`)
+Row 15 in the tpcodl document list. Changed from `upload` to `generate` (migration `20260516000005` + seed.js updated).
+
+`DocumentGeneratorService` (`backend/src/documents/document-generator.service.ts`) is the single file for all PDF generation:
+- `generate(applicantId, masterItemId, companyId)` — routes by `masterItem.title` via a `switch`
+- `jointInspectionReport(applicant)` — PDFKit A4, reads: `customerName`, `existingConsumerNo`, full address, `panelTotalCapacityKw`/`inverterCapacityKw` (falls back to `systemCapacityKw`), primary vendor `businessName`+`contactPerson`, `contractAmount`, sum of approved subsidy transactions
+- `placeholderPdf(title)` — fallback for unimplemented generate types
+- **Adding new generated documents:** add a `case 'Document Title':` in the switch and a private method — no other files need changing
+
+PDFs are generated in memory and streamed directly to the client; `uploads/generated/` is reserved for future caching.
+
+---
+
+### 16. Download Filename — Title + Datetime
+
+**Files:** `backend/src/applicants/applicants.controller.ts`, `backend/src/document-master/document-master.controller.ts`, `frontend/src/pages/applicants/components/DocumentsTab.tsx`
+
+All document views and downloads now use `{Document_Title}_{YYYY-MM-DD_HH-MM-SS}.ext` as the filename instead of the encrypted storage name.
+
+- Backend: `buildDocFilename(title, ext)` helper in both controllers sets `Content-Disposition: inline; filename="..."`.
+- Frontend: `buildFilename(title, mimeType)` helper in `DocumentsTab` sets the `filename` field on the `viewFile` state. A Download button (`<a download={viewFile.filename}>`) in the viewer modal allows saving with the correct name.
+
+---
+
+## Current Running State (as of May 2026)
+
+| Environment | Status | Notes |
+|-------------|--------|-------|
+| **Local** | Running | Up to date with GitHub (this push) |
+| **Railway (Production)** | Deploying | Migration `20260516000005` will apply on next deploy — changes Joint Inspection Report to `generate` |
+
+> **Post-deploy action required on Railway:** Upload the Solar Wiring Diagram PDF through Admin → Document Master → Solar Wiring Diagram → Upload File.
+
+---
+
 ## Key Architecture Notes
 
 ### Stage ↔ Checklist Phase Mapping

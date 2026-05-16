@@ -19,8 +19,9 @@ export class VendorsController {
 
   @Get(':id')
   @Roles('admin', 'operations_staff', 'finance_manager')
-  findOne(@Param('id') id: string, @CurrentUser() user: any) {
-    return this.vendorsService.findOne(id, user.companyId);
+  async findOne(@Param('id') id: string, @CurrentUser() user: any) {
+    const data = await this.vendorsService.findOne(id, user.companyId);
+    return { data };
   }
 
   @Post()

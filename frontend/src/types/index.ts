@@ -28,6 +28,8 @@ export interface AuthUser {
   role: UserRole;
   status: UserStatus;
   companyId: string;
+  vendorId?: string;
+  vendorLevel?: string;
 }
 
 export interface LoginResponse {
@@ -64,6 +66,9 @@ export interface User {
   mobile: string;
   email?: string;
   role: UserRole;
+  vendorLevel?: string;
+  vendorId?: string;
+  parentVendorUserId?: string;
   status: UserStatus;
   createdAt: string;
 }
@@ -141,6 +146,7 @@ export interface Applicant {
   customerName: string;
   stage: number;
   stageUpdatedAt?: string;
+  projectStatus?: string;
 
   // Personal
   dateOfBirth?: string;
@@ -203,6 +209,90 @@ export interface Applicant {
   transactions?: Transaction[];
   applicantVendors?: ApplicantVendor[];
   activities?: ProjectActivity[];
+  installationDetails?: InstallationDetails;
+  otherMaterials?: OtherMaterial[];
+}
+
+export interface InstallationDetails {
+  id: string;
+  applicantId: string;
+  // A. Dispatch
+  dispatchNo?: string;
+  dispatchDate?: string;
+  dispatchCustomerMobileNo?: string;
+  vehicleNo?: string;
+  driverMobileNo?: string;
+  // B. Solar Panel
+  panelBrand?: string;
+  panelCellManufacturer?: string;
+  panelTypeOfModule?: string;
+  panelCapacityPerModule?: number;
+  panelQty?: number;
+  panelTotalCapacityKw?: number;
+  panelModelType?: string;
+  panelSerial1?: string;
+  panelSerial2?: string;
+  panelSerial3?: string;
+  panelSerial4?: string;
+  panelSerial5?: string;
+  panelSerial6?: string;
+  // C. Inverter
+  inverterBrand?: string;
+  inverterCapacityKw?: number;
+  inverterSerialNo?: string;
+  inverterQty?: number;
+  inverterModelNo?: string;
+  inverterInputVoltage?: string;
+  inverterOutputVoltage?: string;
+  // D. Structure
+  structureGiType?: string;
+  structureLegRafter?: string;
+  structurePerlin?: string;
+  structureNutBoltClampBox?: string;
+  // E. ACDB / DCDB
+  acdbModel?: string;
+  acdbSpecs?: string;
+  acdbBrand?: string;
+  dcdbModel?: string;
+  dcdbSpecs?: string;
+  dcdbBrand?: string;
+  // F. Earthing Kit
+  earthingLightningArrestor?: string;
+  earthingChemicalBag?: string;
+  earthingNutBolt?: string;
+  earthingPitCover?: string;
+  earthingRod?: string;
+  // G. PVC / Wires
+  wireMc4Connector?: string;
+  wireEarthingCable?: string;
+  wirePvcCableTray?: string;
+  wirePvcConduitPipe?: string;
+  wirePvcElbow?: string;
+  wireCClip?: string;
+  wireT?: string;
+  wireFlexibleCoil?: string;
+  wireCableTie?: string;
+  wireBlackTape?: string;
+}
+
+export interface ProjectStatusHistory {
+  id: string;
+  applicantId: string;
+  status: string;
+  changedById: string;
+  changedBy?: { id: string; name: string };
+  changedAt: string;
+}
+
+export interface OtherMaterial {
+  id: string;
+  applicantId: string;
+  itemNo: number;
+  item: string;
+  size?: string;
+  lengthQty?: string;
+  make?: string;
+  createdAt?: string;
 }
 
 export type ProjectActivityType =

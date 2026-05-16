@@ -20,7 +20,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto, @Req() req: Request) {
     const ip = req.ip || req.socket.remoteAddress || '';
-    return this.authService.login(dto.email, dto.password, ip);
+    return this.authService.login(dto.identifier, dto.password, ip);
   }
 
   @Post('refresh')

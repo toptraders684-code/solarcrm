@@ -249,6 +249,12 @@ model User {
   email            String?    @db.VarChar(200)
   passwordHash     String?    @map("password_hash") @db.VarChar(200)
   role             UserRole
+  vendorLevel           String?    @map("vendor_level") @db.VarChar(5)
+  vendorId              String?    @map("vendor_id")
+  vendorRef             Vendor?    @relation("VendorUsers", fields: [vendorId], references: [id])
+  parentVendorUserId    String?    @map("parent_vendor_user_id")
+  parentVendorUser      User?      @relation("VendorHierarchy", fields: [parentVendorUserId], references: [id])
+  vendorSubUsers        User[]     @relation("VendorHierarchy")
   status           UserStatus @default(pending_approval)
   permissionsJson  Json?      @default("{}") @map("permissions_json")
   ipWhitelist      String[]   @map("ip_whitelist")
@@ -264,6 +270,7 @@ model User {
   leadFollowups        LeadFollowup[]
   projectActivities    ProjectActivity[]
   checklistItems       ApplicantChecklist[]
+  statusChanges        ProjectStatusHistory[] @relation("StatusChanges")
   uploadedDocuments    Document[]
   approvedTransactions Transaction[]        @relation("ApprovedTransactions")
   createdTransactions  Transaction[]        @relation("CreatedTransactions")
@@ -422,6 +429,7 @@ model Applicant {
 
   stage                 Int             @default(1)
   stageUpdatedAt        DateTime?       @map("stage_updated_at")
+  projectStatus         String?         @map("project_status") @db.VarChar(50)
   consentGiven          Boolean         @default(false) @map("consent_given")
   consentTimestamp      DateTime?       @map("consent_timestamp")
 
@@ -430,19 +438,35 @@ model Applicant {
   createdById           String          @map("created_by")
   createdBy             User            @relation("CreatedApplicants", fields: [createdById], references: [id])
 
-  leadsConvertedFrom  Lead[]               @relation("ConvertedFromLead")
-  checklists          ApplicantChecklist[]
-  documents           Document[]
-  transactions        Transaction[]
-  applicantVendors    ApplicantVendor[]
-  customerUploadLinks CustomerUploadLink[]
-  piiVault            PiiVault?
-  activities          ProjectActivity[]
+  leadsConvertedFrom    Lead[]               @relation("ConvertedFromLead")
+  checklists            ApplicantChecklist[]
+  documents             Document[]
+  transactions          Transaction[]
+  applicantVendors      ApplicantVendor[]
+  customerUploadLinks   CustomerUploadLink[]
+  piiVault              PiiVault?
+  activities            ProjectActivity[]
+  installationDetails   InstallationDetails?
+  otherMaterials        OtherMaterial[]
+  statusHistory         ProjectStatusHistory[]
 
   @@unique([companyId, applicantCode])
   @@index([companyId, stage], map: "idx_applicants_company_stage")
   @@index([discom], map: "idx_applicants_discom")
   @@map("applicants")
+}
+
+model ProjectStatusHistory {
+  id          String    @id @default(uuid())
+  applicantId String    @map("applicant_id")
+  applicant   Applicant @relation(fields: [applicantId], references: [id])
+  status      String    @db.VarChar(50)
+  changedById String    @map("changed_by_id")
+  changedBy   User      @relation("StatusChanges", fields: [changedById], references: [id])
+  changedAt   DateTime  @default(now()) @map("changed_at")
+
+  @@index([applicantId], map: "idx_status_history_applicant")
+  @@map("project_status_history")
 }
 
 // ─────────────────────────────────────────────
@@ -461,6 +485,98 @@ model PiiVault {
   updatedAt            DateTime  @updatedAt @map("updated_at")
 
   @@map("pii_vault")
+}
+
+// ─────────────────────────────────────────────
+// INSTALLATION DETAILS
+// ─────────────────────────────────────────────
+
+model InstallationDetails {
+  id          String    @id @default(uuid())
+  applicantId String    @unique @map("applicant_id")
+  applicant   Applicant @relation(fields: [applicantId], references: [id])
+
+  // A. Dispatch
+  dispatchNo               String?   @map("dispatch_no") @db.VarChar(100)
+  dispatchDate             DateTime? @map("dispatch_date") @db.Date
+  dispatchCustomerMobileNo String?   @map("dispatch_customer_mobile_no") @db.VarChar(15)
+  vehicleNo                String?   @map("vehicle_no") @db.VarChar(50)
+  driverMobileNo           String?   @map("driver_mobile_no") @db.VarChar(15)
+
+  // B. Solar Panel
+  panelBrand             String?  @map("panel_brand") @db.VarChar(100)
+  panelCellManufacturer  String?  @map("panel_cell_manufacturer") @db.VarChar(100)
+  panelTypeOfModule      String?  @map("panel_type_of_module") @db.VarChar(100)
+  panelCapacityPerModule Decimal? @map("panel_capacity_per_module") @db.Decimal(10, 3)
+  panelQty               Int?     @map("panel_qty")
+  panelTotalCapacityKw   Decimal? @map("panel_total_capacity_kw") @db.Decimal(10, 3)
+  panelModelType         String?  @map("panel_model_type") @db.VarChar(100)
+  panelSerial1           String?  @map("panel_serial_1") @db.VarChar(100)
+  panelSerial2           String?  @map("panel_serial_2") @db.VarChar(100)
+  panelSerial3           String?  @map("panel_serial_3") @db.VarChar(100)
+  panelSerial4           String?  @map("panel_serial_4") @db.VarChar(100)
+  panelSerial5           String?  @map("panel_serial_5") @db.VarChar(100)
+  panelSerial6           String?  @map("panel_serial_6") @db.VarChar(100)
+
+  // C. Inverter
+  inverterBrand         String?  @map("inverter_brand") @db.VarChar(100)
+  inverterCapacityKw    Decimal? @map("inverter_capacity_kw") @db.Decimal(10, 3)
+  inverterSerialNo      String?  @map("inverter_serial_no") @db.VarChar(100)
+  inverterQty           Int?     @map("inverter_qty")
+  inverterModelNo       String?  @map("inverter_model_no") @db.VarChar(100)
+  inverterInputVoltage  String?  @map("inverter_input_voltage") @db.VarChar(50)
+  inverterOutputVoltage String?  @map("inverter_output_voltage") @db.VarChar(50)
+
+  // D. Structure
+  structureGiType          String? @map("structure_gi_type") @db.VarChar(50)
+  structureLegRafter       String? @map("structure_leg_rafter") @db.VarChar(50)
+  structurePerlin          String? @map("structure_perlin") @db.VarChar(50)
+  structureNutBoltClampBox String? @map("structure_nut_bolt_clamp_box") @db.VarChar(50)
+
+  // E. ACDB / DCDB
+  acdbModel String? @map("acdb_model") @db.VarChar(100)
+  acdbSpecs String? @map("acdb_specs") @db.VarChar(100)
+  acdbBrand String? @map("acdb_brand") @db.VarChar(100)
+  dcdbModel String? @map("dcdb_model") @db.VarChar(100)
+  dcdbSpecs String? @map("dcdb_specs") @db.VarChar(100)
+  dcdbBrand String? @map("dcdb_brand") @db.VarChar(100)
+
+  // F. Earthing Kit
+  earthingLightningArrestor String? @map("earthing_lightning_arrestor") @db.VarChar(50)
+  earthingChemicalBag       String? @map("earthing_chemical_bag") @db.VarChar(50)
+  earthingNutBolt           String? @map("earthing_nut_bolt") @db.VarChar(50)
+  earthingPitCover          String? @map("earthing_pit_cover") @db.VarChar(50)
+  earthingRod               String? @map("earthing_rod") @db.VarChar(50)
+
+  // G. PVC / Wires
+  wireMc4Connector   String? @map("wire_mc4_connector") @db.VarChar(50)
+  wireEarthingCable  String? @map("wire_earthing_cable") @db.VarChar(50)
+  wirePvcCableTray   String? @map("wire_pvc_cable_tray") @db.VarChar(50)
+  wirePvcConduitPipe String? @map("wire_pvc_conduit_pipe") @db.VarChar(50)
+  wirePvcElbow       String? @map("wire_pvc_elbow") @db.VarChar(50)
+  wireCClip          String? @map("wire_c_clip") @db.VarChar(50)
+  wireT              String? @map("wire_t") @db.VarChar(50)
+  wireFlexibleCoil   String? @map("wire_flexible_coil") @db.VarChar(50)
+  wireCableTie       String? @map("wire_cable_tie") @db.VarChar(50)
+  wireBlackTape      String? @map("wire_black_tape") @db.VarChar(50)
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("installation_details")
+}
+
+model OtherMaterial {
+  id          String    @id @default(uuid())
+  applicantId String    @map("applicant_id")
+  applicant   Applicant @relation(fields: [applicantId], references: [id])
+  itemNo      Int       @map("item_no")
+  item        String    @db.VarChar(200)
+  size        String?   @db.VarChar(100)
+  lengthQty   String?   @map("length_qty") @db.VarChar(100)
+  make        String?   @db.VarChar(100)
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("other_materials")
 }
 
 // ─────────────────────────────────────────────
@@ -608,6 +724,7 @@ model Vendor {
 
   applicantVendors ApplicantVendor[]
   transactions     Transaction[]
+  vendorUsers      User[]            @relation("VendorUsers")
 
   @@map("vendors")
 }

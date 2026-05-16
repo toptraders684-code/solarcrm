@@ -22,12 +22,13 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/leads', label: 'Leads', icon: FileText, roles: ['admin', 'operations_staff', 'field_technician'] },
+  { to: '/leads', label: 'Leads', icon: FileText, roles: ['admin', 'operations_staff', 'field_technician', 'vendor'] },
   { to: '/applicants', label: 'Projects', icon: Users },
   { to: '/finance', label: 'Finance', icon: CreditCard, roles: ['admin', 'finance_manager', 'operations_staff'] },
   { to: '/vendors', label: 'Vendors', icon: Truck, roles: ['admin', 'operations_staff'] },
-  { to: '/reports', label: 'Reports', icon: BarChart2, roles: ['admin', 'finance_manager'] },
+  { to: '/reports', label: 'Reports', icon: BarChart2, roles: ['admin', 'finance_manager', 'vendor'] },
   { to: '/settings', label: 'Settings', icon: Settings, roles: ['admin'] },
+  { to: '/vendor-team', label: 'My Team', icon: Users, roles: ['vendor'] },
 ];
 
 interface SidebarProps {

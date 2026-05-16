@@ -10,6 +10,7 @@ import { AuditService } from '../audit/audit.service';
 import { EmailService } from '../notifications/email.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateVendorUserDto } from './dto/create-vendor-user.dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -52,6 +53,8 @@ export class UsersService {
         email: true,
         mobile: true,
         role: true,
+        vendorLevel: true,
+        vendorId: true,
         status: true,
         createdAt: true,
       },
@@ -180,6 +183,52 @@ export class UsersService {
       orderBy: { name: 'asc' },
     });
     return { data: staff };
+  }
+
+  async createVendorUser(dto: CreateVendorUserDto, companyId: string, callerRole: string, callerVendorId: string | null, createdBy: string) {
+    const resolvedVendorId = callerRole === 'admin' ? dto.vendorId : callerVendorId;
+    if (!resolvedVendorId) throw new BadRequestException('Vendor is required');
+
+    // Confirm vendor belongs to this company
+    const vendor = await this.prisma.vendor.findFirst({ where: { id: resolvedVendorId, companyId, deletedAt: null } });
+    if (!vendor) throw new NotFoundException('Vendor not found');
+
+    const existing = await this.prisma.user.findFirst({ where: { mobile: dto.mobile, companyId } });
+    if (existing) throw new ConflictException('Mobile already in use');
+
+    const passwordHash = await bcrypt.hash(dto.password, 12);
+    const user = await this.prisma.user.create({
+      data: {
+        name: dto.name,
+        email: dto.email,
+        mobile: dto.mobile,
+        passwordHash,
+        role: 'vendor',
+        vendorLevel: dto.vendorLevel,
+        vendorId: resolvedVendorId,
+        parentVendorUserId: dto.parentVendorUserId ?? null,
+        companyId,
+        status: 'active',
+        ipWhitelist: [],
+      },
+    });
+
+    await this.audit.log({ entityType: 'User', entityId: user.id, action: 'CREATE', afterJson: { id: user.id, role: 'vendor', vendorLevel: dto.vendorLevel }, userId: createdBy, companyId });
+    return { data: { id: user.id, name: user.name, role: user.role, vendorLevel: user.vendorLevel } };
+  }
+
+  async getVendorTeam(companyId: string, callerVendorId: string | null) {
+    if (!callerVendorId) return { data: [] };
+    const users = await this.prisma.user.findMany({
+      where: { companyId, vendorId: callerVendorId, deletedAt: null, role: 'vendor', vendorLevel: { not: null } },
+      select: {
+        id: true, name: true, email: true, mobile: true,
+        vendorLevel: true, status: true, createdAt: true,
+        parentVendorUserId: true,
+      },
+      orderBy: [{ vendorLevel: 'asc' }, { name: 'asc' }],
+    });
+    return { data: users };
   }
 
   async approveUser(id: string, companyId: string | null, approvedBy: string) {
