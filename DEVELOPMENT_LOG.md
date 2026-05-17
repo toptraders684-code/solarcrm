@@ -258,12 +258,67 @@ All document views and downloads now use `{Document_Title}_{YYYY-MM-DD_HH-MM-SS}
 
 ---
 
+---
+
+## Session: Bug Fixes — Vendor Team, Lead Assignment & PDF Viewer (May 2026)
+
+### 17. PDF Viewer — "This content is blocked" Fix
+
+**File:** `backend/src/main.ts`
+
+Helmet's default CSP blocked `blob:` URLs in iframes, causing Chrome to show "This content is blocked" when viewing generated or downloaded PDFs in the viewer modal on Railway (HTTPS). Fixed by explicitly adding `frameSrc` and `workerSrc` directives that allow `blob:` while keeping all other Helmet defaults unchanged.
+
+---
+
+### 18. Vendor Team Page — Admin Can Manage Vendor Teams
+
+**Files:** `frontend/src/pages/vendor/VendorTeamPage.tsx`, `frontend/src/components/layout/Sidebar.tsx`, `backend/src/users/users.controller.ts`, `backend/src/users/users.service.ts`
+
+- Admin and operations_staff now have a **"Vendor Team"** link in the sidebar.
+- When admin opens the page, a **vendor selector** dropdown appears at the top. Selecting a vendor loads that vendor's team and pre-fills the vendor in the Add Member dialog.
+- "Add Member" button is disabled until a vendor is selected (prevents "Vendor is required" backend error).
+- `getVendorTeam` backend fix: removed early `return { data: [] }` when `callerVendorId` is null. Admin calls without `?vendorId` now return all vendor-role users across the company (used by SettingsPage "Vendor Team Members" grid). Calls with `?vendorId` return only that vendor's team.
+- `createVendorUser` now checks `isStaff = callerRole === 'admin' || callerRole === 'operations_staff'` to resolve vendorId from `dto.vendorId`.
+- `operations_staff` role added to both vendor-team endpoints.
+
+---
+
+### 19. Vendor-Created Leads — No Assigned Staff Required
+
+**Files:** `backend/src/leads/dto/create-lead.dto.ts`, `backend/src/leads/dto/update-lead.dto.ts`, `backend/src/leads/leads.service.ts`, `backend/prisma/schema.prisma`, `frontend/src/pages/leads/components/AddLeadForm.tsx`, `frontend/src/utils/validators.ts`
+**Migration:** `20260517000000_leads_assigned_staff_optional`
+
+- Vendor and vendor team members no longer see the "Assigned Staff" field when creating a lead — it is hidden for `vendor` role.
+- `assigned_staff_id` DB column is now nullable (`ALTER TABLE leads ALTER COLUMN assigned_staff_id DROP NOT NULL`).
+- Prisma schema: `assignedStaffId String?` / `assignedStaff User?`.
+- Backend DTO: `@IsOptional()` on `assignedStaffId` in both `CreateLeadDto` and `UpdateLeadDto`.
+- Email notification to assigned staff only fires when `assignedStaffId` is present.
+- Admin assigns staff to vendor-created leads via the pencil icon in the "Assigned To" column of the Leads grid (hover to reveal).
+
+---
+
+### 20. Lead Edit — `alternateMobile` Validation Error
+
+**File:** `backend/src/leads/dto/update-lead.dto.ts`
+
+`alternateMobile` was present in `CreateLeadDto` but missing from `UpdateLeadDto`. With `forbidNonWhitelisted: true` globally, editing a lead sent `alternateMobile` and got rejected with "property alternateMobile should not exist". Fixed by adding the field to `UpdateLeadDto`.
+
+---
+
+### 21. Error Messages — GlobalExceptionFilter Response Shape
+
+**Files:** `frontend/src/pages/leads/components/AddLeadForm.tsx`, `frontend/src/pages/leads/LeadsListPage.tsx`
+
+`GlobalExceptionFilter` returns `{ error: { code, message } }` but frontend catch blocks were reading `err.response.data.message` (wrong path). Fixed to check `err.response.data.error.message` first, then fall back to `err.response.data.message`.
+
+---
+
 ## Current Running State (as of May 2026)
 
 | Environment | Status | Notes |
 |-------------|--------|-------|
 | **Local** | Running | Up to date with GitHub (this push) |
-| **Railway (Production)** | Deploying | Migration `20260516000005` will apply on next deploy — changes Joint Inspection Report to `generate` |
+| **Railway (Production)** | Deploying | Migrations `20260516000005` + `20260517000000` will apply |
 
 > **Post-deploy action required on Railway:** Upload the Solar Wiring Diagram PDF through Admin → Document Master → Solar Wiring Diagram → Upload File.
 

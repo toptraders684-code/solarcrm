@@ -113,11 +113,13 @@ export class LeadsService {
       },
     });
 
-    // Notify assigned staff
-    const assignedUser = await this.prisma.user.findUnique({ where: { id: dto.assignedStaffId } });
-    if (assignedUser?.email) {
-      const creator = await this.prisma.user.findUnique({ where: { id: userId } });
-      await this.emailService.sendLeadAssigned(assignedUser.email, lead.customerName, creator?.name || '');
+    // Notify assigned staff (only if a staff member was assigned at creation)
+    if (dto.assignedStaffId) {
+      const assignedUser = await this.prisma.user.findUnique({ where: { id: dto.assignedStaffId } });
+      if (assignedUser?.email) {
+        const creator = await this.prisma.user.findUnique({ where: { id: userId } });
+        await this.emailService.sendLeadAssigned(assignedUser.email, lead.customerName, creator?.name || '');
+      }
     }
 
     await this.audit.log({

@@ -51,14 +51,15 @@ export class UsersController {
   }
 
   @Get('vendor-team')
-  @Roles('admin', 'vendor')
+  @Roles('admin', 'operations_staff', 'vendor')
   getVendorTeam(@CurrentUser() user: any, @Query() query: any) {
-    const vendorId = user.role === 'admin' ? (query.vendorId ?? null) : (user.vendorId ?? null);
+    const isStaff = user.role === 'admin' || user.role === 'operations_staff';
+    const vendorId = isStaff ? (query.vendorId ?? null) : (user.vendorId ?? null);
     return this.usersService.getVendorTeam(user.companyId, vendorId);
   }
 
   @Post('vendor-team')
-  @Roles('admin', 'vendor')
+  @Roles('admin', 'operations_staff', 'vendor')
   createVendorUser(@Body() dto: CreateVendorUserDto, @CurrentUser() user: any) {
     return this.usersService.createVendorUser(dto, user.companyId, user.role, user.vendorId ?? null, user.id);
   }

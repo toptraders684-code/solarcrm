@@ -186,7 +186,8 @@ export class UsersService {
   }
 
   async createVendorUser(dto: CreateVendorUserDto, companyId: string, callerRole: string, callerVendorId: string | null, createdBy: string) {
-    const resolvedVendorId = callerRole === 'admin' ? dto.vendorId : callerVendorId;
+    const isStaff = callerRole === 'admin' || callerRole === 'operations_staff';
+    const resolvedVendorId = isStaff ? dto.vendorId : callerVendorId;
     if (!resolvedVendorId) throw new BadRequestException('Vendor is required');
 
     // Confirm vendor belongs to this company
@@ -218,9 +219,10 @@ export class UsersService {
   }
 
   async getVendorTeam(companyId: string, callerVendorId: string | null) {
-    if (!callerVendorId) return { data: [] };
+    const where: any = { companyId, deletedAt: null, role: 'vendor', vendorLevel: { not: null } };
+    if (callerVendorId) where.vendorId = callerVendorId;
     const users = await this.prisma.user.findMany({
-      where: { companyId, vendorId: callerVendorId, deletedAt: null, role: 'vendor', vendorLevel: { not: null } },
+      where,
       select: {
         id: true, name: true, email: true, mobile: true,
         vendorLevel: true, status: true, createdAt: true,

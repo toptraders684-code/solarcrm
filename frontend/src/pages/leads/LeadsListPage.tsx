@@ -49,7 +49,7 @@ export default function LeadsListPage() {
       setReassignTarget(null);
       setReassignStaffId('');
     },
-    onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to reassign'),
+    onError: (err: any) => toast.error(err?.response?.data?.error?.message || err?.response?.data?.message || 'Failed to reassign'),
   });
 
   const { data, isLoading } = useQuery({

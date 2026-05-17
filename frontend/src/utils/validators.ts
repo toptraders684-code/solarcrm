@@ -77,7 +77,7 @@ export const createLeadSchema = z.object({
   estimatedCapacityKw: z.number().positive().optional(),
   leadSource: z.string().min(1, 'Lead source is required'),
   financePreference: z.string().optional(),
-  assignedStaffId: z.string().min(1, 'Assigned staff is required'),
+  assignedStaffId: z.string().min(1, 'Assigned staff is required').optional(),
   followUpDate: z.string().optional(),
 });
 

@@ -12,8 +12,28 @@ async function bootstrap() {
   // Trust Railway's reverse proxy so rate-limit can read the real client IP
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
-  // Security headers
-  app.use(helmet());
+  // Security headers — allow blob: URLs in frames so PDF/image viewers work
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          baseUri: ["'self'"],
+          fontSrc: ["'self'", 'https:', 'data:'],
+          formAction: ["'self'"],
+          frameAncestors: ["'self'"],
+          imgSrc: ["'self'", 'data:'],
+          objectSrc: ["'none'"],
+          scriptSrc: ["'self'"],
+          scriptSrcAttr: ["'none'"],
+          styleSrc: ["'self'", 'https:', "'unsafe-inline'"],
+          upgradeInsecureRequests: [],
+          frameSrc: ["'self'", 'blob:'],
+          workerSrc: ["'self'", 'blob:'],
+        },
+      },
+    }),
+  );
 
   // Rate limiting
   app.use(

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { usersService, CreateVendorUserDto } from '@/services/users.service';
+import { vendorsService } from '@/services/vendors.service';
+import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { UserPlus, Eye, EyeOff, UserCircle, Phone, Mail, Users } from 'lucide-react';
+import { UserPlus, Eye, EyeOff, Phone, Mail, Users, Building2 } from 'lucide-react';
 import type { User } from '@/types';
 
 // ── Styles ──────────────────────────────────────────────────────────────────
@@ -127,14 +129,29 @@ function TreeBranch({ node, depth = 0 }: { node: TreeNode; depth?: number }) {
 
 export default function VendorTeamPage() {
   const qc = useQueryClient();
+  const { user: authUser } = useAuthStore();
+  const isAdmin = authUser?.role === 'admin' || authUser?.role === 'operations_staff';
+
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<CreateVendorUserDto>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPwd, setShowPwd] = useState(false);
+  const [selectedVendorId, setSelectedVendorId] = useState<string>('');
+
+  // Vendor list — only needed for admin
+  const { data: vendorData } = useQuery({
+    queryKey: ['vendors-dropdown'],
+    queryFn: () => vendorsService.getVendors({ limit: 200 }),
+    enabled: isAdmin,
+  });
+  const vendorList = vendorData?.data ?? [];
+
+  const activeVendorId = isAdmin ? selectedVendorId : undefined;
 
   const { data, isLoading } = useQuery({
-    queryKey: ['vendor-team'],
-    queryFn: () => usersService.getVendorTeam(),
+    queryKey: ['vendor-team', activeVendorId],
+    queryFn: () => usersService.getVendorTeam(activeVendorId),
+    enabled: !isAdmin || !!selectedVendorId,
   });
 
   const members: User[] = data?.data ?? [];
@@ -147,7 +164,7 @@ export default function VendorTeamPage() {
     mutationFn: (dto: CreateVendorUserDto) => usersService.createVendorUser(dto),
     onSuccess: () => {
       toast.success('Team member added');
-      qc.invalidateQueries({ queryKey: ['vendor-team'] });
+      qc.invalidateQueries({ queryKey: ['vendor-team', activeVendorId] });
       handleClose();
     },
     onError: (err: any) => {
@@ -158,6 +175,7 @@ export default function VendorTeamPage() {
 
   function validate() {
     const e: Record<string, string> = {};
+    if (isAdmin && !selectedVendorId) e.vendorId = 'Select a vendor first';
     if (!form.name.trim()) e.name = 'Name is required';
     if (!/^\d{10}$/.test(form.mobile)) e.mobile = 'Mobile must be 10 digits';
     if (form.password.length < 8) e.password = 'Password must be at least 8 characters';
@@ -174,7 +192,11 @@ export default function VendorTeamPage() {
 
   function handleSubmit() {
     if (!validate()) return;
-    createMutation.mutate({ ...form, email: form.email?.trim() || undefined });
+    createMutation.mutate({
+      ...form,
+      email: form.email?.trim() || undefined,
+      vendorId: isAdmin ? selectedVendorId : undefined,
+    });
   }
 
   function handleClose() {
@@ -191,16 +213,33 @@ export default function VendorTeamPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-on-surface font-headline">My Team</h1>
+          <h1 className="text-2xl font-bold text-on-surface font-headline">{isAdmin ? 'Vendor Team' : 'My Team'}</h1>
           <p className="text-sm text-on-surface-variant/60 mt-0.5">
             {members.length} team member{members.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <Button onClick={() => setOpen(true)}>
+        <Button onClick={() => setOpen(true)} disabled={isAdmin && !selectedVendorId}>
           <UserPlus size={16} className="mr-2" />
           Add Member
         </Button>
       </div>
+
+      {/* Vendor selector — admin only */}
+      {isAdmin && (
+        <div className="mb-5 flex items-center gap-3">
+          <Building2 size={16} className="text-on-surface-variant/50 flex-shrink-0" />
+          <Select value={selectedVendorId} onValueChange={setSelectedVendorId}>
+            <SelectTrigger className="w-72">
+              <SelectValue placeholder="Select a vendor to view their team…" />
+            </SelectTrigger>
+            <SelectContent>
+              {vendorList.map((v) => (
+                <SelectItem key={v.id} value={v.id}>{v.businessName}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Tree */}
       {isLoading ? (
@@ -251,6 +290,22 @@ export default function VendorTeamPage() {
           </DialogHeader>
 
           <div className="grid grid-cols-2 gap-x-4 gap-y-3 pt-2">
+            {/* Vendor selector — admin only */}
+            {isAdmin && (
+              <div className="col-span-2 flex flex-col gap-1">
+                <Label>Vendor <span className="text-destructive">*</span></Label>
+                <Select value={selectedVendorId} onValueChange={(v) => { setSelectedVendorId(v); setErrors({}); }}>
+                  <SelectTrigger><SelectValue placeholder="Select vendor…" /></SelectTrigger>
+                  <SelectContent>
+                    {vendorList.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>{v.businessName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.vendorId && <p className="text-xs text-destructive">{errors.vendorId}</p>}
+              </div>
+            )}
+
             <div className="col-span-2 flex flex-col gap-1">
               <Label>Full Name <span className="text-destructive">*</span></Label>
               <Input

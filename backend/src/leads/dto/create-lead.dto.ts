@@ -57,8 +57,9 @@ export class CreateLeadDto {
   @IsString()
   addressStateId?: string;
 
+  @IsOptional()
   @IsString()
-  assignedStaffId: string;
+  assignedStaffId?: string;
 
   @IsOptional()
   @IsString()

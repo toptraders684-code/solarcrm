@@ -16,6 +16,10 @@ export class UpdateLeadDto {
 
   @IsOptional()
   @IsString()
+  alternateMobile?: string;
+
+  @IsOptional()
+  @IsString()
   discom?: string;
 
   @IsOptional()

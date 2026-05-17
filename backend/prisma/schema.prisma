@@ -308,8 +308,8 @@ model Lead {
   estimatedCapacityKw  Decimal?           @map("estimated_capacity_kw") @db.Decimal(6, 2)
   leadSource           String             @map("lead_source") @db.VarChar(50)
   financePreference    FinancePreference? @map("finance_preference")
-  assignedStaffId      String             @map("assigned_staff_id")
-  assignedStaff        User               @relation("AssignedLeads", fields: [assignedStaffId], references: [id])
+  assignedStaffId      String?            @map("assigned_staff_id")
+  assignedStaff        User?              @relation("AssignedLeads", fields: [assignedStaffId], references: [id])
   status               LeadStatus         @default(new)
   closureReason        LeadClosureReason? @map("closure_reason")
   followUpDate         DateTime?          @map("follow_up_date") @db.Date

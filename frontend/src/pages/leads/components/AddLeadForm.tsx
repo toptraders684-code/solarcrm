@@ -10,6 +10,7 @@ import { createLeadSchema, type CreateLeadFormData } from '@/utils/validators';
 import { masterService } from '@/services/master.service';
 import { usersService } from '@/services/users.service';
 import { leadsService } from '@/services/leads.service';
+import { useAuthStore } from '@/store/authStore';
 
 interface AddLeadFormProps {
   onSuccess: () => void;
@@ -17,9 +18,12 @@ interface AddLeadFormProps {
 }
 
 export function AddLeadForm({ onSuccess, onCancel }: AddLeadFormProps) {
+  const { user } = useAuthStore();
+  const isVendor = user?.role === 'vendor';
+
   const { data: enums } = useQuery({ queryKey: ['enums'], queryFn: () => masterService.getEnums() });
   const { data: statesData } = useQuery({ queryKey: ['states'], queryFn: () => masterService.getStates() });
-  const { data: staffData } = useQuery({ queryKey: ['staff'], queryFn: () => usersService.getStaff() });
+  const { data: staffData } = useQuery({ queryKey: ['staff'], queryFn: () => usersService.getStaff(), enabled: !isVendor });
 
   const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<CreateLeadFormData>({
     resolver: zodResolver(createLeadSchema),
@@ -42,7 +46,7 @@ export function AddLeadForm({ onSuccess, onCancel }: AddLeadFormProps) {
       toast.success('Lead created successfully');
       onSuccess();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to create lead';
+      const msg = err?.response?.data?.error?.message || err?.response?.data?.message || 'Failed to create lead';
       toast.error(Array.isArray(msg) ? msg[0] : msg);
     }
   });
@@ -171,18 +175,20 @@ export function AddLeadForm({ onSuccess, onCancel }: AddLeadFormProps) {
         </div>
       </div>
 
-      <div>
-        <L>Assigned Staff *</L>
-        <Select onValueChange={(v) => setValue('assignedStaffId', v)}>
-          <SelectTrigger className="mt-1"><SelectValue placeholder="Select staff member" /></SelectTrigger>
-          <SelectContent>
-            {staffData?.data?.map((u) => (
-              <SelectItem key={u.id} value={u.id}>{u.name} ({u.role.replace(/_/g, ' ')})</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {errors.assignedStaffId && <p className="text-xs text-error mt-1">{errors.assignedStaffId.message}</p>}
-      </div>
+      {!isVendor && (
+        <div>
+          <L>Assigned Staff *</L>
+          <Select onValueChange={(v) => setValue('assignedStaffId', v)}>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Select staff member" /></SelectTrigger>
+            <SelectContent>
+              {staffData?.data?.map((u) => (
+                <SelectItem key={u.id} value={u.id}>{u.name} ({u.role.replace(/_/g, ' ')})</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.assignedStaffId && <p className="text-xs text-error mt-1">{errors.assignedStaffId.message}</p>}
+        </div>
+      )}
 
       <div>
         <L>Follow Up Date</L>
