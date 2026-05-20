@@ -4,6 +4,7 @@ import LandingPage from '@/pages/landing/LandingPage';
 import LoginPage from '@/pages/auth/LoginPage';
 import AdminLoginPage from '@/pages/admin/AdminLoginPage';
 import DocumentMasterPage from '@/pages/admin/DocumentMasterPage';
+import TemplateEditorPage from '@/pages/admin/TemplateEditorPage';
 import AdminUsersPage from '@/pages/admin/AdminUsersPage';
 import CompaniesPage from '@/pages/admin/CompaniesPage';
 import MasterDataPage from '@/pages/admin/MasterDataPage';
@@ -46,6 +47,9 @@ export default function App() {
       } />
       <Route path="/admin/documents" element={
         <AdminProtectedRoute><DocumentMasterPage /></AdminProtectedRoute>
+      } />
+      <Route path="/admin/template/:id" element={
+        <AdminProtectedRoute><TemplateEditorPage /></AdminProtectedRoute>
       } />
       <Route path="/admin/masters" element={
         <AdminProtectedRoute><MasterDataPage /></AdminProtectedRoute>

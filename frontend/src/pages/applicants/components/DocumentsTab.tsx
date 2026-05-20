@@ -3,16 +3,18 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Upload, Eye, FileText, X, Zap, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { GeneratePreviewModal } from '@/components/shared/GeneratePreviewModal';
 import { applicantsService } from '@/services/applicants.service';
 import { documentMasterService } from '@/services/document-master.service';
-import type { Document, DocumentMaster } from '@/types';
+import type { Document, DocumentMaster, Applicant } from '@/types';
 
 interface DocumentsTabProps {
   applicantId: string;
   discom: string;
+  applicant: Applicant;
 }
 
-export function DocumentsTab({ applicantId, discom }: DocumentsTabProps) {
+export function DocumentsTab({ applicantId, discom, applicant }: DocumentsTabProps) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -21,7 +23,7 @@ export function DocumentsTab({ applicantId, discom }: DocumentsTabProps) {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [viewFile, setViewFile] = useState<{ url: string; mimeType: string; title: string; filename: string } | null>(null);
   const [loadingViewId, setLoadingViewId] = useState<string | null>(null);
-  const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [generateModal, setGenerateModal] = useState<{ master: DocumentMaster } | null>(null);
 
   const buildFilename = (title: string, mimeType = 'application/pdf') => {
     const safe = title.replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_');
@@ -101,17 +103,8 @@ export function DocumentsTab({ applicantId, discom }: DocumentsTabProps) {
     }
   };
 
-  const handleGenerate = async (master: DocumentMaster) => {
-    setGeneratingId(master.id);
-    try {
-      const blob = await applicantsService.generateDocument(applicantId, master.id);
-      const url = URL.createObjectURL(blob);
-      setViewFile({ url, mimeType: 'application/pdf', title: master.title, filename: buildFilename(master.title) });
-    } catch {
-      toast.error('Failed to generate document');
-    } finally {
-      setGeneratingId(null);
-    }
+  const handleGenerate = (master: DocumentMaster) => {
+    setGenerateModal({ master });
   };
 
   const handleViewMasterFile = async (master: DocumentMaster) => {
@@ -190,10 +183,9 @@ export function DocumentsTab({ applicantId, discom }: DocumentsTabProps) {
                     {master.docType === 'generate' ? (
                       <button
                         onClick={() => handleGenerate(master)}
-                        disabled={generatingId === master.id}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary-container text-on-secondary-fixed-variant text-xs font-semibold hover:opacity-80 disabled:opacity-60 transition-opacity"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary-container text-on-secondary-fixed-variant text-xs font-semibold hover:opacity-80 transition-opacity"
                       >
-                        <Zap size={12} />{generatingId === master.id ? 'Generating…' : 'Generate Document'}
+                        <Zap size={12} />Generate Document
                       </button>
                     ) : master.docType === 'view' ? (
                       <button
@@ -274,6 +266,17 @@ export function DocumentsTab({ applicantId, discom }: DocumentsTabProps) {
           </tbody>
         </table>
       </div>
+
+      {/* Generate Document Modal */}
+      {generateModal && (
+        <GeneratePreviewModal
+          open={!!generateModal}
+          onClose={() => setGenerateModal(null)}
+          masterItemId={generateModal.master.id}
+          masterTitle={generateModal.master.title}
+          applicant={applicant}
+        />
+      )}
 
       {/* View File Modal */}
       <Dialog open={!!viewFile} onOpenChange={(open) => { if (!open) closeView(); }}>

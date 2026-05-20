@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Patch, Delete,
+  Controller, Get, Post, Patch, Delete, Put,
   Body, Param, Query, Res,
   UseGuards, UseInterceptors, UploadedFile,
 } from '@nestjs/common';
@@ -34,7 +34,7 @@ export class DocumentMasterController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles('super_admin')
-  create(@Body() body: { discom: string; title: string; docType?: string; sortOrder?: number }) {
+  create(@Body() body: { discom?: string; title: string; docType?: string; sortOrder?: number; isCommon?: boolean }) {
     return this.service.create(body);
   }
 
@@ -43,7 +43,7 @@ export class DocumentMasterController {
   @Roles('super_admin')
   update(
     @Param('id') id: string,
-    @Body() body: { title?: string; docType?: string; sortOrder?: number; isActive?: boolean },
+    @Body() body: { title?: string; docType?: string; sortOrder?: number; isActive?: boolean; isCommon?: boolean },
   ) {
     return this.service.update(id, body);
   }
@@ -61,6 +61,18 @@ export class DocumentMasterController {
   @UseInterceptors(FileInterceptor('file'))
   uploadFile(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
     return this.service.uploadMasterFile(id, file);
+  }
+
+  @Get(':id/template')
+  getTemplate(@Param('id') id: string) {
+    return this.service.getTemplate(id);
+  }
+
+  @Put(':id/template')
+  @UseGuards(RolesGuard)
+  @Roles('super_admin')
+  saveTemplate(@Param('id') id: string, @Body() body: { templateContent: any }) {
+    return this.service.saveTemplate(id, body.templateContent);
   }
 
   @Get(':id/file')

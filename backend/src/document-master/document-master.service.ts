@@ -13,31 +13,35 @@ export class DocumentMasterService {
 
   async list(discom?: string) {
     const where: any = { isActive: true };
-    if (discom) where.discom = discom;
+    if (discom) {
+      where.OR = [{ discom, isCommon: false }, { isCommon: true }];
+    }
     const data = await this.prisma.documentMaster.findMany({
       where,
-      orderBy: [{ discom: 'asc' }, { sortOrder: 'asc' }],
+      orderBy: [{ isCommon: 'desc' }, { sortOrder: 'asc' }],
     });
     return { data };
   }
 
-  async create(body: { discom: string; title: string; docType?: string; sortOrder?: number }) {
+  async create(body: { discom?: string; title: string; docType?: string; sortOrder?: number; isCommon?: boolean }) {
+    const isCommon = body.isCommon ?? false;
     const maxOrder = await this.prisma.documentMaster.aggregate({
-      where: { discom: body.discom as any },
+      where: isCommon ? { isCommon: true } : { discom: body.discom as any },
       _max: { sortOrder: true },
     });
     const data = await this.prisma.documentMaster.create({
       data: {
-        discom: body.discom as any,
+        discom: isCommon ? null : (body.discom as any),
         title: body.title,
         docType: (body.docType as any) ?? 'upload',
         sortOrder: body.sortOrder ?? (maxOrder._max.sortOrder ?? 0) + 1,
+        isCommon,
       },
     });
     return { data };
   }
 
-  async update(id: string, body: { title?: string; docType?: string; sortOrder?: number; isActive?: boolean }) {
+  async update(id: string, body: { title?: string; docType?: string; sortOrder?: number; isActive?: boolean; isCommon?: boolean }) {
     const existing = await this.prisma.documentMaster.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Document master item not found');
     const data = await this.prisma.documentMaster.update({ where: { id }, data: body as any });
@@ -76,5 +80,21 @@ export class DocumentMasterService {
     if (!item || !item.masterFilePath) throw new NotFoundException('File not found');
     const buffer = await this.storage.downloadFile(item.masterFilePath);
     return { buffer, item };
+  }
+
+  async getTemplate(id: string) {
+    const item = await this.prisma.documentMaster.findUnique({ where: { id } });
+    if (!item) throw new NotFoundException('Document master item not found');
+    return { templateContent: item.templateContent ?? null, title: item.title };
+  }
+
+  async saveTemplate(id: string, templateContent: any) {
+    const existing = await this.prisma.documentMaster.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Document master item not found');
+    const data = await this.prisma.documentMaster.update({
+      where: { id },
+      data: { templateContent },
+    });
+    return { data };
   }
 }

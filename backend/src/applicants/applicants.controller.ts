@@ -18,7 +18,6 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { ApplicantsService } from './applicants.service';
-import { DocumentGeneratorService } from '../documents/document-generator.service';
 import { UpdateApplicantDto } from './dto/update-applicant.dto';
 import { StageChangeDto } from './dto/stage-change.dto';
 import { CreateActivityDto } from './dto/create-activity.dto';
@@ -36,10 +35,7 @@ function buildDocFilename(title: string, ext: string): string {
 @Controller('applicants')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ApplicantsController {
-  constructor(
-    private applicantsService: ApplicantsService,
-    private docGenerator: DocumentGeneratorService,
-  ) {}
+  constructor(private applicantsService: ApplicantsService) {}
 
   @Get()
   @Roles('admin', 'operations_staff', 'finance_manager', 'vendor')
@@ -108,23 +104,6 @@ export class ApplicantsController {
     @CurrentUser() user: any,
   ) {
     return this.applicantsService.uploadDocument(id, file, body, user.companyId, user.id);
-  }
-
-  @Get(':id/documents/generate/:masterItemId')
-  @Roles('admin', 'operations_staff', 'finance_manager', 'field_technician', 'vendor')
-  async generateDocument(
-    @Param('id') id: string,
-    @Param('masterItemId') masterItemId: string,
-    @CurrentUser() user: any,
-    @Res() res: Response,
-  ) {
-    const { buffer, title } = await this.docGenerator.generate(id, masterItemId, user.companyId);
-    const filename = buildDocFilename(title, 'pdf');
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `inline; filename="${filename}"`,
-    });
-    res.send(buffer);
   }
 
   @Get(':id/documents/:docId')

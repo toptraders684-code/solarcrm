@@ -1,11 +1,12 @@
 ﻿import { useRef, useState } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, LogOut, FileText, Zap, Upload, Eye, X, Users, Building2, Database, Activity } from 'lucide-react';
+import { Plus, Pencil, Trash2, LogOut, FileText, Zap, Upload, Eye, X, Users, Building2, Database, Activity, Globe, LayoutTemplate } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { documentMasterService } from '@/services/document-master.service';
@@ -26,9 +27,10 @@ interface FormState {
   title: string;
   docType: string;
   sortOrder: string;
+  isCommon: boolean;
 }
 
-const DEFAULT_FORM: FormState = { discom: 'tpcodl', title: '', docType: 'upload', sortOrder: '' };
+const DEFAULT_FORM: FormState = { discom: 'tpcodl', title: '', docType: 'upload', sortOrder: '', isCommon: false };
 
 function TypeBadge({ docType }: { docType: string }) {
   if (docType === 'generate') {
@@ -67,10 +69,12 @@ export default function DocumentMasterPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['document-master', activeDiscom],
-    queryFn: () => documentMasterService.list(activeDiscom),
+    queryFn: () => documentMasterService.list(activeDiscom === 'common' ? undefined : activeDiscom),
   });
 
-  const items: DocumentMaster[] = data?.data ?? [];
+  const items: DocumentMaster[] = (data?.data ?? []).filter((d) =>
+    activeDiscom === 'common' ? !!d.isCommon : !d.isCommon,
+  );
 
   const closeForm = () => {
     setFormOpen(false);
@@ -81,10 +85,11 @@ export default function DocumentMasterPage() {
   const createMutation = useMutation({
     mutationFn: async () => {
       const result = await documentMasterService.create({
-        discom: form.discom,
+        discom: form.isCommon ? undefined : form.discom,
         title: form.title.trim(),
         docType: form.docType,
         sortOrder: form.sortOrder ? parseInt(form.sortOrder) : undefined,
+        isCommon: form.isCommon,
       });
       if (pendingFile && form.docType === 'view') {
         await documentMasterService.uploadMasterFile(result.data.id, pendingFile);
@@ -105,6 +110,7 @@ export default function DocumentMasterPage() {
         title: form.title.trim(),
         docType: form.docType,
         sortOrder: form.sortOrder ? parseInt(form.sortOrder) : undefined,
+        isCommon: form.isCommon,
       });
       if (pendingFile) {
         await documentMasterService.uploadMasterFile(editItem!.id, pendingFile);
@@ -131,14 +137,24 @@ export default function DocumentMasterPage() {
 
   const openAdd = () => {
     setEditItem(null);
-    setForm({ ...DEFAULT_FORM, discom: activeDiscom });
+    setForm({
+      ...DEFAULT_FORM,
+      discom: activeDiscom === 'common' ? 'tpcodl' : activeDiscom,
+      isCommon: activeDiscom === 'common',
+    });
     setPendingFile(null);
     setFormOpen(true);
   };
 
   const openEdit = (item: DocumentMaster) => {
     setEditItem(item);
-    setForm({ discom: item.discom, title: item.title, docType: item.docType, sortOrder: String(item.sortOrder) });
+    setForm({
+      discom: item.discom || 'tpcodl',
+      title: item.title,
+      docType: item.docType,
+      sortOrder: String(item.sortOrder),
+      isCommon: item.isCommon ?? false,
+    });
     setPendingFile(null);
     setFormOpen(true);
   };
@@ -215,6 +231,16 @@ export default function DocumentMasterPage() {
 
         {/* DISCOM Tabs */}
         <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => setActiveDiscom('common')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeDiscom === 'common'
+                ? 'bg-tertiary text-white shadow-sm'
+                : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+            }`}
+          >
+            <Globe size={11} />Common
+          </button>
           {DISCOMS.map((d) => (
             <button
               key={d}
@@ -234,7 +260,7 @@ export default function DocumentMasterPage() {
         <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/10 overflow-hidden">
           <div className="px-5 py-3 border-b border-outline-variant/10 flex items-center justify-between">
             <p className="text-xs font-black uppercase tracking-widest text-on-surface-variant/50">
-              {DISCOM_LABELS[activeDiscom]}
+              {activeDiscom === 'common' ? 'Common — All DISCOMs' : DISCOM_LABELS[activeDiscom]}
             </p>
             <span className="text-xs text-on-surface-variant/40">{items.length} documents</span>
           </div>
@@ -264,10 +290,15 @@ export default function DocumentMasterPage() {
                     <td className="px-5 py-3 text-on-surface-variant/40 text-xs">{i + 1}</td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <FileText size={11} className="text-primary" />
+                        <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${item.isCommon ? 'bg-tertiary/10' : 'bg-primary/10'}`}>
+                          {item.isCommon
+                            ? <Globe size={11} className="text-tertiary" />
+                            : <FileText size={11} className="text-primary" />}
                         </div>
                         <span className="font-semibold text-on-surface">{item.title}</span>
+                        {item.isCommon && (
+                          <span className="text-[9px] font-bold text-tertiary bg-tertiary/10 px-1.5 py-0.5 rounded-full">ALL</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-5 py-3">
@@ -276,6 +307,15 @@ export default function DocumentMasterPage() {
                     <td className="px-5 py-3 text-xs text-on-surface-variant/60">{item.sortOrder}</td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-1 justify-end">
+                        {item.docType === 'generate' && (
+                          <button
+                            onClick={() => navigate(`/admin/template/${item.id}`)}
+                            title="Edit Template"
+                            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-secondary-container text-on-surface-variant/50 hover:text-on-secondary-fixed-variant transition-colors"
+                          >
+                            <LayoutTemplate size={13} />
+                          </button>
+                        )}
                         <button
                           onClick={() => openEdit(item)}
                           className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-surface-container-high text-on-surface-variant/50 hover:text-primary transition-colors"
@@ -295,7 +335,7 @@ export default function DocumentMasterPage() {
                 {items.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-5 py-10 text-center text-sm text-on-surface-variant/50">
-                      No documents for {activeDiscom.toUpperCase()} yet.
+                      {activeDiscom === 'common' ? 'No common documents yet.' : `No documents for ${activeDiscom.toUpperCase()} yet.`}
                     </td>
                   </tr>
                 )}
@@ -312,7 +352,22 @@ export default function DocumentMasterPage() {
             <DialogTitle>{editItem ? 'Edit Document' : 'Add Document'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {!editItem && (
+            <div className="flex items-center gap-2.5 py-1">
+              <Checkbox
+                id="isCommon"
+                checked={form.isCommon}
+                onCheckedChange={(checked) => setForm((f) => ({ ...f, isCommon: !!checked }))}
+                disabled={!!editItem}
+              />
+              <label htmlFor="isCommon" className={`text-sm font-semibold text-on-surface ${editItem ? 'opacity-50' : 'cursor-pointer'}`}>
+                Common to all DISCOMs
+              </label>
+              {editItem && (
+                <span className="text-[10px] text-on-surface-variant/50">(cannot change after creation)</span>
+              )}
+            </div>
+
+            {!editItem && !form.isCommon && (
               <div>
                 <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">DISCOM <span className="text-error">*</span></label>
                 <Select value={form.discom} onValueChange={(v) => setForm((f) => ({ ...f, discom: v }))}>
@@ -419,7 +474,7 @@ export default function DocumentMasterPage() {
         open={!!deleteItem}
         onOpenChange={(open) => { if (!open) setDeleteItem(null); }}
         title="Remove Document?"
-        description={`"${deleteItem?.title}" will be removed from the ${deleteItem?.discom?.toUpperCase()} document list.`}
+        description={`"${deleteItem?.title}" will be removed from the ${deleteItem?.isCommon ? 'common (all DISCOMs)' : (deleteItem?.discom?.toUpperCase() ?? '')} document list.`}
         confirmLabel="Remove"
         variant="danger"
         onConfirm={() => deleteMutation.mutate()}

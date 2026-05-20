@@ -353,11 +353,12 @@ export type DocType = 'upload' | 'generate' | 'view';
 
 export interface DocumentMaster {
   id: string;
-  discom: Discom;
+  discom?: Discom | null;
   title: string;
   docType: DocType;
   sortOrder: number;
   isActive: boolean;
+  isCommon?: boolean;
   masterFilePath?: string;
   masterFileMime?: string;
   createdAt: string;

@@ -317,9 +317,11 @@ Helmet's default CSP blocked `blob:` URLs in iframes, causing Chrome to show "Th
 
 | Environment | Status | Notes |
 |-------------|--------|-------|
-| **Local** | Running | Up to date with GitHub (this push) |
-| **Railway (Production)** | Deploying | Migrations `20260516000005` + `20260517000000` will apply |
+| **Local** | Active development | New features built and tested here first |
+| **Railway (Production)** | Running | Commit `d0197bf` — all migrations applied |
 
+> **Deployment workflow:** Local changes accumulate here. GitHub push + Railway deploy only happen when explicitly requested. Each push section below will note what was deployed and when.
+>
 > **Post-deploy action required on Railway:** Upload the Solar Wiring Diagram PDF through Admin → Document Master → Solar Wiring Diagram → Upload File.
 
 ---

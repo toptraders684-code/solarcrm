@@ -7,12 +7,12 @@ export const documentMasterService = {
     return data;
   },
 
-  create: async (body: { discom: string; title: string; docType?: string; sortOrder?: number }): Promise<{ data: DocumentMaster }> => {
+  create: async (body: { discom?: string; title: string; docType?: string; sortOrder?: number; isCommon?: boolean }): Promise<{ data: DocumentMaster }> => {
     const { data } = await api.post('/document-master', body);
     return data;
   },
 
-  update: async (id: string, body: { title?: string; docType?: string; sortOrder?: number; isActive?: boolean }): Promise<{ data: DocumentMaster }> => {
+  update: async (id: string, body: { title?: string; docType?: string; sortOrder?: number; isActive?: boolean; isCommon?: boolean }): Promise<{ data: DocumentMaster }> => {
     const { data } = await api.patch(`/document-master/${id}`, body);
     return data;
   },
@@ -33,6 +33,16 @@ export const documentMasterService = {
 
   getMasterFile: async (id: string): Promise<Blob> => {
     const { data } = await api.get(`/document-master/${id}/file`, { responseType: 'blob' });
+    return data;
+  },
+
+  getTemplate: async (id: string): Promise<{ templateContent: any; title: string }> => {
+    const { data } = await api.get(`/document-master/${id}/template`);
+    return data;
+  },
+
+  saveTemplate: async (id: string, templateContent: any): Promise<{ data: DocumentMaster }> => {
+    const { data } = await api.put(`/document-master/${id}/template`, { templateContent });
     return data;
   },
 };

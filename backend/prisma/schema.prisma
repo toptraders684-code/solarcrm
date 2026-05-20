@@ -623,14 +623,16 @@ model ApplicantChecklist {
 
 model DocumentMaster {
   id             String   @id @default(uuid())
-  discom         String   @db.VarChar(50)
+  discom         String?  @db.VarChar(50)
   title          String   @db.VarChar(200)
   docType        DocType  @default(upload) @map("doc_type")
   sortOrder      Int      @map("sort_order")
   isActive       Boolean  @default(true) @map("is_active")
-  masterFilePath String?  @map("master_file_path") @db.VarChar(500)
-  masterFileMime String?  @map("master_file_mime") @db.VarChar(100)
-  createdAt      DateTime @default(now()) @map("created_at")
+  isCommon       Boolean  @default(false) @map("is_common")
+  masterFilePath  String?  @map("master_file_path") @db.VarChar(500)
+  masterFileMime  String?  @map("master_file_mime") @db.VarChar(100)
+  templateContent Json?    @map("template_content")
+  createdAt       DateTime @default(now()) @map("created_at")
 
   documents Document[]
 
