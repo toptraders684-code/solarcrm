@@ -69,9 +69,9 @@ export function GeneratePreviewModal({ open, onClose, masterItemId, masterTitle,
       const safe = masterTitle.replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_');
       const dt = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
       const opt = {
-        margin: [18, 20, 18, 20],
+        margin: [18, 20, 18, 20] as [number, number, number, number],
         filename: `${safe}_${dt}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
+        image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
       };

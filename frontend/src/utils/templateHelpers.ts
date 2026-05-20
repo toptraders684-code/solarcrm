@@ -48,7 +48,7 @@ export function buildPlaceholderValues(applicant: Applicant): Record<string, str
   return {
     applicant_code: fmt(applicant.applicantCode),
     customer_name: fmt(applicant.customerName),
-    mobile: fmt(applicant.mobile),
+    mobile: fmt((applicant as any).mobile),
     alternate_mobile: fmt(applicant.alternateMobile),
     email: fmt(applicant.email),
     date_of_birth: fmtDate(applicant.dateOfBirth),
