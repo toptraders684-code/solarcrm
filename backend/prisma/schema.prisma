@@ -114,12 +114,16 @@ enum ProjectActivityType {
 // ─────────────────────────────────────────────
 
 model MasterDiscom {
-  id        String   @id @default(uuid())
-  name      String   @unique @db.VarChar(100)
-  code      String   @unique @db.VarChar(50)
-  isActive  Boolean  @default(true) @map("is_active")
-  sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at")
+  id           String          @id @default(uuid())
+  districtId   String?         @map("district_id")
+  district     MasterDistrict? @relation(fields: [districtId], references: [id])
+  name         String          @db.VarChar(100)
+  code         String          @db.VarChar(50)
+  fullform     String?         @map("full_form") @db.VarChar(200)
+  headquarters String?         @db.VarChar(200)
+  isActive     Boolean         @default(true) @map("is_active")
+  sortOrder    Int             @default(0) @map("sort_order")
+  createdAt    DateTime        @default(now()) @map("created_at")
 
   @@map("master_discoms")
 }
@@ -179,6 +183,15 @@ model MasterStage {
   @@map("master_stages")
 }
 
+model MasterHeadquarters {
+  id        String   @id @default(uuid())
+  name      String   @unique @db.VarChar(200)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("master_headquarters")
+}
+
 // ─────────────────────────────────────────────
 // GEO MASTER TABLES
 // ─────────────────────────────────────────────
@@ -203,8 +216,9 @@ model MasterDistrict {
   state     MasterState @relation(fields: [stateId], references: [id])
   createdAt DateTime    @default(now()) @map("created_at")
 
-  leads      Lead[]
-  applicants Applicant[]
+  leads         Lead[]
+  applicants    Applicant[]
+  discomMasters MasterDiscom[]
 
   @@unique([name, stateId])
   @@map("master_districts")
@@ -376,10 +390,13 @@ model Applicant {
   aadhaarToken          String?         @map("aadhaar_token") @db.VarChar(200)
   panToken              String?         @map("pan_token") @db.VarChar(200)
   bankAccountToken      String?         @map("bank_account_token") @db.VarChar(200)
+  signatureFileKey      String?         @map("signature_file_key") @db.VarChar(500)
 
   addressHouse          String?         @map("address_house") @db.VarChar(200)
   addressStreet         String?         @map("address_street") @db.VarChar(200)
   addressVillage        String?         @map("address_village") @db.VarChar(200)
+  addressGp             String?         @map("address_gp") @db.VarChar(200)
+  addressBlock          String?         @map("address_block") @db.VarChar(200)
   addressDistrictId     String?         @map("address_district_id")
   addressDistrict       MasterDistrict? @relation(fields: [addressDistrictId], references: [id])
   addressStateId        String?         @map("address_state_id")
@@ -388,11 +405,27 @@ model Applicant {
   gpsLatitude           Decimal?        @map("gps_latitude") @db.Decimal(10, 7)
   gpsLongitude          Decimal?        @map("gps_longitude") @db.Decimal(10, 7)
 
+  areaHouseNo           String?         @map("area_house_no") @db.VarChar(200)
+  areaRoofSizeSqft      Decimal?        @map("area_roof_size_sqft") @db.Decimal(8, 2)
+  areaNoOfFloors        Int?            @map("area_no_of_floors")
+  areaRoofType          String?         @map("area_roof_type") @db.VarChar(50)
+  areaHouseHeight       String?         @map("area_house_height") @db.VarChar(100)
+
+  bankNameInAccount     String?         @map("bank_name_in_account") @db.VarChar(200)
+  bankBranchName        String?         @map("bank_branch_name") @db.VarChar(200)
+  bankAccountNumber     String?         @map("bank_account_number") @db.VarChar(50)
+  bankIfscCode          String?         @map("bank_ifsc_code") @db.VarChar(20)
+  coApplicantName       String?         @map("co_applicant_name") @db.VarChar(200)
+  coApplicantRelationship String?       @map("co_applicant_relationship") @db.VarChar(100)
+  coApplicantMobile     String?         @map("co_applicant_mobile") @db.VarChar(10)
+  coApplicantOccupation String?         @map("co_applicant_occupation") @db.VarChar(200)
+
   dateOfBirth           DateTime?       @map("date_of_birth") @db.Date
   gender                String?         @db.VarChar(10)
   alternateMobile       String?         @map("alternate_mobile") @db.VarChar(10)
   email                 String?         @db.VarChar(200)
   whatsappNumber        String?         @map("whatsapp_number") @db.VarChar(10)
+  customerProfession    String?         @map("customer_profession") @db.VarChar(200)
 
   discom                String          @db.VarChar(50)
   projectType           String          @map("project_type") @db.VarChar(50)
@@ -402,6 +435,11 @@ model Applicant {
   existingConsumerNo    String?         @map("existing_consumer_no") @db.VarChar(50)
 
   contractAmount        Decimal?        @map("contract_amount") @db.Decimal(12, 2)
+  invoiceNo             String?         @map("invoice_no") @db.VarChar(100)
+  solarRate             Decimal?        @map("solar_rate") @db.Decimal(12, 2)
+  solarGst              Decimal?        @map("solar_gst") @db.Decimal(5, 2)
+  installationRate      Decimal?        @map("installation_rate") @db.Decimal(12, 2)
+  installationGst       Decimal?        @map("installation_gst") @db.Decimal(5, 2)
   financeMode           FinancePreference? @map("finance_mode")
   bankName              String?         @map("bank_name") @db.VarChar(200)
   loanAmount            Decimal?        @map("loan_amount") @db.Decimal(12, 2)
@@ -421,6 +459,15 @@ model Applicant {
   inspectionDate        DateTime?       @map("inspection_date") @db.Date
   inspectionResult      String?         @map("inspection_result") @db.VarChar(50)
   netMeterSerialNo      String?         @map("net_meter_serial_no") @db.VarChar(100)
+
+  mnreApplicationNo     String?         @map("mnre_application_no") @db.VarChar(100)
+  discomApplicationNo   String?         @map("discom_application_no") @db.VarChar(100)
+  mnreSubmitDate        DateTime?       @map("mnre_submit_date") @db.Date
+  discomDivision        String?         @map("discom_division") @db.VarChar(200)
+  discomSubDivision     String?         @map("discom_sub_division") @db.VarChar(200)
+  discomSection         String?         @map("discom_section") @db.VarChar(200)
+  discomContactPerson   String?         @map("discom_contact_person") @db.VarChar(200)
+  discomMobileNo        String?         @map("discom_mobile_no") @db.VarChar(10)
 
   expectedSubsidyAmount Decimal?        @map("expected_subsidy_amount") @db.Decimal(12, 2)
   actualSubsidyReceived Decimal?        @map("actual_subsidy_received") @db.Decimal(12, 2)
@@ -557,8 +604,11 @@ model InstallationDetails {
   wireCClip          String? @map("wire_c_clip") @db.VarChar(50)
   wireT              String? @map("wire_t") @db.VarChar(50)
   wireFlexibleCoil   String? @map("wire_flexible_coil") @db.VarChar(50)
-  wireCableTie       String? @map("wire_cable_tie") @db.VarChar(50)
-  wireBlackTape      String? @map("wire_black_tape") @db.VarChar(50)
+  wireCableTie             String? @map("wire_cable_tie") @db.VarChar(50)
+  wireBlackTape            String? @map("wire_black_tape") @db.VarChar(50)
+  wire16mmEarthingCable    String? @map("wire_16mm_earthing_cable") @db.VarChar(50)
+  wireDcCable4sqmm         String? @map("wire_dc_cable_4sqmm") @db.VarChar(50)
+  wireAcCableCopper        String? @map("wire_ac_cable_copper") @db.VarChar(50)
 
   updatedAt DateTime @updatedAt @map("updated_at")
 

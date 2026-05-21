@@ -18,6 +18,7 @@ import { ProcurementTab } from './components/ProcurementTab';
 import { DetailsTab } from './components/DetailsTab';
 import { EditApplicantSheet } from './components/EditApplicantSheet';
 import { StatusHistoryTab } from './components/StatusHistoryTab';
+import { InvoiceTab } from './components/InvoiceTab';
 import { applicantsService } from '@/services/applicants.service';
 import { formatDate, getStageName, toTitleCase, formatCapacity } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
@@ -228,6 +229,7 @@ export default function ApplicantDetailPage() {
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="checklist">Checklist</TabsTrigger>
           <TabsTrigger value="finance">Finance</TabsTrigger>
+          <TabsTrigger value="invoice">Invoice</TabsTrigger>
           <TabsTrigger value="status-history">Status History</TabsTrigger>
         </TabsList>
 
@@ -253,6 +255,10 @@ export default function ApplicantDetailPage() {
 
         <TabsContent value="finance" className="mt-4">
           <FinanceTab applicantId={id!} />
+        </TabsContent>
+
+        <TabsContent value="invoice" className="mt-4">
+          <InvoiceTab applicant={applicant} />
         </TabsContent>
 
         <TabsContent value="status-history" className="mt-4">

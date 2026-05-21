@@ -1,7 +1,7 @@
 ﻿import { useState } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { LogOut, Users, FileText, Building2, Database, Activity, Plus, Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react';
+import { LogOut, Users, FileText, Building2, Database, Activity, Plus, Eye, EyeOff, CheckCircle2, XCircle, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -107,6 +107,7 @@ export default function CompaniesPage() {
           {[
             { to: '/admin/companies', icon: Building2, label: 'Companies' },
             { to: '/admin/documents', icon: FileText, label: 'Document Master' },
+            { to: '/admin/discoms', icon: Zap, label: 'DISCOM Master' },
             { to: '/admin/masters', icon: Database, label: 'Master Data' },
             { to: '/admin/users', icon: Users, label: 'Admin Users' },
             { to: '/admin/logs', icon: Activity, label: 'Activity Logs' },

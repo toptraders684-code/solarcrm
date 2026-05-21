@@ -351,3 +351,150 @@ The `queryClient` instance is exported from `main.tsx` and imported by `authStor
 ### CSS Variable Theming
 
 All design tokens are CSS custom properties defined in `index.css` under `@theme {}` (light) and `.dark {}` (dark). Tailwind classes like `bg-surface`, `text-on-surface-variant` etc. resolve to these variables at runtime — toggling the `.dark` class on `<html>` switches the entire theme without any component changes.
+
+---
+
+---
+
+## Session: Applicant Details Expansion & Invoice Tab (May 2026)
+
+### 22. Personal Information — Additional Fields
+
+**Files:** `frontend/src/pages/applicants/components/DetailsTab.tsx`, `backend/src/applicants/dto/update-applicant.dto.ts`, `backend/prisma/schema.prisma`
+**Migrations:** `20260521000006_applicant_customer_profession`, `20260521000007_applicant_signature`
+
+Added to the **Personal Information** accordion:
+- **Customer Name** — `customerName` (already in DB, surfaced in edit form)
+- **PAN Number** — `panToken` (encrypted, existing field)
+- **Aadhaar Number** — `aadhaarToken` (encrypted, existing field)
+- **Customer Profession** — `customerProfession` (new `VARCHAR(200)` column)
+- **Signature** — `signatureFileKey` image upload; stored at `uploads/signatures/{applicantId}/signature.{ext}`
+
+Signature upload uses `useRef` + programmatic click (not a `<label>` wrapper) because buttons nested inside labels do not reliably trigger file inputs in all browsers. Preview image is displayed to the right of the upload button. On Railway the `uploads/signatures/` directory is created at container startup.
+
+---
+
+### 23. Address Section — GP & Block Fields
+
+**Files:** `frontend/src/pages/applicants/components/DetailsTab.tsx`, `frontend/src/pages/applicants/components/EditApplicantSheet.tsx`, `backend/prisma/schema.prisma`
+**Migration:** `20260521000003_applicant_address_gp_block`
+
+Added `addressGp` (Gram Panchayat) and `addressBlock` fields to the Address accordion and edit sheet.
+
+---
+
+### 24. New Accordion — Area Details
+
+**Files:** `frontend/src/pages/applicants/components/DetailsTab.tsx`, `backend/src/applicants/dto/update-applicant.dto.ts`, `backend/prisma/schema.prisma`
+**Migration:** `20260521000004_applicant_area_details`
+
+New accordion between Address and Survey Information:
+
+| Field | DB Column | Type |
+|-------|-----------|------|
+| House/Flat/Plot No. | `area_house_no` | VARCHAR(100) |
+| Roof Size (sq. ft.) | `area_roof_size_sqft` | FLOAT |
+| No. of Floors | `area_no_of_floors` | INT (dropdown 1–5) |
+| Roof Type | `area_roof_type` | VARCHAR(50) (RCC / Pakka) |
+| House Height | `area_house_height` | VARCHAR(50) |
+
+---
+
+### 25. New Accordion — Bank Details
+
+**Files:** `frontend/src/pages/applicants/components/DetailsTab.tsx`, `backend/src/applicants/dto/update-applicant.dto.ts`, `backend/prisma/schema.prisma`
+**Migration:** `20260521000005_applicant_bank_details`
+
+New accordion after Area Details with bank account and co-applicant fields:
+
+| Field | DB Column |
+|-------|-----------|
+| Name in Bank Account | `bank_name_in_account` |
+| Bank & Branch Name | `bank_branch_name` |
+| Account Number | `bank_account_number` |
+| IFSC Code | `bank_ifsc_code` |
+| Co-Applicant Name | `co_applicant_name` |
+| Relationship | `co_applicant_relationship` |
+| Co-Applicant Mobile | `co_applicant_mobile` |
+| Date of Birth | reuses existing `date_of_birth` |
+| Co-Applicant Occupation | `co_applicant_occupation` |
+
+---
+
+### 26. Removed DISCOM Application Accordion from Details Tab
+
+**File:** `frontend/src/pages/applicants/components/DetailsTab.tsx`
+
+The "DISCOM Application" accordion was removed from the Details tab because all DISCOM fields are already present in the dedicated **DISCOM Application** tab. The `Section` union type was updated to remove `'discom'`.
+
+---
+
+### 27. DISCOM Tab — New "DISCOM Details" Card
+
+**Files:** `frontend/src/pages/applicants/components/DiscomTab.tsx`, `backend/src/applicants/dto/update-applicant.dto.ts`, `backend/prisma/schema.prisma`
+**Migration:** `20260521000008_applicant_discom_details`
+
+New card inserted between "Portal Application" and "Site Survey" cards:
+
+| Field | DB Column |
+|-------|-----------|
+| MNRE Application No (PMSURYA GARH) | `mnre_application_no` |
+| DISCOM Application No (Reference No) | `discom_application_no` |
+| MNRE Application Submit Date | `mnre_submit_date` |
+| DISCOM Division Name | `discom_division` |
+| DISCOM Sub Division Name | `discom_sub_division` |
+| DISCOM Section | `discom_section` |
+| DISCOM Contact Person Name | `discom_contact_person` |
+| DISCOM Mobile No | `discom_mobile_no` |
+
+---
+
+### 28. New Tab — Invoice
+
+**Files:** `frontend/src/pages/applicants/components/InvoiceTab.tsx` (NEW), `frontend/src/pages/applicants/ApplicantDetailPage.tsx`, `backend/src/applicants/dto/update-applicant.dto.ts`, `backend/prisma/schema.prisma`
+**Migration:** `20260521000009_applicant_invoice`
+
+New **Invoice** tab (between Finance and Status History) with the following fields:
+
+| Field | DB Column | Notes |
+|-------|-----------|-------|
+| Invoice No | `invoice_no` | VARCHAR(100) |
+| Solar Rate | `solar_rate` | DECIMAL — unit rate |
+| Solar GST (%) | `solar_gst` | DECIMAL — percentage |
+| Installation Rate | `installation_rate` | DECIMAL — unit rate |
+| Installation GST (%) | `installation_gst` | DECIMAL — percentage |
+| Project Cost | `contract_amount` | Read-only; edit via Finance Details |
+
+Helper formatters `fmt()` (₹ formatted) and `fmtPct()` (percentage) used for display. `canEdit` restricted to `admin` / `operations_staff`.
+
+---
+
+### 29. Installation Details — Additional Wire/Cable Fields
+
+**Files:** `frontend/src/pages/applicants/components/InstallationSection.tsx`, `frontend/src/types/index.ts`, `backend/src/applicants/dto/update-applicant.dto.ts`, `backend/prisma/schema.prisma`
+**Migration:** `20260521000010_installation_wire_cables`
+
+Three new fields added to the **G. PVC / Connectors / Wires** sub-section of Installation Details:
+
+| Field | DB Column |
+|-------|-----------|
+| 16mm Earthing Cable | `wire_16mm_earthing_cable` |
+| DC Cable 4 Sq mm | `wire_dc_cable_4sqmm` |
+| AC Cable Copper | `wire_ac_cable_copper` |
+
+---
+
+### Migrations Added This Session
+
+| Migration | Description |
+|-----------|-------------|
+| `20260521000001_master_discom_district` | DISCOM master with district linkage |
+| `20260521000002_master_headquarters` | HQ field on DISCOM master |
+| `20260521000003_applicant_address_gp_block` | GP and Block address fields |
+| `20260521000004_applicant_area_details` | Area details section fields |
+| `20260521000005_applicant_bank_details` | Bank + co-applicant fields |
+| `20260521000006_applicant_customer_profession` | Customer profession field |
+| `20260521000007_applicant_signature` | Signature file key + upload endpoint |
+| `20260521000008_applicant_discom_details` | DISCOM detail fields (MNRE, division, JE etc.) |
+| `20260521000009_applicant_invoice` | Invoice fields (invoice no, rates, GST) |
+| `20260521000010_installation_wire_cables` | Three new wire/cable fields on installation_details |

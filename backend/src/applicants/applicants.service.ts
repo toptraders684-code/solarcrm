@@ -440,6 +440,44 @@ export class ApplicantsService {
     return document;
   }
 
+  // ── Signature ──
+
+  async uploadSignature(applicantId: string, file: Express.Multer.File, companyId: string) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    if (file.size > MAX_FILE_SIZE) throw new BadRequestException('File exceeds 2MB limit');
+    const ALLOWED_SIG_MIME = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!ALLOWED_SIG_MIME.includes(file.mimetype)) throw new BadRequestException('Only JPG, PNG, WEBP allowed');
+
+    const applicant = await this.prisma.applicant.findFirst({
+      where: { id: applicantId, companyId },
+      select: { signatureFileKey: true },
+    });
+    if (!applicant) throw new NotFoundException('Applicant not found');
+
+    if (applicant.signatureFileKey) {
+      try { await this.storage.deleteFile(applicant.signatureFileKey); } catch { /* ignore */ }
+    }
+
+    const ext = path.extname(file.originalname) || '.jpg';
+    const filePath = `signatures/${applicantId}/signature${ext}`;
+    const fileKey = await this.storage.uploadFile(file.buffer, filePath, file.mimetype);
+
+    await this.prisma.applicant.update({ where: { id: applicantId }, data: { signatureFileKey: fileKey } });
+    return { data: { signatureFileKey: fileKey } };
+  }
+
+  async getSignature(applicantId: string, companyId: string) {
+    const applicant = await this.prisma.applicant.findFirst({
+      where: { id: applicantId, companyId },
+      select: { signatureFileKey: true },
+    });
+    if (!applicant?.signatureFileKey) throw new NotFoundException('No signature found');
+    const buffer = await this.storage.downloadFile(applicant.signatureFileKey);
+    const ext = path.extname(applicant.signatureFileKey).toLowerCase();
+    const mimeType = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+    return { buffer, mimeType };
+  }
+
   async assignVendor(applicantId: string, body: { vendorId: string; categoryLabel?: string; isPrimary?: boolean }, companyId: string) {
     await this.findOne(applicantId, companyId);
     const existing = await this.prisma.applicantVendor.findUnique({

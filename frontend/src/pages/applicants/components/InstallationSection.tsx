@@ -370,6 +370,9 @@ export function InstallationSection({ applicant }: InstallationSectionProps) {
           wirePvcElbow: d.wirePvcElbow ?? '', wireCClip: d.wireCClip ?? '',
           wireT: d.wireT ?? '', wireFlexibleCoil: d.wireFlexibleCoil ?? '',
           wireCableTie: d.wireCableTie ?? '', wireBlackTape: d.wireBlackTape ?? '',
+          wire16mmEarthingCable: d.wire16mmEarthingCable ?? '',
+          wireDcCable4sqmm: d.wireDcCable4sqmm ?? '',
+          wireAcCableCopper: d.wireAcCableCopper ?? '',
         })}
         onCancel={cancelEdit} onSave={() => saveMutation.mutate()}>
         {editingSub === 'wires' ? (
@@ -384,6 +387,9 @@ export function InstallationSection({ applicant }: InstallationSectionProps) {
             <F label="Flexible Coil"><Input value={form.wireFlexibleCoil ?? ''} onChange={(e) => set('wireFlexibleCoil', e.target.value)} placeholder="e.g. 3 Meter" /></F>
             <F label="Cable Tie"><Input value={form.wireCableTie ?? ''} onChange={(e) => set('wireCableTie', e.target.value)} placeholder="e.g. 20 Pc" /></F>
             <F label="Black Tape"><Input value={form.wireBlackTape ?? ''} onChange={(e) => set('wireBlackTape', e.target.value)} placeholder="e.g. 5 Pc" /></F>
+            <F label="16mm Earthing Cable"><Input value={form.wire16mmEarthingCable ?? ''} onChange={(e) => set('wire16mmEarthingCable', e.target.value)} placeholder="e.g. 10 Meter" /></F>
+            <F label="DC Cable 4 Sq mm"><Input value={form.wireDcCable4sqmm ?? ''} onChange={(e) => set('wireDcCable4sqmm', e.target.value)} placeholder="e.g. 20 Meter" /></F>
+            <F label="AC Cable Copper"><Input value={form.wireAcCableCopper ?? ''} onChange={(e) => set('wireAcCableCopper', e.target.value)} placeholder="e.g. 15 Meter" /></F>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-x-4">
@@ -397,6 +403,9 @@ export function InstallationSection({ applicant }: InstallationSectionProps) {
             <IR label="Flexible Coil">{d.wireFlexibleCoil}</IR>
             <IR label="Cable Tie">{d.wireCableTie}</IR>
             <IR label="Black Tape">{d.wireBlackTape}</IR>
+            <IR label="16mm Earthing Cable">{d.wire16mmEarthingCable}</IR>
+            <IR label="DC Cable 4 Sq mm">{d.wireDcCable4sqmm}</IR>
+            <IR label="AC Cable Copper">{d.wireAcCableCopper}</IR>
           </div>
         )}
       </SubCard>

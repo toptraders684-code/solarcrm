@@ -11,6 +11,14 @@ export class CreateMasterItemDto {
   @IsInt()
   @Min(0)
   sortOrder?: number;
+
+  @IsOptional()
+  @IsString()
+  fullform?: string;
+
+  @IsOptional()
+  @IsString()
+  headquarters?: string;
 }
 
 export class CreateStageDto {
@@ -43,6 +51,14 @@ export class UpdateMasterItemDto {
   @IsInt()
   @Min(0)
   sortOrder?: number;
+
+  @IsOptional()
+  @IsString()
+  fullform?: string;
+
+  @IsOptional()
+  @IsString()
+  headquarters?: string;
 }
 
 export class UpdateStageDto {

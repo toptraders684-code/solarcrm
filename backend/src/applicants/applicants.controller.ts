@@ -122,6 +122,31 @@ export class ApplicantsController {
     res.send(buffer);
   }
 
+  // ── Signature ──
+
+  @Post(':id/signature')
+  @Roles('admin', 'operations_staff')
+  @UseInterceptors(FileInterceptor('file'))
+  uploadSignature(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: any,
+  ) {
+    return this.applicantsService.uploadSignature(id, file, user.companyId);
+  }
+
+  @Get(':id/signature')
+  @Roles('admin', 'operations_staff', 'finance_manager')
+  async getSignature(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+    @Res() res: Response,
+  ) {
+    const { buffer, mimeType } = await this.applicantsService.getSignature(id, user.companyId);
+    res.set({ 'Content-Type': mimeType });
+    res.send(buffer);
+  }
+
   @Post(':id/vendors')
   @Roles('admin', 'operations_staff')
   assignVendor(@Param('id') id: string, @Body() body: { vendorId: string; categoryLabel?: string; isPrimary?: boolean }, @CurrentUser() user: any) {

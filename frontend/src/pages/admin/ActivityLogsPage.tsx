@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, Users, FileText, Building2, Database, Activity, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
+import { LogOut, Users, FileText, Building2, Database, Activity, ChevronLeft, ChevronRight, Search, X, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DateSelectPicker } from '@/components/ui/date-select-picker';
@@ -104,6 +104,7 @@ export default function ActivityLogsPage() {
           {[
             { to: '/admin/companies', icon: Building2, label: 'Companies' },
             { to: '/admin/documents', icon: FileText, label: 'Document Master' },
+            { to: '/admin/discoms', icon: Zap, label: 'DISCOM Master' },
             { to: '/admin/masters', icon: Database, label: 'Master Data' },
             { to: '/admin/users', icon: Users, label: 'Admin Users' },
             { to: '/admin/logs', icon: Activity, label: 'Activity Logs' },

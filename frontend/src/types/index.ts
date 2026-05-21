@@ -149,16 +149,22 @@ export interface Applicant {
   projectStatus?: string;
 
   // Personal
+  customerProfession?: string;
   dateOfBirth?: string;
   gender?: string;
   email?: string;
   alternateMobile?: string;
   whatsappNumber?: string;
+  panToken?: string;
+  aadhaarToken?: string;
+  signatureFileKey?: string;
 
   // Address
   addressHouse?: string;
   addressStreet?: string;
   addressVillage?: string;
+  addressGp?: string;
+  addressBlock?: string;
   addressDistrictId?: string;
   addressDistrict?: MasterDistrict;
   addressStateId?: string;
@@ -166,6 +172,23 @@ export interface Applicant {
   addressPincode?: string;
   gpsLatitude?: number;
   gpsLongitude?: number;
+
+  // Bank Details
+  bankNameInAccount?: string;
+  bankBranchName?: string;
+  bankAccountNumber?: string;
+  bankIfscCode?: string;
+  coApplicantName?: string;
+  coApplicantRelationship?: string;
+  coApplicantMobile?: string;
+  coApplicantOccupation?: string;
+
+  // Area Details
+  areaHouseNo?: string;
+  areaRoofSizeSqft?: number;
+  areaNoOfFloors?: number;
+  areaRoofType?: string;
+  areaHouseHeight?: string;
 
   // Installation
   discom: Discom;
@@ -175,8 +198,13 @@ export interface Applicant {
   sanctionedLoadKw?: number;
   existingConsumerNo?: string;
 
-  // Finance
+  // Finance / Invoice
   contractAmount?: number;
+  invoiceNo?: string;
+  solarRate?: number;
+  solarGst?: number;
+  installationRate?: number;
+  installationGst?: number;
   financeMode?: FinancePreference;
   bankName?: string;
   loanAmount?: number;
@@ -192,6 +220,15 @@ export interface Applicant {
 
   // DISCOM
   portalApplicationDate?: string;
+  // DISCOM Details
+  mnreApplicationNo?: string;
+  discomApplicationNo?: string;
+  mnreSubmitDate?: string;
+  discomDivision?: string;
+  discomSubDivision?: string;
+  discomSection?: string;
+  discomContactPerson?: string;
+  discomMobileNo?: string;
   jeName?: string;
   jeContact?: string;
   mrtDate?: string;
@@ -273,6 +310,9 @@ export interface InstallationDetails {
   wireFlexibleCoil?: string;
   wireCableTie?: string;
   wireBlackTape?: string;
+  wire16mmEarthingCable?: string;
+  wireDcCable4sqmm?: string;
+  wireAcCableCopper?: string;
 }
 
 export interface ProjectStatusHistory {
@@ -350,6 +390,19 @@ export interface ApplicantChecklist {
 // ─────────────────────────────────────────────
 
 export type DocType = 'upload' | 'generate' | 'view';
+
+export interface DiscomMasterItem {
+  id: string;
+  districtId?: string | null;
+  district?: { id: string; name: string; state?: { id: string; name: string } } | null;
+  name: string;
+  code: string;
+  fullform?: string | null;
+  headquarters?: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
 
 export interface DocumentMaster {
   id: string;

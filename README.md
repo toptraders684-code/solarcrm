@@ -100,7 +100,7 @@ This creates all tables and seeds:
 ### 6. Create upload directories
 
 ```bash
-mkdir -p backend/uploads/applicants backend/uploads/master backend/uploads/generated
+mkdir -p backend/uploads/applicants backend/uploads/master backend/uploads/generated backend/uploads/signatures
 ```
 
 ---
@@ -178,7 +178,8 @@ solarcrm/
 │   └── uploads/
 │       ├── applicants/        # User-uploaded documents
 │       ├── master/            # Admin-uploaded static files (view-type docs)
-│       └── generated/         # Reserved for cached generated PDFs
+│       ├── generated/         # Reserved for cached generated PDFs
+│       └── signatures/        # Applicant signature images
 ├── frontend/
 │   └── src/
 │       ├── pages/

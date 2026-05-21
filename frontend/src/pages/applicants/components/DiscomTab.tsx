@@ -57,12 +57,15 @@ function F({ label, error, children }: { label: string; error?: string; children
 
 const MOBILE_RE = /^[6-9]\d{9}$/;
 
-function validateDiscom(section: 'discom' | 'survey' | null, form: Record<string, any>): Record<string, string> {
+function validateDiscom(section: Section, form: Record<string, any>): Record<string, string> {
   const e: Record<string, string> = {};
   if (section === 'discom') {
     if (form.jeContact && !MOBILE_RE.test(form.jeContact)) e.jeContact = 'Must be a valid 10-digit mobile number';
     if (form.roofAreaSqft !== '' && form.roofAreaSqft !== undefined && Number(form.roofAreaSqft) <= 0)
       e.roofAreaSqft = 'Must be greater than 0';
+  }
+  if (section === 'discomDetails') {
+    if (form.discomMobileNo && !MOBILE_RE.test(form.discomMobileNo)) e.discomMobileNo = 'Must be a valid 10-digit mobile number';
   }
   if (section === 'survey') {
     if (form.roofAreaSqft !== '' && form.roofAreaSqft !== undefined && Number(form.roofAreaSqft) <= 0)
@@ -73,7 +76,7 @@ function validateDiscom(section: 'discom' | 'survey' | null, form: Record<string
   return e;
 }
 
-type Section = 'discom' | 'survey' | null;
+type Section = 'discom' | 'discomDetails' | 'survey' | null;
 
 function SectionActions({ isEditing, canEdit, saving, editDisabled, onEdit, onCancel, onSave }: {
   isEditing: boolean; canEdit: boolean; saving: boolean; editDisabled: boolean;
@@ -135,6 +138,17 @@ export function DiscomTab({ applicant }: DiscomTabProps) {
         inspectionResult: applicant.inspectionResult ?? '',
         netMeterSerialNo: applicant.netMeterSerialNo ?? '',
         discomRefNo: applicant.discomRefNo ?? '',
+      });
+    } else if (section === 'discomDetails') {
+      setForm({
+        mnreApplicationNo: applicant.mnreApplicationNo ?? '',
+        discomApplicationNo: applicant.discomApplicationNo ?? '',
+        mnreSubmitDate: applicant.mnreSubmitDate ? applicant.mnreSubmitDate.slice(0, 10) : '',
+        discomDivision: applicant.discomDivision ?? '',
+        discomSubDivision: applicant.discomSubDivision ?? '',
+        discomSection: applicant.discomSection ?? '',
+        discomContactPerson: applicant.discomContactPerson ?? '',
+        discomMobileNo: applicant.discomMobileNo ?? '',
       });
     } else if (section === 'survey') {
       setForm({
@@ -284,6 +298,54 @@ export function DiscomTab({ applicant }: DiscomTabProps) {
             </InfoRow>
             <InfoRow label="DISCOM Ref No.">{applicant.discomRefNo}</InfoRow>
             <InfoRow label="Net Meter Serial No.">{applicant.netMeterSerialNo}</InfoRow>
+          </div>
+        )}
+      </div>
+
+      {/* ── DISCOM Details ────────────────────────────────────────────── */}
+      <div className="bg-surface-container-lowest rounded-xl p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h4 className="text-xs font-black uppercase tracking-widest text-on-surface-variant/50">DISCOM Details</h4>
+          <SectionActions isEditing={editingSection === 'discomDetails'} canEdit={!!canEdit} saving={saveMutation.isPending} editDisabled={editingSection !== null} onEdit={() => startEdit('discomDetails')} onCancel={cancelEdit} onSave={() => saveMutation.mutate()} />
+        </div>
+
+        {editingSection === 'discomDetails' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <F label="MNRE Application No (PMSURYA GARH)">
+              <Input value={form.mnreApplicationNo ?? ''} onChange={(e) => set('mnreApplicationNo', e.target.value)} onBlur={(e) => touch('mnreApplicationNo', e.target.value)} placeholder="MNRE application number" className={fieldClass('mnreApplicationNo')} />
+            </F>
+            <F label="DISCOM Application No (Reference No)">
+              <Input value={form.discomApplicationNo ?? ''} onChange={(e) => set('discomApplicationNo', e.target.value)} onBlur={(e) => touch('discomApplicationNo', e.target.value)} placeholder="DISCOM reference number" className={fieldClass('discomApplicationNo')} />
+            </F>
+            <F label="MNRE Application Submit Date">
+              <DateSelectPicker value={form.mnreSubmitDate ?? ''} onChange={(v) => { set('mnreSubmitDate', v); touch('mnreSubmitDate', v); }} placeholder="Select date" />
+            </F>
+            <F label="DISCOM Division Name">
+              <Input value={form.discomDivision ?? ''} onChange={(e) => set('discomDivision', e.target.value)} onBlur={(e) => touch('discomDivision', e.target.value)} placeholder="Division name" className={fieldClass('discomDivision')} />
+            </F>
+            <F label="DISCOM Sub Division Name">
+              <Input value={form.discomSubDivision ?? ''} onChange={(e) => set('discomSubDivision', e.target.value)} onBlur={(e) => touch('discomSubDivision', e.target.value)} placeholder="Sub division name" className={fieldClass('discomSubDivision')} />
+            </F>
+            <F label="DISCOM Section">
+              <Input value={form.discomSection ?? ''} onChange={(e) => set('discomSection', e.target.value)} onBlur={(e) => touch('discomSection', e.target.value)} placeholder="Section name" className={fieldClass('discomSection')} />
+            </F>
+            <F label="DISCOM Contact Person Name">
+              <Input value={form.discomContactPerson ?? ''} onChange={(e) => set('discomContactPerson', e.target.value)} onBlur={(e) => touch('discomContactPerson', e.target.value)} placeholder="Contact person name" className={fieldClass('discomContactPerson')} />
+            </F>
+            <F label="DISCOM Mobile No" error={errors.discomMobileNo}>
+              <Input maxLength={10} value={form.discomMobileNo ?? ''} onChange={(e) => set('discomMobileNo', e.target.value.replace(/\D/g, ''))} onBlur={(e) => touch('discomMobileNo', e.target.value.replace(/\D/g, ''))} placeholder="10-digit mobile" className={fieldClass('discomMobileNo')} />
+            </F>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+            <InfoRow label="MNRE Application No">{applicant.mnreApplicationNo}</InfoRow>
+            <InfoRow label="DISCOM Application No">{applicant.discomApplicationNo}</InfoRow>
+            <InfoRow label="MNRE Submit Date">{applicant.mnreSubmitDate ? formatDate(applicant.mnreSubmitDate) : null}</InfoRow>
+            <InfoRow label="DISCOM Division">{applicant.discomDivision}</InfoRow>
+            <InfoRow label="DISCOM Sub Division">{applicant.discomSubDivision}</InfoRow>
+            <InfoRow label="DISCOM Section">{applicant.discomSection}</InfoRow>
+            <InfoRow label="Contact Person">{applicant.discomContactPerson}</InfoRow>
+            <InfoRow label="DISCOM Mobile No">{applicant.discomMobileNo}</InfoRow>
           </div>
         )}
       </div>

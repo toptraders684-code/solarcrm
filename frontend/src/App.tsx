@@ -8,6 +8,7 @@ import TemplateEditorPage from '@/pages/admin/TemplateEditorPage';
 import AdminUsersPage from '@/pages/admin/AdminUsersPage';
 import CompaniesPage from '@/pages/admin/CompaniesPage';
 import MasterDataPage from '@/pages/admin/MasterDataPage';
+import DiscomMasterPage from '@/pages/admin/DiscomMasterPage';
 import ActivityLogsPage from '@/pages/admin/ActivityLogsPage';
 import DashboardPage from '@/pages/dashboard/DashboardPage';
 import LeadsListPage from '@/pages/leads/LeadsListPage';
@@ -50,6 +51,9 @@ export default function App() {
       } />
       <Route path="/admin/template/:id" element={
         <AdminProtectedRoute><TemplateEditorPage /></AdminProtectedRoute>
+      } />
+      <Route path="/admin/discoms" element={
+        <AdminProtectedRoute><DiscomMasterPage /></AdminProtectedRoute>
       } />
       <Route path="/admin/masters" element={
         <AdminProtectedRoute><MasterDataPage /></AdminProtectedRoute>

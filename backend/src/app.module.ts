@@ -20,6 +20,7 @@ import { CompaniesModule } from './companies/companies.module';
 import { MasterDataModule } from './master-data/master-data.module';
 import { ActivityLogModule } from './activity-log/activity-log.module';
 import { ActivityLogInterceptor } from './activity-log/activity-log.interceptor';
+import { DiscomMasterModule } from './discom-master/discom-master.module';
 import configuration from './config/configuration';
 
 @Module({
@@ -50,6 +51,7 @@ import configuration from './config/configuration';
     CompaniesModule,
     MasterDataModule,
     ActivityLogModule,
+    DiscomMasterModule,
   ],
   providers: [
     {

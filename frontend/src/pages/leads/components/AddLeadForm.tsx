@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createLeadSchema, type CreateLeadFormData } from '@/utils/validators';
 import { masterService } from '@/services/master.service';
+import { discomMasterService } from '@/services/discom-master.service';
 import { usersService } from '@/services/users.service';
 import { leadsService } from '@/services/leads.service';
 import { useAuthStore } from '@/store/authStore';
@@ -30,11 +31,17 @@ export function AddLeadForm({ onSuccess, onCancel }: AddLeadFormProps) {
   });
 
   const selectedStateId = watch('addressStateId');
+  const selectedDistrictId = watch('addressDistrictId');
 
   const { data: districtsData } = useQuery({
     queryKey: ['districts', selectedStateId],
     queryFn: () => masterService.getDistricts(selectedStateId),
     enabled: !!selectedStateId,
+  });
+
+  const { data: discomsData } = useQuery({
+    queryKey: ['discoms-by-district', selectedDistrictId],
+    queryFn: () => discomMasterService.list(selectedDistrictId || undefined),
   });
 
   const onSubmit = handleSubmit(async (values) => {
@@ -95,7 +102,7 @@ export function AddLeadForm({ onSuccess, onCancel }: AddLeadFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <L>State</L>
-          <Select onValueChange={(v) => { setValue('addressStateId', v); setValue('addressDistrictId', ''); }}>
+          <Select onValueChange={(v) => { setValue('addressStateId', v); setValue('addressDistrictId', ''); setValue('discom', '' as any); }}>
             <SelectTrigger className="mt-1"><SelectValue placeholder="Select state" /></SelectTrigger>
             <SelectContent>
               {statesData?.data?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -104,7 +111,7 @@ export function AddLeadForm({ onSuccess, onCancel }: AddLeadFormProps) {
         </div>
         <div>
           <L>District</L>
-          <Select onValueChange={(v) => setValue('addressDistrictId', v)} disabled={!selectedStateId}>
+          <Select onValueChange={(v) => { setValue('addressDistrictId', v); setValue('discom', '' as any); }} disabled={!selectedStateId}>
             <SelectTrigger className="mt-1"><SelectValue placeholder="Select district" /></SelectTrigger>
             <SelectContent>
               {districtsData?.data?.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
@@ -120,10 +127,22 @@ export function AddLeadForm({ onSuccess, onCancel }: AddLeadFormProps) {
         </div>
         <div>
           <L>DISCOM *</L>
-          <Select onValueChange={(v) => setValue('discom', v as any)}>
-            <SelectTrigger className="mt-1"><SelectValue placeholder="Select DISCOM" /></SelectTrigger>
+          <Select onValueChange={(v) => setValue('discom', v as any)} disabled={!selectedDistrictId}>
+            <SelectTrigger className="mt-1">
+              <SelectValue placeholder={selectedDistrictId ? 'Select DISCOM' : 'Select district first'} />
+            </SelectTrigger>
             <SelectContent>
-              {enums?.discoms?.map((d) => <SelectItem key={d} value={d}>{d.toUpperCase()}</SelectItem>)}
+              {(discomsData?.data ?? []).map((d) => (
+                <SelectItem key={d.id} value={d.code}>
+                  <span className="font-bold">{d.code}</span>
+                  {d.fullform && <span className="text-on-surface-variant/60 ml-1">— {d.fullform}</span>}
+                </SelectItem>
+              ))}
+              {selectedDistrictId && (discomsData?.data ?? []).length === 0 && (
+                <div className="px-3 py-2 text-xs text-on-surface-variant/50 italic">
+                  No DISCOMs configured for this district
+                </div>
+              )}
             </SelectContent>
           </Select>
           {errors.discom && <p className="text-xs text-error mt-1">{errors.discom.message}</p>}

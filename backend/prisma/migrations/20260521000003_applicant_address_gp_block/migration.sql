@@ -1,0 +1,2 @@
+ALTER TABLE "applicants" ADD COLUMN IF NOT EXISTS "address_gp" VARCHAR(200);
+ALTER TABLE "applicants" ADD COLUMN IF NOT EXISTS "address_block" VARCHAR(200);

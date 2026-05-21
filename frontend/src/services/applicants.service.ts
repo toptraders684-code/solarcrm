@@ -98,6 +98,20 @@ export const applicantsService = {
     return data;
   },
 
+  uploadSignature: async (id: string, file: File): Promise<{ data: { signatureFileKey: string } }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await api.post(`/applicants/${id}/signature`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+
+  getSignatureBlob: async (id: string): Promise<Blob> => {
+    const { data } = await api.get(`/applicants/${id}/signature`, { responseType: 'blob' });
+    return data;
+  },
+
   addActivity: async (
     id: string,
     dto: { activityType: string; notes?: string; followUpDate?: string },

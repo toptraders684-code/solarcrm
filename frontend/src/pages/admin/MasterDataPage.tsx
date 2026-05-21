@@ -1,16 +1,17 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { LogOut, Users, FileText, Building2, Database, Activity, Plus, Pencil, ToggleLeft, ToggleRight } from 'lucide-react';
+import { LogOut, Users, FileText, Building2, Database, Activity, Plus, Pencil, ToggleLeft, ToggleRight, Zap, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { masterDataService, MasterType } from '@/services/masterData.service';
 import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/store/authStore';
 
-type Tab = MasterType | 'stages';
+type Tab = MasterType | 'stages' | 'states' | 'districts' | 'headquarters';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'discoms', label: 'DISCOMs' },
@@ -19,10 +20,12 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'payment-methods', label: 'Payment Methods' },
   { id: 'project-types', label: 'Project Types' },
   { id: 'stages', label: 'Project Stages' },
+  { id: 'states', label: 'States' },
+  { id: 'districts', label: 'Districts' },
+  { id: 'headquarters', label: 'Headquarters' },
 ];
 
-interface SimpleItem { id: string; name: string; code: string; isActive: boolean; sortOrder: number; }
-interface StageItem { id: string; stageNumber: number; name: string; description?: string; isActive: boolean; }
+interface StateItem { id: string; name: string; code: string; _count?: { districts: number }; }
 
 function AdminHeader({ user, onLogout }: { user: any; onLogout: () => void }) {
   return (
@@ -47,6 +50,7 @@ function AdminHeader({ user, onLogout }: { user: any; onLogout: () => void }) {
         {[
           { to: '/admin/companies', icon: Building2, label: 'Companies' },
           { to: '/admin/documents', icon: FileText, label: 'Document Master' },
+          { to: '/admin/discoms', icon: Zap, label: 'DISCOM Master' },
           { to: '/admin/masters', icon: Database, label: 'Master Data' },
           { to: '/admin/users', icon: Users, label: 'Admin Users' },
           { to: '/admin/logs', icon: Activity, label: 'Activity Logs' },
@@ -69,16 +73,37 @@ export default function MasterDataPage() {
   const { user, clearAuth } = useAuthStore();
   const [activeTab, setActiveTab] = useState<Tab>('discoms');
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editItem, setEditItem] = useState<SimpleItem | StageItem | null>(null);
-  const [form, setForm] = useState({ name: '', code: '', sortOrder: '0', description: '', stageNumber: '' });
+  const [editItem, setEditItem] = useState<any | null>(null);
+  const [form, setForm] = useState({
+    name: '', code: '', sortOrder: '0', description: '', stageNumber: '',
+    fullform: '', stateId: '',
+  });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; label: string } | null>(null);
 
+  const isDiscoms = activeTab === 'discoms';
   const isStages = activeTab === 'stages';
+  const isStates = activeTab === 'states';
+  const isDistricts = activeTab === 'districts';
+  const isHq = activeTab === 'headquarters';
 
   const { data, isLoading } = useQuery({
     queryKey: ['master-data', activeTab],
-    queryFn: () => masterDataService.list(activeTab),
+    queryFn: () => {
+      if (isStates) return masterDataService.listStates();
+      if (isDistricts) return masterDataService.listDistricts();
+      if (isHq) return masterDataService.listHq();
+      return masterDataService.list(activeTab as MasterType | 'stages');
+    },
   });
   const items: any[] = data?.data ?? [];
+
+  const { data: statesForForm } = useQuery({
+    queryKey: ['master-data', 'states'],
+    queryFn: () => masterDataService.listStates(),
+    enabled: isDistricts,
+    staleTime: 60_000,
+  });
+  const statesList: StateItem[] = statesForForm?.data ?? [];
 
   const handleLogout = async () => {
     try { await authService.logout(); } catch { /* ignore */ }
@@ -88,40 +113,58 @@ export default function MasterDataPage() {
 
   const openCreate = () => {
     setEditItem(null);
-    setForm({ name: '', code: '', sortOrder: '0', description: '', stageNumber: '' });
+    setForm({ name: '', code: '', sortOrder: '0', description: '', stageNumber: '', fullform: '', stateId: '' });
     setDialogOpen(true);
   };
 
   const openEdit = (item: any) => {
     setEditItem(item);
     setForm({
-      name: item.name,
-      code: (item as SimpleItem).code ?? '',
-      sortOrder: String((item as SimpleItem).sortOrder ?? 0),
-      description: (item as StageItem).description ?? '',
-      stageNumber: String((item as StageItem).stageNumber ?? ''),
+      name: item.name ?? '',
+      code: item.code ?? '',
+      sortOrder: String(item.sortOrder ?? 0),
+      description: item.description ?? '',
+      stageNumber: String(item.stageNumber ?? ''),
+      fullform: item.fullform ?? '',
+      stateId: item.stateId ?? '',
     });
     setDialogOpen(true);
   };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (isStages) {
-        if (editItem) {
-          return masterDataService.updateStage(editItem.id, { name: form.name, description: form.description || undefined });
-        }
-        return masterDataService.createStage({ stageNumber: Number(form.stageNumber), name: form.name, description: form.description || undefined });
-      } else {
-        const type = activeTab as MasterType;
-        if (editItem) {
-          return masterDataService.update(type, editItem.id, { name: form.name, code: form.code, sortOrder: Number(form.sortOrder) });
-        }
-        return masterDataService.create(type, { name: form.name, code: form.code, sortOrder: Number(form.sortOrder) });
+      if (isHq) {
+        if (editItem) return masterDataService.updateHq(editItem.id, { name: form.name });
+        return masterDataService.createHq({ name: form.name.trim() });
       }
+      if (isStates) {
+        const body = { name: form.name.trim(), code: form.code.trim().toUpperCase() };
+        if (editItem) return masterDataService.updateState(editItem.id, body);
+        return masterDataService.createState(body);
+      }
+      if (isDistricts) {
+        const body = { name: form.name.trim(), stateId: form.stateId };
+        if (editItem) return masterDataService.updateDistrict(editItem.id, body);
+        return masterDataService.createDistrict(body);
+      }
+      if (isStages) {
+        if (editItem) return masterDataService.updateStage(editItem.id, { name: form.name, description: form.description || undefined });
+        return masterDataService.createStage({ stageNumber: Number(form.stageNumber), name: form.name, description: form.description || undefined });
+      }
+      const type = activeTab as MasterType;
+      // For discoms: name = code (they are the same), only include fullform (no headquarters from this page)
+      const extra = isDiscoms ? { fullform: form.fullform || undefined } : {};
+      if (editItem) {
+        const nameVal = isDiscoms ? form.code : form.name;
+        return masterDataService.update(type, editItem.id, { name: nameVal, code: form.code, sortOrder: Number(form.sortOrder), ...extra });
+      }
+      const nameVal = isDiscoms ? form.code : form.name;
+      return masterDataService.create(type, { name: nameVal, code: form.code, sortOrder: Number(form.sortOrder), ...extra });
     },
     onSuccess: () => {
       toast.success(editItem ? 'Updated' : 'Created');
       queryClient.invalidateQueries({ queryKey: ['master-data', activeTab] });
+      if (isDistricts) queryClient.invalidateQueries({ queryKey: ['master-data', 'states'] });
       setDialogOpen(false);
     },
     onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to save'),
@@ -130,6 +173,7 @@ export default function MasterDataPage() {
   const toggleMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => {
       if (isStages) return masterDataService.updateStage(id, { isActive: !isActive });
+      if (isHq) return masterDataService.updateHq(id, { isActive: !isActive });
       return masterDataService.update(activeTab as MasterType, id, { isActive: !isActive });
     },
     onSuccess: () => {
@@ -139,9 +183,34 @@ export default function MasterDataPage() {
     onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed'),
   });
 
-  const canSave = isStages
-    ? form.name.trim().length > 0 && (editItem || form.stageNumber.trim().length > 0)
-    : form.name.trim().length > 0 && form.code.trim().length > 0;
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => {
+      if (isStates) return masterDataService.deleteState(id);
+      return masterDataService.deleteDistrict(id);
+    },
+    onSuccess: () => {
+      toast.success('Deleted');
+      queryClient.invalidateQueries({ queryKey: ['master-data', activeTab] });
+      if (isStates) queryClient.invalidateQueries({ queryKey: ['master-data', 'districts'] });
+      setDeleteConfirm(null);
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Cannot delete');
+      setDeleteConfirm(null);
+    },
+  });
+
+  const canSave = isHq
+    ? form.name.trim().length > 0
+    : isStates
+    ? form.name.trim().length > 0 && form.code.trim().length > 0
+    : isDistricts
+    ? form.name.trim().length > 0 && form.stateId.length > 0
+    : isStages
+    ? form.name.trim().length > 0 && (!!editItem || form.stageNumber.trim().length > 0)
+    : form.code.trim().length > 0;
+
+  const colSpan = isStages ? 5 : isDiscoms ? 5 : isStates ? 4 : isDistricts ? 3 : isHq ? 3 : 5;
 
   return (
     <div className="min-h-screen bg-surface">
@@ -154,7 +223,7 @@ export default function MasterDataPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 border-b border-outline-variant/20">
+        <div className="flex gap-1 border-b border-outline-variant/20 flex-wrap">
           {TABS.map((t) => (
             <button key={t.id} onClick={() => setActiveTab(t.id)}
               className={`px-4 py-2 text-xs font-bold border-b-2 transition-colors ${
@@ -191,54 +260,161 @@ export default function MasterDataPage() {
                       <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40 w-16">No.</th>
                       <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40">Stage Name</th>
                       <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40">Description</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40 w-20">Active</th>
+                      <th className="px-5 py-3 w-24" />
+                    </>
+                  ) : isDiscoms ? (
+                    <>
+                      <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40">DISCOM Code</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40">Full Form</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40 w-16">Order</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40 w-20">Active</th>
+                      <th className="px-5 py-3 w-24" />
+                    </>
+                  ) : isStates ? (
+                    <>
+                      <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40">State Name</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40 w-24">Code</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40 w-28">Districts</th>
+                      <th className="px-5 py-3 w-36" />
+                    </>
+                  ) : isDistricts ? (
+                    <>
+                      <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40 w-40">State</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40">District Name</th>
+                      <th className="px-5 py-3 w-36" />
+                    </>
+                  ) : isHq ? (
+                    <>
+                      <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40">Headquarters Name</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40 w-20">Active</th>
+                      <th className="px-5 py-3 w-24" />
                     </>
                   ) : (
                     <>
                       <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40">Name</th>
                       <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40">Code</th>
                       <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40 w-20">Order</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40 w-20">Active</th>
+                      <th className="px-5 py-3 w-24" />
                     </>
                   )}
-                  <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40 w-20">Active</th>
-                  <th className="px-5 py-3 w-24" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/5">
                 {items.map((item) => (
-                  <tr key={item.id} className={`hover:bg-surface-container-low/30 transition-colors ${!item.isActive ? 'opacity-50' : ''}`}>
+                  <tr key={item.id} className={`hover:bg-surface-container-low/30 transition-colors ${item.isActive === false ? 'opacity-50' : ''}`}>
                     {isStages ? (
                       <>
                         <td className="px-5 py-3 text-xs font-black text-primary">{item.stageNumber}</td>
                         <td className="px-5 py-3 font-semibold text-on-surface">{item.name}</td>
                         <td className="px-5 py-3 text-xs text-on-surface-variant/60 max-w-xs truncate">{item.description || '—'}</td>
+                        <td className="px-5 py-3">
+                          <button onClick={() => toggleMutation.mutate({ id: item.id, isActive: item.isActive })}
+                            className="text-on-surface-variant/40 hover:text-primary transition-colors">
+                            {item.isActive ? <ToggleRight size={20} className="text-primary" /> : <ToggleLeft size={20} />}
+                          </button>
+                        </td>
+                        <td className="px-5 py-3">
+                          <button onClick={() => openEdit(item)}
+                            className="flex items-center gap-1 text-xs text-on-surface-variant/50 hover:text-primary transition-colors">
+                            <Pencil size={12} />Edit
+                          </button>
+                        </td>
+                      </>
+                    ) : isDiscoms ? (
+                      <>
+                        <td className="px-5 py-3 font-black text-primary font-mono">{item.code}</td>
+                        <td className="px-5 py-3 text-sm text-on-surface-variant">{item.fullform || <span className="text-on-surface-variant/30 italic">—</span>}</td>
+                        <td className="px-5 py-3 text-xs text-on-surface-variant/60">{item.sortOrder}</td>
+                        <td className="px-5 py-3">
+                          <button onClick={() => toggleMutation.mutate({ id: item.id, isActive: item.isActive })}
+                            className="text-on-surface-variant/40 hover:text-primary transition-colors">
+                            {item.isActive ? <ToggleRight size={20} className="text-primary" /> : <ToggleLeft size={20} />}
+                          </button>
+                        </td>
+                        <td className="px-5 py-3">
+                          <button onClick={() => openEdit(item)}
+                            className="flex items-center gap-1 text-xs text-on-surface-variant/50 hover:text-primary transition-colors">
+                            <Pencil size={12} />Edit
+                          </button>
+                        </td>
+                      </>
+                    ) : isStates ? (
+                      <>
+                        <td className="px-5 py-3 font-semibold text-on-surface">{item.name}</td>
+                        <td className="px-5 py-3 font-mono text-xs text-on-surface-variant/70">{item.code}</td>
+                        <td className="px-5 py-3 text-xs text-on-surface-variant/60">{item._count?.districts ?? 0}</td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => openEdit(item)}
+                              className="flex items-center gap-1 text-xs text-on-surface-variant/50 hover:text-primary transition-colors">
+                              <Pencil size={12} />Edit
+                            </button>
+                            <button onClick={() => setDeleteConfirm({ id: item.id, label: item.name })}
+                              className="flex items-center gap-1 text-xs text-on-surface-variant/50 hover:text-error transition-colors">
+                              <Trash2 size={12} />Delete
+                            </button>
+                          </div>
+                        </td>
+                      </>
+                    ) : isDistricts ? (
+                      <>
+                        <td className="px-5 py-3 text-xs text-on-surface-variant/60">{item.state?.name}</td>
+                        <td className="px-5 py-3 font-semibold text-on-surface">{item.name}</td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => openEdit(item)}
+                              className="flex items-center gap-1 text-xs text-on-surface-variant/50 hover:text-primary transition-colors">
+                              <Pencil size={12} />Edit
+                            </button>
+                            <button onClick={() => setDeleteConfirm({ id: item.id, label: item.name })}
+                              className="flex items-center gap-1 text-xs text-on-surface-variant/50 hover:text-error transition-colors">
+                              <Trash2 size={12} />Delete
+                            </button>
+                          </div>
+                        </td>
+                      </>
+                    ) : isHq ? (
+                      <>
+                        <td className="px-5 py-3 font-semibold text-on-surface">{item.name}</td>
+                        <td className="px-5 py-3">
+                          <button onClick={() => toggleMutation.mutate({ id: item.id, isActive: item.isActive })}
+                            className="text-on-surface-variant/40 hover:text-primary transition-colors">
+                            {item.isActive ? <ToggleRight size={20} className="text-primary" /> : <ToggleLeft size={20} />}
+                          </button>
+                        </td>
+                        <td className="px-5 py-3">
+                          <button onClick={() => openEdit(item)}
+                            className="flex items-center gap-1 text-xs text-on-surface-variant/50 hover:text-primary transition-colors">
+                            <Pencil size={12} />Edit
+                          </button>
+                        </td>
                       </>
                     ) : (
                       <>
                         <td className="px-5 py-3 font-semibold text-on-surface">{item.name}</td>
                         <td className="px-5 py-3 font-mono text-xs text-on-surface-variant/70">{item.code}</td>
                         <td className="px-5 py-3 text-xs text-on-surface-variant/60">{item.sortOrder}</td>
+                        <td className="px-5 py-3">
+                          <button onClick={() => toggleMutation.mutate({ id: item.id, isActive: item.isActive })}
+                            className="text-on-surface-variant/40 hover:text-primary transition-colors">
+                            {item.isActive ? <ToggleRight size={20} className="text-primary" /> : <ToggleLeft size={20} />}
+                          </button>
+                        </td>
+                        <td className="px-5 py-3">
+                          <button onClick={() => openEdit(item)}
+                            className="flex items-center gap-1 text-xs text-on-surface-variant/50 hover:text-primary transition-colors">
+                            <Pencil size={12} />Edit
+                          </button>
+                        </td>
                       </>
                     )}
-                    <td className="px-5 py-3">
-                      <button onClick={() => toggleMutation.mutate({ id: item.id, isActive: item.isActive })}
-                        className="text-on-surface-variant/40 hover:text-primary transition-colors">
-                        {item.isActive
-                          ? <ToggleRight size={20} className="text-primary" />
-                          : <ToggleLeft size={20} />
-                        }
-                      </button>
-                    </td>
-                    <td className="px-5 py-3">
-                      <button onClick={() => openEdit(item)}
-                        className="flex items-center gap-1 text-xs text-on-surface-variant/50 hover:text-primary transition-colors">
-                        <Pencil size={12} />Edit
-                      </button>
-                    </td>
                   </tr>
                 ))}
                 {items.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-5 py-10 text-center text-sm text-on-surface-variant/50">
+                    <td colSpan={colSpan} className="px-5 py-10 text-center text-sm text-on-surface-variant/50">
                       No items yet.
                     </td>
                   </tr>
@@ -249,12 +425,20 @@ export default function MasterDataPage() {
         </div>
       </main>
 
+      {/* Add / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) setDialogOpen(false); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editItem ? 'Edit' : 'Add'} {TABS.find((t) => t.id === activeTab)?.label.replace(/s$/, '')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {isHq ? (
+              <div>
+                <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Headquarters Name <span className="text-error">*</span></label>
+                <Input className="mt-1" placeholder="e.g. Bhubaneswar" value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+              </div>
+            ) : (<>
             {isStages && !editItem && (
               <div>
                 <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Stage Number <span className="text-error">*</span></label>
@@ -262,25 +446,68 @@ export default function MasterDataPage() {
                   onChange={(e) => setForm((f) => ({ ...f, stageNumber: e.target.value }))} />
               </div>
             )}
-            <div>
-              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Name <span className="text-error">*</span></label>
-              <Input className="mt-1" placeholder="Display name" value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-            </div>
+
+            {isDistricts && (
+              <div>
+                <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">State <span className="text-error">*</span></label>
+                <Select value={form.stateId || undefined} onValueChange={(v) => setForm((f) => ({ ...f, stateId: v }))}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select state..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statesList.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name} ({s.code})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Name field: hidden for discoms (code serves as name) */}
+            {!isDiscoms && (
+              <div>
+                <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">
+                  {isDistricts ? 'District Name' : 'Name'} <span className="text-error">*</span>
+                </label>
+                <Input className="mt-1"
+                  placeholder={isStates ? 'e.g. Odisha' : isDistricts ? 'e.g. Khordha' : 'Display name'}
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+              </div>
+            )}
+
             {isStages ? (
               <div>
                 <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Description</label>
                 <Input className="mt-1" placeholder="Short description (optional)" value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
               </div>
-            ) : (
+            ) : isStates ? (
+              <div>
+                <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">State Code <span className="text-error">*</span></label>
+                <Input className="mt-1 uppercase" placeholder="e.g. OD" maxLength={5} value={form.code}
+                  onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} />
+                <p className="text-[10px] text-on-surface-variant/40 mt-1">Short code, uppercase (e.g. OD, MH, DL)</p>
+              </div>
+            ) : isDistricts ? null : (
               <>
                 <div>
-                  <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Code <span className="text-error">*</span></label>
-                  <Input className="mt-1" placeholder="e.g. walk_in (used in data)" value={form.code}
+                  <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">
+                    {isDiscoms ? 'DISCOM Code' : 'Code'} <span className="text-error">*</span>
+                  </label>
+                  <Input className="mt-1"
+                    placeholder={isDiscoms ? 'e.g. TPCODL' : 'e.g. walk_in (used in data)'}
+                    value={form.code}
                     onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} />
-                  <p className="text-[10px] text-on-surface-variant/40 mt-1">Lowercase, underscores only. Cannot change after data is saved.</p>
+                  {!isDiscoms && <p className="text-[10px] text-on-surface-variant/40 mt-1">Lowercase, underscores only. Cannot change after data is saved.</p>}
                 </div>
+                {isDiscoms && (
+                  <div>
+                    <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Full Form</label>
+                    <Input className="mt-1" placeholder="e.g. TP Central Odisha Distribution Ltd" value={form.fullform}
+                      onChange={(e) => setForm((f) => ({ ...f, fullform: e.target.value }))} />
+                  </div>
+                )}
                 <div>
                   <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Sort Order</label>
                   <Input className="mt-1" type="number" min={0} value={form.sortOrder}
@@ -288,11 +515,33 @@ export default function MasterDataPage() {
                 </div>
               </>
             )}
+            </>)}
           </div>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button disabled={!canSave} loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
               {editItem ? 'Save Changes' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete "{deleteConfirm?.label}"?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-on-surface-variant">
+            {isStates
+              ? 'Cannot delete if districts are linked. This action is permanent.'
+              : 'Cannot delete if the district is in use by leads or applicants. This action is permanent.'}
+          </p>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+            <Button loading={deleteMutation.isPending}
+              onClick={() => deleteConfirm && deleteMutation.mutate(deleteConfirm.id)}>
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

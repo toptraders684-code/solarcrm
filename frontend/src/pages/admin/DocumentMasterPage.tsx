@@ -204,6 +204,7 @@ export default function DocumentMasterPage() {
           {[
             { to: '/admin/companies', icon: Building2, label: 'Companies' },
             { to: '/admin/documents', icon: FileText, label: 'Document Master' },
+            { to: '/admin/discoms', icon: Zap, label: 'DISCOM Master' },
             { to: '/admin/masters', icon: Database, label: 'Master Data' },
             { to: '/admin/users', icon: Users, label: 'Admin Users' },
             { to: '/admin/logs', icon: Activity, label: 'Activity Logs' },
