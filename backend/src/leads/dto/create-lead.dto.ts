@@ -64,4 +64,8 @@ export class CreateLeadDto {
   @IsOptional()
   @IsString()
   followUpDate?: string;
+
+  @IsOptional()
+  @IsString()
+  channelPartnerId?: string;
 }

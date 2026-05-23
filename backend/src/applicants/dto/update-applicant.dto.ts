@@ -11,6 +11,7 @@ export class UpdateApplicantDto {
   @IsOptional() @IsString() whatsappNumber?: string;
   @IsOptional() @IsString() gender?: string;
   @IsOptional() @IsString() dateOfBirth?: string;
+  @IsOptional() @IsString() mobileToken?: string;
   @IsOptional() @IsString() panToken?: string;
   @IsOptional() @IsString() aadhaarToken?: string;
   @IsOptional() @IsString() assignedStaffId?: string;
@@ -43,6 +44,11 @@ export class UpdateApplicantDto {
   @IsOptional() @Type(() => Number) @IsNumber() @Min(1) areaNoOfFloors?: number;
   @IsOptional() @IsString() areaRoofType?: string;
   @IsOptional() @IsString() areaHouseHeight?: string;
+
+  // Electricity Details
+  @IsOptional() aadhaarNameSameAsBillName?: boolean;
+  @IsOptional() aadhaarMobileSameAsBillMobile?: boolean;
+  @IsOptional() aadhaarNameSameAsBankDetails?: boolean;
 
   // Installation
   @IsOptional() @IsString() discom?: string;

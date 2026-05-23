@@ -35,7 +35,7 @@ export class LeadsController {
   @Post()
   @Roles('admin', 'operations_staff', 'field_technician', 'vendor')
   create(@Body() dto: CreateLeadDto, @CurrentUser() user: any) {
-    return this.leadsService.create(dto, user.companyId, user.id);
+    return this.leadsService.create(dto, user.companyId, user.id, user.vendorId);
   }
 
   @Get(':id')

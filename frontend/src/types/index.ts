@@ -95,6 +95,8 @@ export interface Lead {
   financePreference?: FinancePreference;
   assignedStaffId: string;
   assignedStaff?: { id: string; name: string };
+  channelPartnerId?: string;
+  channelPartner?: { id: string; businessName: string };
   status: LeadStatus;
   closureReason?: LeadClosureReason;
   followUpDate?: string;
@@ -155,6 +157,7 @@ export interface Applicant {
   email?: string;
   alternateMobile?: string;
   whatsappNumber?: string;
+  mobileToken?: string;
   panToken?: string;
   aadhaarToken?: string;
   signatureFileKey?: string;
@@ -189,6 +192,11 @@ export interface Applicant {
   areaNoOfFloors?: number;
   areaRoofType?: string;
   areaHouseHeight?: string;
+
+  // Electricity Details
+  aadhaarNameSameAsBillName?: boolean;
+  aadhaarMobileSameAsBillMobile?: boolean;
+  aadhaarNameSameAsBankDetails?: boolean;
 
   // Installation
   discom: Discom;
@@ -313,6 +321,8 @@ export interface InstallationDetails {
   wire16mmEarthingCable?: string;
   wireDcCable4sqmm?: string;
   wireAcCableCopper?: string;
+  // Postinstallation
+  dcrCertificateNo?: string;
 }
 
 export interface ProjectStatusHistory {

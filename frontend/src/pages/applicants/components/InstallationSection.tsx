@@ -11,7 +11,7 @@ import { formatDate } from '@/utils/formatters';
 import type { Applicant, OtherMaterial } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 
-type SubSection = 'dispatch' | 'panel' | 'inverter' | 'structure' | 'acdb' | 'earthing' | 'wires' | null;
+type SubSection = 'dispatch' | 'panel' | 'inverter' | 'structure' | 'acdb' | 'earthing' | 'wires' | 'postinstallation' | null;
 
 function sv(v: any): string | undefined { return v || undefined; }
 
@@ -410,10 +410,29 @@ export function InstallationSection({ applicant }: InstallationSectionProps) {
         )}
       </SubCard>
 
-      {/* H. Other Materials */}
+      {/* H. Postinstallation */}
+      <SubCard title="H. Postinstallation" isOpen={!!expanded['postinstallation']} isEditing={editingSub === 'postinstallation'}
+        saving={saving} canEdit={canEdit} editDisabled={editDisabled && editingSub !== 'postinstallation'}
+        onToggle={() => toggle('postinstallation')}
+        onEdit={() => startEdit('postinstallation', { dcrCertificateNo: d.dcrCertificateNo ?? '' })}
+        onCancel={cancelEdit} onSave={() => saveMutation.mutate()}>
+        {editingSub === 'postinstallation' ? (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <F label="DCR Certificate No.">
+              <Input value={form.dcrCertificateNo ?? ''} onChange={(e) => set('dcrCertificateNo', e.target.value)} placeholder="DCR certificate number" />
+            </F>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-x-4">
+            <IR label="DCR Certificate No.">{d.dcrCertificateNo}</IR>
+          </div>
+        )}
+      </SubCard>
+
+      {/* I. Other Materials */}
       <div className="rounded-lg border border-surface-container-low overflow-hidden">
         <div className="flex items-center gap-2 px-4 py-2.5 bg-surface-container-low/50">
-          <span className="flex-1 text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">H. Other Materials</span>
+          <span className="flex-1 text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">I. Other Materials</span>
           {canEdit && (
             <Button size="sm" variant="secondary" onClick={() => setAddingMat(true)} disabled={addingMat || editingMatId !== null}>
               <Plus size={11} />Add Row

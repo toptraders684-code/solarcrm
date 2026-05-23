@@ -324,6 +324,8 @@ model Lead {
   financePreference    FinancePreference? @map("finance_preference")
   assignedStaffId      String?            @map("assigned_staff_id")
   assignedStaff        User?              @relation("AssignedLeads", fields: [assignedStaffId], references: [id])
+  channelPartnerId     String?            @map("channel_partner_id")
+  channelPartner       Vendor?            @relation("LeadChannelPartner", fields: [channelPartnerId], references: [id])
   status               LeadStatus         @default(new)
   closureReason        LeadClosureReason? @map("closure_reason")
   followUpDate         DateTime?          @map("follow_up_date") @db.Date
@@ -410,6 +412,10 @@ model Applicant {
   areaNoOfFloors        Int?            @map("area_no_of_floors")
   areaRoofType          String?         @map("area_roof_type") @db.VarChar(50)
   areaHouseHeight       String?         @map("area_house_height") @db.VarChar(100)
+
+  aadhaarNameSameAsBillName      Boolean? @map("aadhaar_name_same_as_bill_name")
+  aadhaarMobileSameAsBillMobile  Boolean? @map("aadhaar_mobile_same_as_bill_mobile")
+  aadhaarNameSameAsBankDetails   Boolean? @map("aadhaar_name_same_as_bank_details")
 
   bankNameInAccount     String?         @map("bank_name_in_account") @db.VarChar(200)
   bankBranchName        String?         @map("bank_branch_name") @db.VarChar(200)
@@ -610,6 +616,9 @@ model InstallationDetails {
   wireDcCable4sqmm         String? @map("wire_dc_cable_4sqmm") @db.VarChar(50)
   wireAcCableCopper        String? @map("wire_ac_cable_copper") @db.VarChar(50)
 
+  // Postinstallation
+  dcrCertificateNo         String? @map("dcr_certificate_no") @db.VarChar(100)
+
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("installation_details")
@@ -774,9 +783,10 @@ model Vendor {
   deletedAt        DateTime? @map("deleted_at")
   createdAt        DateTime  @default(now()) @map("created_at")
 
-  applicantVendors ApplicantVendor[]
-  transactions     Transaction[]
-  vendorUsers      User[]            @relation("VendorUsers")
+  applicantVendors    ApplicantVendor[]
+  transactions        Transaction[]
+  vendorUsers         User[]            @relation("VendorUsers")
+  channelPartnerLeads Lead[]            @relation("LeadChannelPartner")
 
   @@map("vendors")
 }

@@ -72,6 +72,7 @@ export class LeadsService {
       include: {
         assignedStaff: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true } },
+        channelPartner: { select: { id: true, businessName: true } },
         followups: {
           orderBy: { createdAt: 'desc' },
           include: { createdBy: { select: { id: true, name: true } } },
@@ -82,10 +83,14 @@ export class LeadsService {
     return lead;
   }
 
-  async create(dto: CreateLeadDto, companyId: string, userId: string) {
+  async create(dto: CreateLeadDto, companyId: string, userId: string, callerVendorId?: string) {
     // Generate lead code
     const count = await this.prisma.lead.count({ where: { companyId } });
     const leadCode = `LD-${String(count + 1).padStart(5, '0')}`;
+
+    // If the caller is a vendor (channel partner), auto-lock lead source and capture their ID
+    const leadSource = callerVendorId ? 'channel_partner' : dto.leadSource;
+    const channelPartnerId = callerVendorId || dto.channelPartnerId || null;
 
     const lead = await this.prisma.lead.create({
       data: {
@@ -96,7 +101,7 @@ export class LeadsService {
         alternateMobile: dto.alternateMobile,
         discom: dto.discom,
         projectType: dto.projectType,
-        leadSource: dto.leadSource,
+        leadSource,
         estimatedCapacityKw: dto.estimatedCapacityKw,
         financePreference: dto.financePreference,
         addressVillage: dto.addressVillage,
@@ -107,6 +112,7 @@ export class LeadsService {
         addressStateId: dto.addressStateId,
         assignedStaffId: dto.assignedStaffId,
         followUpDate: dto.followUpDate ? new Date(dto.followUpDate) : undefined,
+        channelPartnerId,
         companyId,
         createdById: userId,
         status: 'new',

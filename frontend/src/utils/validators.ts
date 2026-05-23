@@ -78,6 +78,7 @@ export const createLeadSchema = z.object({
   leadSource: z.string().min(1, 'Lead source is required'),
   financePreference: z.string().optional(),
   assignedStaffId: z.string().min(1, 'Assigned staff is required').optional(),
+  channelPartnerId: z.string().optional(),
   followUpDate: z.string().optional(),
 });
 

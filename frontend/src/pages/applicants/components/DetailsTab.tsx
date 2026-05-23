@@ -14,7 +14,7 @@ import type { Applicant } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import { ProjectActivityTimeline } from './ProjectActivityTimeline';
 
-type Section = 'personal' | 'address' | 'area' | 'bank' | 'installation' | 'survey' | 'finance' | null;
+type Section = 'personal' | 'address' | 'area' | 'electricity' | 'bank' | 'installation' | 'survey' | 'finance' | null;
 
 function sv(v: any): string | undefined { return v || undefined; }
 
@@ -53,6 +53,7 @@ const AADHAAR_RE = /^\d{12}$/;
 function validate(section: Section, form: Record<string, any>): Record<string, string> {
   const e: Record<string, string> = {};
   if (section === 'personal') {
+    if (form.mobileToken && !MOBILE_RE.test(form.mobileToken)) e.mobileToken = 'Must be a valid 10-digit mobile number';
     if (form.email && !EMAIL_RE.test(form.email)) e.email = 'Enter a valid email address';
     if (form.whatsappNumber && !MOBILE_RE.test(form.whatsappNumber)) e.whatsappNumber = 'Must be a valid 10-digit mobile number';
     if (form.alternateMobile && !MOBILE_RE.test(form.alternateMobile)) e.alternateMobile = 'Must be a valid 10-digit mobile number';
@@ -89,10 +90,11 @@ function validate(section: Section, form: Record<string, any>): Record<string, s
 }
 
 const SECTION_FIELDS: Record<string, string[]> = {
-  personal: ['customerName', 'customerProfession', 'dateOfBirth', 'gender', 'email', 'whatsappNumber', 'alternateMobile', 'panToken', 'aadhaarToken', 'signatureFileKey'],
+  personal: ['customerName', 'customerProfession', 'projectType', 'mobileToken', 'dateOfBirth', 'gender', 'email', 'whatsappNumber', 'alternateMobile', 'panToken', 'aadhaarToken', 'signatureFileKey'],
   address: ['addressHouse', 'addressStreet', 'addressVillage', 'addressGp', 'addressBlock', 'addressStateId', 'addressDistrictId', 'addressPincode', 'gpsLatitude', 'gpsLongitude'],
   area: ['areaHouseNo', 'areaRoofSizeSqft', 'areaNoOfFloors', 'areaRoofType', 'areaHouseHeight'],
-  bank: ['bankNameInAccount', 'bankBranchName', 'bankAccountNumber', 'bankIfscCode', 'coApplicantName', 'coApplicantRelationship', 'coApplicantMobile', 'dateOfBirth', 'coApplicantOccupation'],
+  electricity: ['existingConsumerNo', 'aadhaarNameSameAsBillName', 'aadhaarMobileSameAsBillMobile', 'aadhaarNameSameAsBankDetails'],
+  bank: ['financeMode', 'bankNameInAccount', 'bankBranchName', 'bankAccountNumber', 'bankIfscCode', 'coApplicantName', 'coApplicantRelationship', 'coApplicantMobile', 'dateOfBirth', 'coApplicantOccupation'],
   installation: [],
   survey: ['surveyDate', 'surveyedBy', 'roofAreaSqft', 'recommendedCapacityKw', 'shadowAnalysis'],
   finance: ['financeMode', 'bankName', 'loanAmount', 'loanSanctionedDate', 'overpaymentRule'],
@@ -246,6 +248,8 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
       setForm({
         customerName: applicant.customerName ?? '',
         customerProfession: applicant.customerProfession ?? '',
+        projectType: applicant.projectType ?? '',
+        mobileToken: applicant.mobileToken ?? '',
         dateOfBirth: applicant.dateOfBirth ? applicant.dateOfBirth.slice(0, 10) : '',
         gender: applicant.gender ?? '',
         email: applicant.email ?? '',
@@ -269,6 +273,7 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
       });
     } else if (section === 'bank') {
       setForm({
+        financeMode: applicant.financeMode ?? '',
         bankNameInAccount: applicant.bankNameInAccount ?? '',
         bankBranchName: applicant.bankBranchName ?? '',
         bankAccountNumber: applicant.bankAccountNumber ?? '',
@@ -286,6 +291,13 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
         areaNoOfFloors: applicant.areaNoOfFloors ?? '',
         areaRoofType: applicant.areaRoofType ?? '',
         areaHouseHeight: applicant.areaHouseHeight ?? '',
+      });
+    } else if (section === 'electricity') {
+      setForm({
+        existingConsumerNo: applicant.existingConsumerNo ?? '',
+        aadhaarNameSameAsBillName: applicant.aadhaarNameSameAsBillName ?? null,
+        aadhaarMobileSameAsBillMobile: applicant.aadhaarMobileSameAsBillMobile ?? null,
+        aadhaarNameSameAsBankDetails: applicant.aadhaarNameSameAsBankDetails ?? null,
       });
     } else if (section === 'survey') {
       setForm({
@@ -350,6 +362,18 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
               <F label="Customer Profession">
                 <Input value={form.customerProfession ?? ''} onChange={(e) => set('customerProfession', e.target.value)} onBlur={(e) => touch('customerProfession', e.target.value)} placeholder="e.g. Farmer, Business" className={fieldClass('customerProfession')} />
               </F>
+              <F label="Project Type">
+                <Select value={sv(form.projectType)} onValueChange={(v) => set('projectType', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="residential">Residential</SelectItem>
+                    <SelectItem value="commercial">Commercial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </F>
+              <F label="Mobile Number" error={errors.mobileToken}>
+                <Input maxLength={10} value={form.mobileToken ?? ''} onChange={(e) => set('mobileToken', e.target.value.replace(/\D/g, ''))} onBlur={(e) => touch('mobileToken', e.target.value.replace(/\D/g, ''))} placeholder="10-digit mobile" className={fieldClass('mobileToken')} />
+              </F>
               <F label="Date of Birth">
                 <DateSelectPicker value={form.dateOfBirth ?? ''} onChange={(v) => { set('dateOfBirth', v); touch('dateOfBirth', v); }} className={fieldClass('dateOfBirth')} />
               </F>
@@ -412,6 +436,8 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
             <div className="grid grid-cols-2 gap-x-4">
               <InfoRow label="Customer Name">{applicant.customerName}</InfoRow>
               <InfoRow label="Profession">{applicant.customerProfession}</InfoRow>
+              <InfoRow label="Project Type">{applicant.projectType ? toTitleCase(applicant.projectType) : null}</InfoRow>
+              <InfoRow label="Mobile Number">{applicant.mobileToken}</InfoRow>
               <InfoRow label="Date of Birth">{formatDate(applicant.dateOfBirth)}</InfoRow>
               <InfoRow label="Gender">{applicant.gender ? toTitleCase(applicant.gender) : null}</InfoRow>
               <InfoRow label="Email">{applicant.email}</InfoRow>
@@ -477,6 +503,24 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
               <InfoRow label="District">{applicant.addressDistrict?.name}</InfoRow>
               <InfoRow label="Pincode">{applicant.addressPincode}</InfoRow>
               {applicant.gpsLatitude && <InfoRow label="GPS">{applicant.gpsLatitude}, {applicant.gpsLongitude}</InfoRow>}
+              {(() => {
+                const parts = [
+                  applicant.addressHouse,
+                  applicant.addressStreet,
+                  applicant.addressVillage,
+                  applicant.addressGp,
+                  applicant.addressBlock,
+                  applicant.addressDistrict?.name,
+                  applicant.addressState?.name,
+                  applicant.addressPincode,
+                ].filter(Boolean);
+                return parts.length > 0 ? (
+                  <div className="col-span-2 flex flex-col gap-0.5 py-2 border-b border-surface-container-low">
+                    <span className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Full Address</span>
+                    <span className="text-sm font-semibold text-on-surface">{parts.join(', ')}</span>
+                  </div>
+                ) : null;
+              })()}
             </div>
           )}
         </AccordionCard>
@@ -528,6 +572,72 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
           )}
         </AccordionCard>
 
+        {/* Electricity Details */}
+        <AccordionCard title="Electricity Details"
+          summary={<FieldsProgress applicant={applicant} section="electricity" />}
+          isOpen={!!expanded['electricity']} isEditing={editingSection === 'electricity'}
+          canEdit={canEdit('electricity')} saving={saveMutation.isPending} editDisabled={editingSection !== null}
+          onToggle={() => toggleSection('electricity')} onEdit={() => startEdit('electricity')}
+          onCancel={cancelEdit} onSave={() => saveMutation.mutate()}>
+          {editingSection === 'electricity' ? (
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <F label="Electricity Connection No.">
+                <Input value={form.existingConsumerNo ?? ''} onChange={(e) => set('existingConsumerNo', e.target.value)} onBlur={(e) => touch('existingConsumerNo', e.target.value)} placeholder="Consumer number" className={fieldClass('existingConsumerNo')} />
+              </F>
+              <div className="flex flex-col gap-0.5 py-1">
+                <span className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Requested Capacity (kW)</span>
+                <span className="text-sm font-semibold text-on-surface mt-1">{applicant.systemCapacityKw ?? '—'}</span>
+              </div>
+              <div className="flex flex-col gap-0.5 py-1">
+                <span className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Sanctioned Capacity (kW)</span>
+                <span className="text-sm font-semibold text-on-surface mt-1">{applicant.sanctionedLoadKw ?? '—'}</span>
+              </div>
+              <F label="Aadhaar Name same as EB Bill Name?">
+                <Select value={form.aadhaarNameSameAsBillName === true ? 'yes' : form.aadhaarNameSameAsBillName === false ? 'no' : ''} onValueChange={(v) => set('aadhaarNameSameAsBillName', v === 'yes')}>
+                  <SelectTrigger><SelectValue placeholder="Select Yes / No" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="yes">Yes</SelectItem>
+                    <SelectItem value="no">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </F>
+              <F label="Aadhaar Mobile No. same as Bill Mobile No.?">
+                <Select value={form.aadhaarMobileSameAsBillMobile === true ? 'yes' : form.aadhaarMobileSameAsBillMobile === false ? 'no' : ''} onValueChange={(v) => set('aadhaarMobileSameAsBillMobile', v === 'yes')}>
+                  <SelectTrigger><SelectValue placeholder="Select Yes / No" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="yes">Yes</SelectItem>
+                    <SelectItem value="no">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </F>
+              <F label="Aadhaar Name same as Bank Name & Mob No.?">
+                <Select value={form.aadhaarNameSameAsBankDetails === true ? 'yes' : form.aadhaarNameSameAsBankDetails === false ? 'no' : ''} onValueChange={(v) => set('aadhaarNameSameAsBankDetails', v === 'yes')}>
+                  <SelectTrigger><SelectValue placeholder="Select Yes / No" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="yes">Yes</SelectItem>
+                    <SelectItem value="no">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </F>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-x-4">
+              <InfoRow label="Electricity Connection No.">{applicant.existingConsumerNo}</InfoRow>
+              <InfoRow label="Requested Capacity (kW)">{applicant.systemCapacityKw}</InfoRow>
+              <InfoRow label="Sanctioned Capacity (kW)">{applicant.sanctionedLoadKw}</InfoRow>
+              <InfoRow label="Aadhaar Name = EB Bill Name?">
+                {applicant.aadhaarNameSameAsBillName === true ? 'Yes' : applicant.aadhaarNameSameAsBillName === false ? 'No' : null}
+              </InfoRow>
+              <InfoRow label="Aadhaar Mobile = Bill Mobile?">
+                {applicant.aadhaarMobileSameAsBillMobile === true ? 'Yes' : applicant.aadhaarMobileSameAsBillMobile === false ? 'No' : null}
+              </InfoRow>
+              <InfoRow label="Aadhaar Name = Bank Name & Mobile?">
+                {applicant.aadhaarNameSameAsBankDetails === true ? 'Yes' : applicant.aadhaarNameSameAsBankDetails === false ? 'No' : null}
+              </InfoRow>
+            </div>
+          )}
+        </AccordionCard>
+
         {/* Bank Details */}
         <AccordionCard title="Bank Details"
           summary={<FieldsProgress applicant={applicant} section="bank" />}
@@ -537,6 +647,17 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
           onCancel={cancelEdit} onSave={() => saveMutation.mutate()}>
           {editingSection === 'bank' ? (
             <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <F label="Finance Preference">
+                <Select value={sv(form.financeMode)} onValueChange={(v) => set('financeMode', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select preference" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="self">Self</SelectItem>
+                    <SelectItem value="govt_bank">Government Bank</SelectItem>
+                    <SelectItem value="private_bank">Private Bank</SelectItem>
+                  </SelectContent>
+                </Select>
+              </F>
+              <div />
               <F label="Name in Bank Account">
                 <Input value={form.bankNameInAccount ?? ''} onChange={(e) => set('bankNameInAccount', e.target.value)} onBlur={(e) => touch('bankNameInAccount', e.target.value)} placeholder="As per bank records" className={fieldClass('bankNameInAccount')} />
               </F>
@@ -567,6 +688,7 @@ export function DetailsTab({ applicant }: DetailsTabProps) {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-x-4">
+              <InfoRow label="Finance Preference">{applicant.financeMode ? applicant.financeMode === 'self' ? 'Self' : applicant.financeMode === 'govt_bank' ? 'Government Bank' : 'Private Bank' : null}</InfoRow>
               <InfoRow label="Name in Bank Account">{applicant.bankNameInAccount}</InfoRow>
               <InfoRow label="Bank & Branch">{applicant.bankBranchName}</InfoRow>
               <InfoRow label="Account Number">{applicant.bankAccountNumber}</InfoRow>

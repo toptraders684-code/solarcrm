@@ -10,6 +10,7 @@ import { createLeadSchema, type CreateLeadFormData } from '@/utils/validators';
 import { masterService } from '@/services/master.service';
 import { discomMasterService } from '@/services/discom-master.service';
 import { usersService } from '@/services/users.service';
+import { vendorsService } from '@/services/vendors.service';
 import { leadsService } from '@/services/leads.service';
 import { useAuthStore } from '@/store/authStore';
 
@@ -28,10 +29,19 @@ export function AddLeadForm({ onSuccess, onCancel }: AddLeadFormProps) {
 
   const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<CreateLeadFormData>({
     resolver: zodResolver(createLeadSchema),
+    defaultValues: isVendor ? { leadSource: 'channel_partner' } : {},
   });
 
   const selectedStateId = watch('addressStateId');
   const selectedDistrictId = watch('addressDistrictId');
+  const selectedLeadSource = watch('leadSource');
+  const showChannelPartnerDropdown = selectedLeadSource === 'channel_partner' && !isVendor;
+
+  const { data: channelPartnersData } = useQuery({
+    queryKey: ['vendors', 'channel_partner'],
+    queryFn: () => vendorsService.getVendors({ vendorType: 'channel_partner' }),
+    enabled: showChannelPartnerDropdown,
+  });
 
   const { data: districtsData } = useQuery({
     queryKey: ['districts', selectedStateId],
@@ -171,7 +181,11 @@ export function AddLeadForm({ onSuccess, onCancel }: AddLeadFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <L>Lead Source *</L>
-          <Select onValueChange={(v) => setValue('leadSource', v as any)}>
+          <Select
+            value={selectedLeadSource || ''}
+            onValueChange={(v) => { setValue('leadSource', v as any); setValue('channelPartnerId', ''); }}
+            disabled={isVendor}
+          >
             <SelectTrigger className="mt-1"><SelectValue placeholder="Select source" /></SelectTrigger>
             <SelectContent>
               {enums?.leadSources?.map((s) => (
@@ -193,6 +207,24 @@ export function AddLeadForm({ onSuccess, onCancel }: AddLeadFormProps) {
           </Select>
         </div>
       </div>
+
+      {showChannelPartnerDropdown && (
+        <div>
+          <L>Channel Partner Name</L>
+          <Select onValueChange={(v) => setValue('channelPartnerId', v)}>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Select channel partner" /></SelectTrigger>
+            <SelectContent>
+              {(channelPartnersData?.data ?? []).map((v) => (
+                <SelectItem key={v.id} value={v.id}>{v.businessName}{v.contactPerson ? ` — ${v.contactPerson}` : ''}</SelectItem>
+              ))}
+              {(channelPartnersData?.data ?? []).length === 0 && (
+                <div className="px-3 py-2 text-xs text-on-surface-variant/50 italic">No channel partners found</div>
+              )}
+            </SelectContent>
+          </Select>
+          {errors.channelPartnerId && <p className="text-xs text-error mt-1">{errors.channelPartnerId.message}</p>}
+        </div>
+      )}
 
       {!isVendor && (
         <div>
