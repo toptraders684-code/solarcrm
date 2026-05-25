@@ -52,6 +52,19 @@ enum OverpaymentRule {
   block
 }
 
+enum CommissionStructureType {
+  per_kw
+  percentage
+  fixed_per_project
+  slab_based
+}
+
+enum PayableStatus {
+  draft
+  approved
+  paid
+}
+
 enum DocumentCategory {
   kyc
   technical
@@ -246,6 +259,8 @@ model Company {
   leads      Lead[]
   applicants Applicant[]
   vendors    Vendor[]
+  commissionAssignments VendorCommissionAssignment[]
+  employeePayables      EmployeePayable[]
 
   @@map("companies")
 }
@@ -291,6 +306,9 @@ model User {
   refreshTokens        RefreshToken[]
   auditLogs            AuditLog[]
   activityLogs         UserActivityLog[]
+  employeePayables     EmployeePayable[]    @relation("EmployeePayables")
+  approvedPayables     EmployeePayable[]    @relation("PayableApprovals")
+  commissionAssignments VendorCommissionAssignment[] @relation("EmployeeAssignments")
 
   @@unique([companyId, mobile])
   @@map("users")
@@ -783,10 +801,12 @@ model Vendor {
   deletedAt        DateTime? @map("deleted_at")
   createdAt        DateTime  @default(now()) @map("created_at")
 
-  applicantVendors    ApplicantVendor[]
-  transactions        Transaction[]
-  vendorUsers         User[]            @relation("VendorUsers")
-  channelPartnerLeads Lead[]            @relation("LeadChannelPartner")
+  applicantVendors      ApplicantVendor[]
+  transactions          Transaction[]
+  vendorUsers           User[]                       @relation("VendorUsers")
+  channelPartnerLeads   Lead[]                       @relation("LeadChannelPartner")
+  commissionAssignments VendorCommissionAssignment[] @relation("VendorCommissionAssignments")
+  vendorPayables        EmployeePayable[]             @relation("VendorPayables")
 
   @@map("vendors")
 }
@@ -896,4 +916,97 @@ model CustomerUploadLink {
 
   @@index([expiresAt], map: "idx_upload_links_expires")
   @@map("customer_upload_links")
+}
+
+// ─────────────────────────────────────────────
+// COMMISSION MODULE
+// ─────────────────────────────────────────────
+
+model CommissionStructure {
+  id            String                     @id @default(uuid())
+  name          String                     @db.VarChar(200)
+  structureType CommissionStructureType    @map("structure_type")
+  configSchema  Json                       @map("config_schema")
+  description   String?                    @db.VarChar(500)
+  isActive      Boolean                    @default(true) @map("is_active")
+  createdAt     DateTime                   @default(now()) @map("created_at")
+  updatedAt     DateTime                   @updatedAt @map("updated_at")
+
+  assignments VendorCommissionAssignment[]
+
+  @@map("commission_structures")
+}
+
+model VendorCommissionAssignment {
+  id                    String              @id @default(uuid())
+  companyId             String              @map("company_id")
+  company               Company             @relation(fields: [companyId], references: [id])
+  vendorId              String              @map("vendor_id")
+  vendor                Vendor              @relation("VendorCommissionAssignments", fields: [vendorId], references: [id])
+  employeeId            String?             @map("employee_id")
+  employee              User?               @relation("EmployeeAssignments", fields: [employeeId], references: [id])
+  commissionStructureId String              @map("commission_structure_id")
+  commissionStructure   CommissionStructure @relation(fields: [commissionStructureId], references: [id])
+  effectiveFrom         DateTime            @map("effective_from") @db.Date
+  isActive              Boolean             @default(true) @map("is_active")
+  createdAt             DateTime            @default(now()) @map("created_at")
+
+  configs  VendorCommissionConfig[]
+  payables EmployeePayable[]
+
+  @@map("vendor_commission_assignments")
+}
+
+model VendorCommissionConfig {
+  id           String                     @id @default(uuid())
+  assignmentId String                     @map("assignment_id")
+  assignment   VendorCommissionAssignment @relation(fields: [assignmentId], references: [id])
+  configKey    String                     @map("config_key") @db.VarChar(100)
+  configValue  String                     @map("config_value") @db.Text
+
+  @@unique([assignmentId, configKey])
+  @@map("vendor_commission_configs")
+}
+
+model EmployeePayable {
+  id               String                     @id @default(uuid())
+  companyId        String                     @map("company_id")
+  company          Company                    @relation(fields: [companyId], references: [id])
+  vendorId         String                     @map("vendor_id")
+  vendor           Vendor                     @relation("VendorPayables", fields: [vendorId], references: [id])
+  employeeId       String                     @map("employee_id")
+  employee         User                       @relation("EmployeePayables", fields: [employeeId], references: [id])
+  assignmentId     String                     @map("assignment_id")
+  assignment       VendorCommissionAssignment @relation(fields: [assignmentId], references: [id])
+  month            Int
+  year             Int
+  salaryAmount     Decimal                    @default(0) @map("salary_amount") @db.Decimal(12, 2)
+  commissionAmount Decimal                    @default(0) @map("commission_amount") @db.Decimal(12, 2)
+  incentiveAmount  Decimal                    @default(0) @map("incentive_amount") @db.Decimal(12, 2)
+  totalPayable     Decimal                    @default(0) @map("total_payable") @db.Decimal(12, 2)
+  projectCount     Int                        @default(0) @map("project_count")
+  totalKw          Decimal                    @default(0) @map("total_kw") @db.Decimal(10, 2)
+  status           PayableStatus              @default(draft)
+  notes            String?                    @db.VarChar(500)
+  generatedAt      DateTime                   @default(now()) @map("generated_at")
+  approvedAt       DateTime?                  @map("approved_at")
+  approvedById     String?                    @map("approved_by_id")
+  approvedBy       User?                      @relation("PayableApprovals", fields: [approvedById], references: [id])
+
+  incentives PayableIncentive[]
+
+  @@unique([employeeId, assignmentId, month, year])
+  @@map("employee_payables")
+}
+
+model PayableIncentive {
+  id        String          @id @default(uuid())
+  payableId String          @map("payable_id")
+  payable   EmployeePayable @relation(fields: [payableId], references: [id])
+  type      String          @db.VarChar(50)
+  amount    Decimal         @db.Decimal(10, 2)
+  note      String?         @db.VarChar(200)
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  @@map("payable_incentives")
 }

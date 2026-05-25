@@ -1,7 +1,7 @@
 ﻿import { useRef, useState } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, LogOut, FileText, Zap, Upload, Eye, X, Users, Building2, Database, Activity, Globe, LayoutTemplate } from 'lucide-react';
+import { Plus, Pencil, Trash2, LogOut, FileText, Zap, Upload, Eye, X, Users, Building2, Database, Activity, Globe, LayoutTemplate, BadgeDollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -208,6 +208,7 @@ export default function DocumentMasterPage() {
             { to: '/admin/masters', icon: Database, label: 'Master Data' },
             { to: '/admin/users', icon: Users, label: 'Admin Users' },
             { to: '/admin/logs', icon: Activity, label: 'Activity Logs' },
+            { to: '/admin/commission', icon: BadgeDollarSign, label: 'Commission Structures' },
           ].map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} className={({ isActive }) =>
               `flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${

@@ -21,6 +21,8 @@ import { MasterDataModule } from './master-data/master-data.module';
 import { ActivityLogModule } from './activity-log/activity-log.module';
 import { ActivityLogInterceptor } from './activity-log/activity-log.interceptor';
 import { DiscomMasterModule } from './discom-master/discom-master.module';
+import { CommissionStructuresModule } from './commission-structures/commission-structures.module';
+import { VendorCommissionModule } from './vendor-commission/vendor-commission.module';
 import configuration from './config/configuration';
 
 @Module({
@@ -52,6 +54,8 @@ import configuration from './config/configuration';
     MasterDataModule,
     ActivityLogModule,
     DiscomMasterModule,
+    CommissionStructuresModule,
+    VendorCommissionModule,
   ],
   providers: [
     {

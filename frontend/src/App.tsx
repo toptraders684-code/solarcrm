@@ -24,6 +24,8 @@ import VendorTeamPage from '@/pages/vendor/VendorTeamPage';
 import SupportPage from '@/pages/support/SupportPage';
 import ChangePasswordPage from '@/pages/profile/ChangePasswordPage';
 import CustomerUploadPage from '@/pages/upload/CustomerUploadPage';
+import CommissionStructuresPage from '@/pages/admin/CommissionStructuresPage';
+import CommissionPage from '@/pages/commission/CommissionPage';
 import { useAuthStore } from '@/store/authStore';
 
 function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -64,6 +66,9 @@ export default function App() {
       <Route path="/admin/logs" element={
         <AdminProtectedRoute><ActivityLogsPage /></AdminProtectedRoute>
       } />
+      <Route path="/admin/commission" element={
+        <AdminProtectedRoute><CommissionStructuresPage /></AdminProtectedRoute>
+      } />
 
       {/* Protected routes */}
       <Route element={<ProtectedLayout />}>
@@ -80,6 +85,7 @@ export default function App() {
         <Route path="/vendor-team" element={<VendorTeamPage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="/support" element={<SupportPage />} />
+        <Route path="/commission" element={<CommissionPage />} />
       </Route>
 
       {/* Catch-all */}

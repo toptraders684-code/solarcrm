@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { usersService, CreateVendorUserDto } from '@/services/users.service';
@@ -20,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { UserPlus, Eye, EyeOff, Phone, Mail, Users, Building2 } from 'lucide-react';
+import { UserPlus, Eye, EyeOff, Phone, Mail, Users, Building2, BadgeDollarSign } from 'lucide-react';
 import type { User } from '@/types';
 
 // ── Styles ──────────────────────────────────────────────────────────────────
@@ -129,6 +130,7 @@ function TreeBranch({ node, depth = 0 }: { node: TreeNode; depth?: number }) {
 
 export default function VendorTeamPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const { user: authUser } = useAuthStore();
   const isAdmin = authUser?.role === 'admin' || authUser?.role === 'operations_staff';
 
@@ -218,10 +220,18 @@ export default function VendorTeamPage() {
             {members.length} team member{members.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <Button onClick={() => setOpen(true)} disabled={isAdmin && !selectedVendorId}>
-          <UserPlus size={16} className="mr-2" />
-          Add Member
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button variant="secondary" onClick={() => navigate('/commission')}>
+              <BadgeDollarSign size={16} className="mr-2" />
+              Commission
+            </Button>
+          )}
+          <Button onClick={() => setOpen(true)} disabled={isAdmin && !selectedVendorId}>
+            <UserPlus size={16} className="mr-2" />
+            Add Member
+          </Button>
+        </div>
       </div>
 
       {/* Vendor selector — admin only */}

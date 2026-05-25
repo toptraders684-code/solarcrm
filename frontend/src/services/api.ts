@@ -69,6 +69,10 @@ api.interceptors.response.use(
         isRefreshing = false;
       }
     }
+    // Normalize error shape: backend returns { error: { message } }, flatten to { message }
+    if (err.response?.data?.error?.message && !err.response.data.message) {
+      err.response.data.message = err.response.data.error.message;
+    }
     return Promise.reject(err);
   }
 );

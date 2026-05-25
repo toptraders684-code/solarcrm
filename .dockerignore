@@ -1,0 +1,50 @@
+# Dependencies (reinstalled during build)
+**/node_modules
+
+# Git metadata
+.git
+.gitignore
+
+# Build outputs (rebuilt during image build)
+backend/dist
+backend/public
+frontend/dist
+frontend/.vite
+
+# Local env files (secrets — never bake into image)
+.env
+.env.*
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
+
+# Uploads (mounted as Railway Volume at runtime)
+backend/uploads
+uploads
+
+# Logs and temp files
+**/*.log
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode
+.idea
+
+# TypeScript build info (not needed in image)
+**/*.tsbuildinfo
+
+# Test files
+**/*.spec.ts
+**/*.test.ts
+**/test/
+
+# Dev-only docs
+DEVELOPMENT_LOG.md
+README.md

@@ -16,6 +16,8 @@ export type PaymentMethod = 'cash' | 'cheque' | 'bank_transfer' | 'upi' | 'other
 export type TransactionStatus = 'pending_approval' | 'approved' | 'rejected';
 export type VendorType = 'channel_partner' | 'district_partner' | 'block_partner' | 'installation_partner' | 'transport_partner' | 'insurance_partner' | 'netmeter_partner';
 export type OutcomeType = 'contacted' | 'not_reachable' | 'meeting_scheduled' | 'site_visit_done' | 'document_collected' | 'other';
+export type CommissionStructureType = 'per_kw' | 'percentage' | 'fixed_per_project' | 'slab_based';
+export type PayableStatus = 'draft' | 'approved' | 'paid';
 
 // ─────────────────────────────────────────────
 // AUTH
@@ -551,4 +553,85 @@ export interface DashboardStats {
   leadsThisMonth: number;
   conversionRate: number;
   stageWiseCount: Record<string, number>;
+}
+
+// ─────────────────────────────────────────────
+// COMMISSION MODULE
+// ─────────────────────────────────────────────
+
+export interface ConfigSchemaField {
+  key: string;
+  label: string;
+  type: 'number' | 'text' | 'slab_table';
+  required: boolean;
+}
+
+export interface CommissionStructure {
+  id: string;
+  name: string;
+  structureType: CommissionStructureType;
+  configSchema: ConfigSchemaField[];
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { assignments: number };
+}
+
+export interface VendorCommissionConfig {
+  id: string;
+  assignmentId: string;
+  configKey: string;
+  configValue: string;
+}
+
+export interface VendorCommissionAssignment {
+  id: string;
+  companyId: string;
+  vendorId: string;
+  vendor?: { id: string; businessName: string; contactPerson?: string };
+  employeeId?: string;
+  employee?: { id: string; name: string; vendorLevel?: string };
+  commissionStructureId: string;
+  commissionStructure?: CommissionStructure;
+  effectiveFrom: string;
+  isActive: boolean;
+  createdAt: string;
+  configs: VendorCommissionConfig[];
+}
+
+export interface PayableIncentive {
+  id: string;
+  payableId: string;
+  type: string;
+  amount: number;
+  note?: string;
+  createdAt: string;
+}
+
+export interface EmployeePayable {
+  id: string;
+  companyId: string;
+  vendorId: string;
+  vendor?: { id: string; businessName: string };
+  employeeId: string;
+  employee?: { id: string; name: string; vendorLevel?: string; mobile?: string };
+  assignmentId: string;
+  assignment?: VendorCommissionAssignment & {
+    commissionStructure?: { name: string; structureType: CommissionStructureType };
+  };
+  month: number;
+  year: number;
+  salaryAmount: number;
+  commissionAmount: number;
+  incentiveAmount: number;
+  totalPayable: number;
+  projectCount: number;
+  totalKw: number;
+  status: PayableStatus;
+  notes?: string;
+  generatedAt: string;
+  approvedAt?: string;
+  approvedBy?: { id: string; name: string };
+  incentives: PayableIncentive[];
 }
