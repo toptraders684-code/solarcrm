@@ -22,7 +22,11 @@ export default function VendorUploadsPage() {
 
   // Collect unique vendors for filter dropdown
   const vendors = Array.from(
-    new Map(uploads.map((d) => [d.uploadedBy?.id, d.uploadedBy]).filter(([k]) => k)).values(),
+    new Map(
+      uploads
+        .filter((d) => d.uploadedBy?.id)
+        .map((d): [string, any] => [d.uploadedBy.id, d.uploadedBy]),
+    ).values(),
   );
 
   const filtered = filterVendor
