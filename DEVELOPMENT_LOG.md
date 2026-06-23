@@ -313,14 +313,14 @@ Helmet's default CSP blocked `blob:` URLs in iframes, causing Chrome to show "Th
 
 ---
 
-## Current Running State (as of May 2026)
+## Current Running State (as of June 2026)
 
 | Environment | Status | Notes |
 |-------------|--------|-------|
-| **Local** | Active development | New features built and tested here first |
-| **Railway (Production)** | Running | Commit `d0197bf` — all migrations applied |
+| **Local** | **Primary — active development** | All development and testing happens here |
+| **Railway (Production)** | Synced | Commit `7e89a54` deployed — vendor uploads TS fix included |
 
-> **Deployment workflow:** Local changes accumulate here. GitHub push + Railway deploy only happen when explicitly requested. Each push section below will note what was deployed and when.
+> **Deployment workflow:** Local is the primary environment. GitHub push + Railway deploy only happen when explicitly requested.
 >
 > **Post-deploy action required on Railway:** Upload the Solar Wiring Diagram PDF through Admin → Document Master → Solar Wiring Diagram → Upload File.
 
@@ -498,3 +498,119 @@ Three new fields added to the **G. PVC / Connectors / Wires** sub-section of Ins
 | `20260521000008_applicant_discom_details` | DISCOM detail fields (MNRE, division, JE etc.) |
 | `20260521000009_applicant_invoice` | Invoice fields (invoice no, rates, GST) |
 | `20260521000010_installation_wire_cables` | Three new wire/cable fields on installation_details |
+
+---
+
+---
+
+## Session: Vendor Document Uploads & Camera (June 2026)
+
+### 30. Vendor Hierarchy Filter — Projects Visible to All Vendor Members
+
+**File:** `backend/src/applicants/applicants.service.ts` — `applyVendorHierarchyFilter()`
+
+**Problem:** H1 vendor (`ven1@suryamcrm.in`) couldn't see any projects because the filter only matched applicants where the creator had the same `vendorId`. But admin (not the vendor) converts leads into projects, so `createdBy.vendorId` was never the vendor's ID.
+
+**Fix:** Extended the OR conditions to also match:
+- `applicantVendors.some({ vendorId })` — vendor explicitly assigned to the project
+- `leadsConvertedFrom.some({ channelPartnerId: vendorId })` — project originated from a vendor-created lead
+
+```typescript
+const ors: any[] = [
+  { applicantVendors: { some: { vendorId } } },
+  { leadsConvertedFrom: { some: { channelPartnerId: vendorId } } },
+];
+// H1 also gets: { createdBy: { vendorId } }
+```
+
+---
+
+### 31. CameraCapture Component — Real Camera via getUserMedia
+
+**File:** `frontend/src/components/shared/CameraCapture.tsx` (NEW)
+
+`capture="environment"` on `<input type="file">` only triggers the camera on mobile; on desktop it opens the file picker. Replaced with a proper camera dialog using the Web API:
+
+- `navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })` — works on both desktop and mobile
+- Live `<video>` element streams the camera feed in a Dialog modal
+- Capture button calls `canvas.toBlob()` → JPEG `File` object passed to the parent callback
+- Stream cleaned up on close: `streamRef.current.getTracks().forEach(t => t.stop())`
+- Error state shown if camera permission denied
+
+---
+
+### 32. DocumentsTab — Camera Button + Uploader Name
+
+**File:** `frontend/src/pages/applicants/components/DocumentsTab.tsx`
+
+- File and Camera buttons appear side-by-side per document row
+- Camera button opens `CameraCapture` modal (instead of file picker)
+- Uploaded documents now show the uploader's name: `uploadedBy { id, name }` included in `listDocuments` query result
+- `documentMasterService.list(discom)` call kept DISCOM-specific (only shows documents relevant to the project's DISCOM)
+
+**Backend:** `listDocuments()` in `applicants.service.ts` now includes `uploadedBy: { select: { id, name } }`.
+
+---
+
+### 33. Vendor Documents Page (Sidebar — vendor role only)
+
+**File:** `frontend/src/pages/vendor/VendorDocumentsPage.tsx` (NEW)
+
+New sidebar page for vendor team members to upload documents directly:
+- Project picker with search input (lists only the vendor's accessible projects)
+- After selecting a project, shows the DISCOM-specific document list
+- File + Camera upload buttons per document row
+- Pending document count badge
+- Route: `/vendor-documents`
+
+---
+
+### 34. Vendor Uploads Admin Page
+
+**Files:**
+- `backend/src/applicants/applicants.service.ts` — `listVendorUploads()`
+- `backend/src/applicants/applicants.controller.ts` — `GET applicants/vendor-uploads` (placed **before** `GET applicants/:id` to avoid NestJS route conflict)
+- `frontend/src/pages/applicants/VendorUploadsPage.tsx` (NEW)
+- `frontend/src/services/applicants.service.ts` — `getVendorUploads()`
+
+Admin and operations_staff can see all documents uploaded by vendor team members:
+- Table: Project (clickable → applicant detail) | Document name | Uploaded By (name + vendorLevel) | Date | View button
+- Vendor filter dropdown (deduplicated from results)
+- View modal supports both images and PDFs
+- Route: `/vendor-uploads`
+
+**Deduplication fix:** Initial implementation used `new Map([...])` which caused TS2769 (`any[][]` not assignable to `Iterable<readonly [unknown, unknown]>`). Fixed with a plain `Record<string, any>` built via `forEach` + `Object.values()`.
+
+---
+
+### 35. Document Master — Case-Insensitive DISCOM Filter
+
+**File:** `backend/src/document-master/document-master.service.ts`
+
+DISCOM names stored in `document_master` (e.g. `TPCODL`) didn't match the mixed-case values coming from applicant data (e.g. `tpcodl`). Fixed with Prisma's `mode: 'insensitive'`:
+
+```typescript
+where.OR = [
+  { discom: { equals: discom, mode: 'insensitive' }, isCommon: false },
+  { isCommon: true },
+];
+```
+
+---
+
+### 36. Sidebar — Vendor Uploads & Documents Links
+
+**File:** `frontend/src/components/layout/Sidebar.tsx`
+
+| Route | Label | Visible to |
+|-------|-------|-----------|
+| `/vendor-documents` | Documents | `vendor` role |
+| `/vendor-uploads` | Vendor Uploads | `admin`, `operations_staff` |
+
+---
+
+### 37. tsconfig.app.json — Removed `baseUrl`
+
+**File:** `frontend/tsconfig.app.json`
+
+Removed `"baseUrl": "."` — not needed with `"moduleResolution": "bundler"` (TypeScript 5.0+). The setting caused a red underline in VS Code without affecting the build.

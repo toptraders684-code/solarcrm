@@ -93,7 +93,7 @@ export default function VendorsListPage() {
   return (
     <PageWrapper
       title="Vendors"
-      subtitle={`${meta?.total ?? 0} vendors`}
+      subtitle={!isLoading ? `${meta?.total ?? 0} vendors` : 'Loading...'}
       actions={canManage ? <Button onClick={() => setAddOpen(true)}><Plus size={16} />Add Vendor</Button> : undefined}
     >
       <div className="bg-surface-container-lowest rounded-xl p-4 flex flex-wrap gap-3 items-center">

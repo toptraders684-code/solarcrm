@@ -69,7 +69,7 @@ export default function LeadsListPage() {
   return (
     <PageWrapper
       title="Leads"
-      subtitle={`${meta?.total ?? 0} total leads`}
+      subtitle={!isLoading ? `${meta?.total ?? 0} total leads` : 'Loading...'}
       actions={
         canAddLead ? (
           <div className="flex gap-2">

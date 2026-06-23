@@ -125,7 +125,7 @@ export default function ActivityLogsPage() {
         <div>
           <h1 className="text-xl font-black text-on-surface">Activity Logs</h1>
           <p className="text-sm text-on-surface-variant/60 mt-0.5">
-            All user actions across tenants — {total.toLocaleString('en-IN')} total records
+            All user actions across tenants{!isLoading ? ` — ${total.toLocaleString('en-IN')} total records` : ''}
           </p>
         </div>
 

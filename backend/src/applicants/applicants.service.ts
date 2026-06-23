@@ -48,34 +48,42 @@ export class ApplicantsService {
   }
 
   async findAll(companyId: string, query: any, caller?: any) {
-    const { limit = 25, after, discom, stage, assignedStaffId, q, sort = 'createdAt', order = 'desc' } = query;
+    const { page = 1, limit = 25, discom, stage, assignedStaffId, search, sort = 'createdAt', order = 'desc' } = query;
+    const take = parseInt(limit);
+    const skip = (parseInt(page) - 1) * take;
 
     const where: any = { companyId, deletedAt: null };
     if (discom) where.discom = discom;
     if (stage) where.stage = parseInt(stage);
     if (assignedStaffId) where.assignedStaffId = assignedStaffId;
-    if (after) where.id = { gt: after };
 
     this.applyVendorHierarchyFilter(where, caller);
 
-    if (q) {
+    if (search) {
       where.OR = [
-        { customerName: { contains: q, mode: 'insensitive' } },
-        { applicantCode: { contains: q, mode: 'insensitive' } },
-        { discomRefNo: { contains: q, mode: 'insensitive' } },
+        { customerName: { contains: search, mode: 'insensitive' } },
+        { applicantCode: { contains: search, mode: 'insensitive' } },
+        { discomRefNo: { contains: search, mode: 'insensitive' } },
       ];
     }
 
-    const applicants = await this.prisma.applicant.findMany({
-      where,
-      take: parseInt(limit),
-      orderBy: { [sort]: order },
-      include: {
-        assignedStaff: { select: { id: true, name: true } },
-      },
-    });
+    const [applicants, total] = await Promise.all([
+      this.prisma.applicant.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { [sort]: order },
+        include: {
+          assignedStaff: { select: { id: true, name: true } },
+        },
+      }),
+      this.prisma.applicant.count({ where }),
+    ]);
 
-    return { data: applicants, count: applicants.length };
+    return {
+      data: applicants,
+      meta: { total, page: parseInt(page), limit: take, totalPages: Math.ceil(total / take) },
+    };
   }
 
   async listVendorUploads(companyId: string, query: any) {

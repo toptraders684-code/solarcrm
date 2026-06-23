@@ -35,35 +35,44 @@ export class LeadsService {
   }
 
   async findAll(companyId: string, query: any, caller?: any) {
-    const { limit = 25, after, status, discom, assignedStaffId, q, sort = 'createdAt', order = 'desc' } = query;
+    const { page = 1, limit = 25, status, discom, assignedStaffId, search, sort = 'createdAt', order = 'desc' } = query;
+    const take = parseInt(limit);
+    const skip = (parseInt(page) - 1) * take;
 
     const where: any = { companyId, deletedAt: null };
     if (status) where.status = status;
     if (discom) where.discom = discom;
     if (assignedStaffId) where.assignedStaffId = assignedStaffId;
-    if (after) where.id = { gt: after };
 
     this.applyVendorHierarchyFilter(where, caller);
 
-    if (q) {
+    if (search) {
       where.OR = [
-        { customerName: { contains: q, mode: 'insensitive' } },
-        { mobile: { contains: q } },
-        { email: { contains: q, mode: 'insensitive' } },
+        { customerName: { contains: search, mode: 'insensitive' } },
+        { mobile: { contains: search } },
+        { leadCode: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
       ];
     }
 
-    const leads = await this.prisma.lead.findMany({
-      where,
-      take: parseInt(limit),
-      orderBy: { [sort]: order },
-      include: {
-        assignedStaff: { select: { id: true, name: true } },
-        createdBy: { select: { id: true, name: true } },
-      },
-    });
+    const [leads, total] = await Promise.all([
+      this.prisma.lead.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { [sort]: order },
+        include: {
+          assignedStaff: { select: { id: true, name: true } },
+          createdBy: { select: { id: true, name: true } },
+        },
+      }),
+      this.prisma.lead.count({ where }),
+    ]);
 
-    return { data: leads, count: leads.length };
+    return {
+      data: leads,
+      meta: { total, page: parseInt(page), limit: take, totalPages: Math.ceil(total / take) },
+    };
   }
 
   async findOne(id: string, companyId: string) {

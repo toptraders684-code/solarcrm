@@ -33,7 +33,7 @@ export default function ApplicantsListPage() {
   const meta = data?.meta;
 
   return (
-    <PageWrapper title="Projects" subtitle={`${meta?.total ?? 0} total projects`}>
+    <PageWrapper title="Projects" subtitle={!isLoading ? `${meta?.total ?? 0} total projects` : 'Loading...'}>
       {/* Stage Pills */}
       <div className="flex flex-wrap gap-2">
         {Object.entries(STAGE_LABELS).map(([num, label]) => (
