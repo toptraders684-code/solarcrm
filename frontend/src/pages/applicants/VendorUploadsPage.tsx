@@ -21,13 +21,9 @@ export default function VendorUploadsPage() {
   const uploads: any[] = data?.data ?? [];
 
   // Collect unique vendors for filter dropdown
-  const vendors = Array.from(
-    new Map(
-      uploads
-        .filter((d) => d.uploadedBy?.id)
-        .map((d): [string, any] => [d.uploadedBy.id, d.uploadedBy]),
-    ).values(),
-  );
+  const vendorMap: Record<string, any> = {};
+  uploads.forEach((d) => { if (d.uploadedBy?.id) vendorMap[d.uploadedBy.id] = d.uploadedBy; });
+  const vendors = Object.values(vendorMap);
 
   const filtered = filterVendor
     ? uploads.filter((d) => d.uploadedBy?.id === filterVendor)
