@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { MasterDataService } from './master-data.service';
-import { CreateMasterItemDto, CreateStageDto, UpdateMasterItemDto, UpdateStageDto } from './dto/master-item.dto';
+import { CreateMasterItemDto, CreateStageDto, UpdateMasterItemDto, UpdateStageDto, UpdateChecklistItemDto } from './dto/master-item.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -109,6 +109,28 @@ export class MasterDataController {
   @Roles('super_admin')
   updateHq(@Param('id') id: string, @Body() body: { name?: string; isActive?: boolean }) {
     return this.masterDataService.updateHq(id, body);
+  }
+
+  // ── Checklist Master ─────────────────────────────────────────────
+  // These must come before the wildcard :type routes
+
+  @Get('checklist/list')
+  listChecklist() {
+    return this.masterDataService.listChecklist();
+  }
+
+  @Patch('checklist/reorder')
+  @UseGuards(RolesGuard)
+  @Roles('super_admin')
+  reorderChecklist(@Body() body: { items: { id: string; itemOrder: number }[] }) {
+    return this.masterDataService.reorderChecklistItems(body.items);
+  }
+
+  @Patch('checklist/:id')
+  @UseGuards(RolesGuard)
+  @Roles('super_admin')
+  updateChecklist(@Param('id') id: string, @Body() dto: UpdateChecklistItemDto) {
+    return this.masterDataService.updateChecklistItem(id, dto);
   }
 
   // ── Simple tables ─────────────────────────────────────────────────

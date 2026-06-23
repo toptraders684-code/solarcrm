@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, LogOut, FileText, Users, Building2, Database, Activity, Zap, BadgeDollarSign } from 'lucide-react';
+import { Plus, Pencil, Trash2, LogOut, FileText, Users, Building2, Database, Activity, Zap, BadgeDollarSign, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -183,6 +183,7 @@ export default function DiscomMasterPage() {
     { to: '/admin/users', icon: Users, label: 'Admin Users' },
     { to: '/admin/logs', icon: Activity, label: 'Activity Logs' },
     { to: '/admin/commission', icon: BadgeDollarSign, label: 'Commission Structures' },
+    { to: '/admin/checklist', icon: ClipboardList, label: 'Checklist Master' },
   ];
 
   return (

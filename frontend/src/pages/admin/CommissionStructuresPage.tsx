@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Power, Pencil, ChevronDown, ChevronUp, Trash2, Building2, FileText, Zap, Database, Users, Activity, BadgeDollarSign } from 'lucide-react';
+import { Plus, Power, Pencil, ChevronDown, ChevronUp, Trash2, Building2, FileText, Zap, Database, Users, Activity, BadgeDollarSign, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -161,6 +161,7 @@ export default function CommissionStructuresPage() {
             { to: '/admin/users', icon: Users, label: 'Admin Users' },
             { to: '/admin/logs', icon: Activity, label: 'Activity Logs' },
             { to: '/admin/commission', icon: BadgeDollarSign, label: 'Commission Structures' },
+            { to: '/admin/checklist', icon: ClipboardList, label: 'Checklist Master' },
           ].map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} className={({ isActive }) =>
               `flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 whitespace-nowrap transition-colors ${

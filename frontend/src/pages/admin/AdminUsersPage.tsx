@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { LogOut, Users, FileText, CheckCircle2, XCircle, Plus, Eye, EyeOff, UserCheck, Building2, Database, Activity, Pencil, Trash2, Zap, BadgeDollarSign } from 'lucide-react';
+import { LogOut, Users, FileText, CheckCircle2, XCircle, Plus, Eye, EyeOff, UserCheck, Building2, Database, Activity, Pencil, Trash2, Zap, BadgeDollarSign, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -171,6 +171,7 @@ export default function AdminUsersPage() {
             { to: '/admin/users', icon: Users, label: 'Admin Users' },
             { to: '/admin/logs', icon: Activity, label: 'Activity Logs' },
             { to: '/admin/commission', icon: BadgeDollarSign, label: 'Commission Structures' },
+            { to: '/admin/checklist', icon: ClipboardList, label: 'Checklist Master' },
           ].map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} className={({ isActive }) =>
               `flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${

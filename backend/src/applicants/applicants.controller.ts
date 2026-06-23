@@ -43,6 +43,12 @@ export class ApplicantsController {
     return this.applicantsService.findAll(user.companyId, query, user);
   }
 
+  @Get('vendor-uploads')
+  @Roles('admin', 'operations_staff')
+  listVendorUploads(@CurrentUser() user: any, @Query() query: any) {
+    return this.applicantsService.listVendorUploads(user.companyId, query);
+  }
+
   @Get(':id')
   @Roles('admin', 'operations_staff', 'finance_manager', 'field_technician', 'vendor')
   async findOne(@Param('id') id: string, @CurrentUser() user: any) {
@@ -95,7 +101,7 @@ export class ApplicantsController {
   // ── Documents Upload/Download ──
 
   @Post(':id/documents')
-  @Roles('admin', 'operations_staff')
+  @Roles('admin', 'operations_staff', 'vendor')
   @UseInterceptors(FileInterceptor('file'))
   uploadDocument(
     @Param('id') id: string,

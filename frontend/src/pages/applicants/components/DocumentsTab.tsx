@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Upload, Eye, FileText, X, Zap, Download } from 'lucide-react';
+import { Upload, Eye, FileText, X, Zap, Download, Camera } from 'lucide-react';
+import { CameraCapture } from '@/components/shared/CameraCapture';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { GeneratePreviewModal } from '@/components/shared/GeneratePreviewModal';
@@ -19,6 +20,8 @@ export function DocumentsTab({ applicantId, discom, applicant }: DocumentsTabPro
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraTargetId, setCameraTargetId] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<Record<string, File>>({});
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [viewFile, setViewFile] = useState<{ url: string; mimeType: string; title: string; filename: string } | null>(null);
@@ -57,6 +60,18 @@ export function DocumentsTab({ applicantId, discom, applicant }: DocumentsTabPro
       fileInputRef.current.value = '';
       fileInputRef.current.click();
     }
+  };
+
+  const handleTakePhoto = (masterItemId: string) => {
+    setCameraTargetId(masterItemId);
+    setCameraOpen(true);
+  };
+
+  const handleCameraCapture = (file: File) => {
+    if (!cameraTargetId) return;
+    if (file.size > 2 * 1024 * 1024) { toast.error('Photo exceeds 2MB limit'); return; }
+    setPendingFiles((prev) => ({ ...prev, [cameraTargetId]: file }));
+    setCameraTargetId(null);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,6 +160,11 @@ export function DocumentsTab({ applicantId, discom, applicant }: DocumentsTabPro
         className="hidden"
         onChange={handleFileChange}
       />
+      <CameraCapture
+        open={cameraOpen}
+        onCapture={handleCameraCapture}
+        onClose={() => { setCameraOpen(false); setCameraTargetId(null); }}
+      />
 
       <div className="overflow-x-auto rounded-xl border border-outline-variant/10">
         <table className="w-full text-sm">
@@ -198,18 +218,9 @@ export function DocumentsTab({ applicantId, discom, applicant }: DocumentsTabPro
                       </button>
                     ) : master.docType === 'upload' && !uploaded ? (
                       <div className="flex items-center gap-2 flex-wrap">
-                        <button
-                          onClick={() => handleChooseFile(master.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface hover:bg-surface-container text-on-surface-variant text-xs font-semibold transition-colors min-w-0"
-                        >
-                          {pending ? (
-                            <span className="text-primary truncate max-w-[110px]" title={pending.name}>{pending.name}</span>
-                          ) : (
-                            <><Upload size={12} />Choose File</>
-                          )}
-                        </button>
-                        {pending && (
+                        {pending ? (
                           <>
+                            <span className="text-primary truncate max-w-[130px] text-xs font-semibold" title={pending.name}>{pending.name}</span>
                             <button
                               onClick={() => handleUpload(master)}
                               disabled={isUploading}
@@ -224,6 +235,21 @@ export function DocumentsTab({ applicantId, discom, applicant }: DocumentsTabPro
                               <X size={12} />
                             </button>
                           </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleChooseFile(master.id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface hover:bg-surface-container text-on-surface-variant text-xs font-semibold transition-colors"
+                            >
+                              <Upload size={12} />File
+                            </button>
+                            <button
+                              onClick={() => handleTakePhoto(master.id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface hover:bg-surface-container text-on-surface-variant text-xs font-semibold transition-colors"
+                            >
+                              <Camera size={12} />Camera
+                            </button>
+                          </>
                         )}
                       </div>
                     ) : null}
@@ -233,17 +259,24 @@ export function DocumentsTab({ applicantId, discom, applicant }: DocumentsTabPro
                   <td className="px-4 py-3">
                     {master.docType === 'upload' ? (
                       uploaded ? (
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wide">
-                            Uploaded
-                          </span>
-                          <button
-                            onClick={() => handleView(uploaded, master.title)}
-                            disabled={loadingViewId === uploaded.id}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/5 disabled:opacity-60 transition-colors"
-                          >
-                            <Eye size={12} />{loadingViewId === uploaded.id ? '…' : 'View'}
-                          </button>
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wide">
+                              Uploaded
+                            </span>
+                            <button
+                              onClick={() => handleView(uploaded, master.title)}
+                              disabled={loadingViewId === uploaded.id}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/5 disabled:opacity-60 transition-colors"
+                            >
+                              <Eye size={12} />{loadingViewId === uploaded.id ? '…' : 'View'}
+                            </button>
+                          </div>
+                          {uploaded.uploadedBy && (
+                            <span className="text-[10px] text-on-surface-variant/50">
+                              by {uploaded.uploadedBy.name}
+                            </span>
+                          )}
                         </div>
                       ) : (
                         <span className="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant/40 text-[10px] font-bold uppercase tracking-wide">
@@ -259,7 +292,7 @@ export function DocumentsTab({ applicantId, discom, applicant }: DocumentsTabPro
             {masters.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-10 text-center text-sm text-on-surface-variant/50">
-                  No documents configured for {discom.toUpperCase()}.
+                  No documents configured for {discom?.toUpperCase()}. Ask your super admin to add them in Document Master.
                 </td>
               </tr>
             )}

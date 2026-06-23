@@ -74,3 +74,17 @@ export class UpdateStageDto {
   @IsBoolean()
   isActive?: boolean;
 }
+
+export class UpdateChecklistItemDto {
+  @IsOptional()
+  @IsString()
+  itemText?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isMandatory?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}

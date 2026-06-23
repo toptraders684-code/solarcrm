@@ -16,6 +16,11 @@ export const applicantsService = {
     return data;
   },
 
+  getVendorUploads: async (filters: { uploadedById?: string } = {}): Promise<{ data: any[] }> => {
+    const { data } = await api.get('/applicants/vendor-uploads', { params: filters });
+    return data;
+  },
+
   getApplicant: async (id: string): Promise<{ data: Applicant }> => {
     const { data } = await api.get(`/applicants/${id}`);
     return data;

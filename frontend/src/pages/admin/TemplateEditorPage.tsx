@@ -12,7 +12,7 @@ import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
-import { ArrowLeft, Save, FileText, Users, Building2, Database, Activity, LogOut, Zap, BadgeDollarSign } from 'lucide-react';
+import { ArrowLeft, Save, FileText, Users, Building2, Database, Activity, LogOut, Zap, BadgeDollarSign, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { PlaceholderNode } from '@/components/template/PlaceholderNode';
@@ -124,6 +124,7 @@ export default function TemplateEditorPage() {
             { to: '/admin/users', icon: Users, label: 'Admin Users' },
             { to: '/admin/logs', icon: Activity, label: 'Activity Logs' },
             { to: '/admin/commission', icon: BadgeDollarSign, label: 'Commission Structures' },
+            { to: '/admin/checklist', icon: ClipboardList, label: 'Checklist Master' },
           ].map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} className={({ isActive }) =>
               `flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${

@@ -14,7 +14,10 @@ export class DocumentMasterService {
   async list(discom?: string) {
     const where: any = { isActive: true };
     if (discom) {
-      where.OR = [{ discom, isCommon: false }, { isCommon: true }];
+      where.OR = [
+        { discom: { equals: discom, mode: 'insensitive' }, isCommon: false },
+        { isCommon: true },
+      ];
     }
     const data = await this.prisma.documentMaster.findMany({
       where,

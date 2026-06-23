@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, Users, FileText, Building2, Database, Activity, ChevronLeft, ChevronRight, Search, X, Zap, BadgeDollarSign } from 'lucide-react';
+import { LogOut, Users, FileText, Building2, Database, Activity, ChevronLeft, ChevronRight, Search, X, Zap, BadgeDollarSign, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DateSelectPicker } from '@/components/ui/date-select-picker';
@@ -109,6 +109,7 @@ export default function ActivityLogsPage() {
             { to: '/admin/users', icon: Users, label: 'Admin Users' },
             { to: '/admin/logs', icon: Activity, label: 'Activity Logs' },
             { to: '/admin/commission', icon: BadgeDollarSign, label: 'Commission Structures' },
+            { to: '/admin/checklist', icon: ClipboardList, label: 'Checklist Master' },
           ].map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} className={({ isActive }) =>
               `flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${

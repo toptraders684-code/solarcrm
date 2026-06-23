@@ -28,15 +28,23 @@ export class ApplicantsService {
   private applyVendorHierarchyFilter(where: any, caller: any) {
     if (caller?.role !== 'vendor' || !caller?.vendorId) return;
     const { id, vendorId, vendorLevel } = caller;
-    let filter: any;
+
+    // Always include projects the vendor is explicitly assigned to, or converted from their leads
+    const ors: any[] = [
+      { applicantVendors: { some: { vendorId } } },
+      { leadsConvertedFrom: { some: { channelPartnerId: vendorId } } },
+    ];
+
     if (vendorLevel === 'H3') {
-      filter = { createdById: id };
+      ors.push({ createdById: id });
     } else if (vendorLevel === 'H2') {
-      filter = { OR: [{ createdById: id }, { createdBy: { vendorId, vendorLevel: 'H3' } }] };
+      ors.push({ createdById: id });
+      ors.push({ createdBy: { vendorId, vendorLevel: 'H3' } });
     } else {
-      filter = { createdBy: { vendorId } };
+      ors.push({ createdBy: { vendorId } });
     }
-    where.AND = where.AND ? [...where.AND, filter] : [filter];
+
+    where.AND = where.AND ? [...where.AND, { OR: ors }] : [{ OR: ors }];
   }
 
   async findAll(companyId: string, query: any, caller?: any) {
@@ -68,6 +76,26 @@ export class ApplicantsService {
     });
 
     return { data: applicants, count: applicants.length };
+  }
+
+  async listVendorUploads(companyId: string, query: any) {
+    const { limit = 100, uploadedById } = query;
+    const where: any = {
+      applicant: { companyId, deletedAt: null },
+      uploadedBy: { role: 'vendor' },
+    };
+    if (uploadedById) where.uploadedById = uploadedById;
+
+    const documents = await this.prisma.document.findMany({
+      where,
+      take: parseInt(limit),
+      orderBy: { uploadedAt: 'desc' },
+      include: {
+        applicant: { select: { id: true, applicantCode: true, customerName: true, discom: true } },
+        uploadedBy: { select: { id: true, name: true, vendorLevel: true } },
+      },
+    });
+    return { data: documents };
   }
 
   async findOne(id: string, companyId: string) {
@@ -267,11 +295,7 @@ export class ApplicantsService {
       throw new BadRequestException(`Fill in required fields before advancing: ${labels}`);
     }
 
-    // Stage 1 (Lead Converted→Survey Done) needs Site Survey checklist (phaseOrder 2).
-    // Stage 2 (Survey Done→Documents Collected) needs Document Collection checklist (phaseOrder 1).
-    // Stages 3–10 align directly with their phaseOrder.
-    const STAGE_TO_PHASE: Record<number, number> = { 1: 2, 2: 1 };
-    const checklistPhase = STAGE_TO_PHASE[applicant.stage] ?? applicant.stage;
+    const checklistPhase = applicant.stage;
 
     // Check mandatory checklist items for current stage are complete.
     // Must look up master items first, because untouched items have no applicantChecklist row
@@ -333,6 +357,9 @@ export class ApplicantsService {
     const documents = await this.prisma.document.findMany({
       where: { applicantId },
       orderBy: { uploadedAt: 'desc' },
+      include: {
+        uploadedBy: { select: { id: true, name: true } },
+      },
     });
     return { data: documents };
   }

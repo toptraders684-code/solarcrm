@@ -57,17 +57,18 @@ export function toTitleCase(str?: string | null): string {
 }
 
 export const STAGE_LABELS: Record<number, string> = {
-  1: 'Lead Converted',
-  2: 'Survey Done',
-  3: 'Documents Collected',
-  4: 'Portal Application',
-  5: 'DISCOM Done',
-  6: 'DISCOM Approval',
-  7: 'Material Procurement',
-  8: 'Installation Done',
-  9: 'JE Inspection',
-  10: 'Net Meter Applied',
-  11: 'Project Complete',
+  1: 'Lead Generation & Information Collection',
+  2: 'Project Onboarding',
+  3: 'Financing',
+  4: 'Advance Payment Collection',
+  5: 'DISCUM Document Verification',
+  6: 'Material Installation',
+  7: 'Inspection & DCR',
+  8: 'Net Meter Approval',
+  9: 'Final Payment Release',
+  10: 'Customer Settlement & Handover',
+  11: 'Subsidy Release',
+  12: 'Maintenance',
 };
 
 export function getStageName(stage: number): string {

@@ -40,12 +40,8 @@ export function ChecklistTab({ applicantId, applicant, focusStage }: ChecklistTa
     return acc;
   }, {});
 
-  // phaseOrder 2 (Site Survey) comes before phaseOrder 1 (Document Collection) per workflow
-  const PHASE_DISPLAY_ORDER: Record<number, number> = { 1: 2, 2: 1 };
-  const phaseDisplayOrder = (phaseItems: ApplicantChecklist[]) => {
-    const po = phaseItems[0]?.masterItem?.phaseOrder ?? 99;
-    return PHASE_DISPLAY_ORDER[po] ?? po;
-  };
+  const phaseDisplayOrder = (phaseItems: ApplicantChecklist[]) =>
+    phaseItems[0]?.masterItem?.phaseOrder ?? 99;
 
   const completedCount = items.filter((i) => i.isCompleted).length;
   const totalCount = items.length;

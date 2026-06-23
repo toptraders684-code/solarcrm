@@ -21,11 +21,14 @@ import VendorDetailPage from '@/pages/vendors/VendorDetailPage';
 import ReportsPage from '@/pages/reports/ReportsPage';
 import SettingsPage from '@/pages/settings/SettingsPage';
 import VendorTeamPage from '@/pages/vendor/VendorTeamPage';
+import VendorDocumentsPage from '@/pages/vendor/VendorDocumentsPage';
+import VendorUploadsPage from '@/pages/applicants/VendorUploadsPage';
 import SupportPage from '@/pages/support/SupportPage';
 import ChangePasswordPage from '@/pages/profile/ChangePasswordPage';
 import CustomerUploadPage from '@/pages/upload/CustomerUploadPage';
 import CommissionStructuresPage from '@/pages/admin/CommissionStructuresPage';
 import CommissionPage from '@/pages/commission/CommissionPage';
+import ChecklistMasterPage from '@/pages/admin/ChecklistMasterPage';
 import { useAuthStore } from '@/store/authStore';
 
 function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -69,6 +72,9 @@ export default function App() {
       <Route path="/admin/commission" element={
         <AdminProtectedRoute><CommissionStructuresPage /></AdminProtectedRoute>
       } />
+      <Route path="/admin/checklist" element={
+        <AdminProtectedRoute><ChecklistMasterPage /></AdminProtectedRoute>
+      } />
 
       {/* Protected routes */}
       <Route element={<ProtectedLayout />}>
@@ -83,6 +89,8 @@ export default function App() {
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/vendor-team" element={<VendorTeamPage />} />
+        <Route path="/vendor-documents" element={<VendorDocumentsPage />} />
+        <Route path="/vendor-uploads" element={<VendorUploadsPage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="/support" element={<SupportPage />} />
         <Route path="/commission" element={<CommissionPage />} />

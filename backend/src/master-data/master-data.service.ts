@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateMasterItemDto, CreateStageDto, UpdateMasterItemDto, UpdateStageDto } from './dto/master-item.dto';
+import { CreateMasterItemDto, CreateStageDto, UpdateMasterItemDto, UpdateStageDto, UpdateChecklistItemDto } from './dto/master-item.dto';
 
 type SimpleTable = 'discoms' | 'lead-sources' | 'vendor-types' | 'payment-methods' | 'project-types';
 
@@ -206,5 +206,33 @@ export class MasterDataService {
     if (body.isActive !== undefined) update.isActive = body.isActive;
     const data = await this.prisma.masterHeadquarters.update({ where: { id }, data: update });
     return { data };
+  }
+
+  // ── Checklist Master ──────────────────────────────────────────────
+
+  async listChecklist() {
+    const data = await this.prisma.checklistMaster.findMany({
+      orderBy: [{ phaseOrder: 'asc' }, { itemOrder: 'asc' }],
+    });
+    return { data };
+  }
+
+  async updateChecklistItem(id: string, dto: UpdateChecklistItemDto) {
+    const existing = await this.prisma.checklistMaster.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Checklist item not found');
+    const update: any = {};
+    if (dto.itemText !== undefined) update.itemText = dto.itemText.trim();
+    if (dto.isMandatory !== undefined) update.isMandatory = dto.isMandatory;
+    if (dto.isActive !== undefined) update.isActive = dto.isActive;
+    return this.prisma.checklistMaster.update({ where: { id }, data: update });
+  }
+
+  async reorderChecklistItems(items: { id: string; itemOrder: number }[]) {
+    await this.prisma.$transaction(
+      items.map(({ id, itemOrder }) =>
+        this.prisma.checklistMaster.update({ where: { id }, data: { itemOrder } }),
+      ),
+    );
+    return { success: true };
   }
 }

@@ -441,6 +441,7 @@ export interface Document {
   mimeType?: string;
   status: 'pending' | 'uploaded';
   uploadedById?: string;
+  uploadedBy?: { id: string; name: string };
   uploadedAt?: string;
   createdAt: string;
 }

@@ -81,4 +81,18 @@ export const masterDataService = {
     const { data } = await api.delete(`/master-data/districts/${id}`);
     return data;
   },
+
+  // Checklist Master
+  listChecklist: async () => {
+    const { data } = await api.get('/master-data/checklist/list');
+    return data;
+  },
+  updateChecklistItem: async (id: string, body: { itemText?: string; isMandatory?: boolean; isActive?: boolean }) => {
+    const { data } = await api.patch(`/master-data/checklist/${id}`, body);
+    return data;
+  },
+  reorderChecklist: async (items: { id: string; itemOrder: number }[]) => {
+    const { data } = await api.patch('/master-data/checklist/reorder', { items });
+    return data;
+  },
 };
