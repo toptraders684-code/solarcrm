@@ -86,7 +86,7 @@ export default function FinancePage() {
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-28" />)}</div>
       ) : summary && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <SummaryCard label="Total Received" value={formatCurrency(summary.totalReceived)} icon={TrendingUp} accent />
           <SummaryCard label="Vendor Payments" value={formatCurrency(summary.totalVendorPayments)} icon={CreditCard} />
           <SummaryCard label="Subsidy Received" value={formatCurrency(summary.totalSubsidy)} icon={CreditCard} />
@@ -106,7 +106,22 @@ export default function FinancePage() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+        {/* Mobile dropdown */}
+        <div className="md:hidden">
+          <select
+            value={tab}
+            onChange={(e) => setTab(e.target.value)}
+            className="w-full rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="all">All</option>
+            <option value="pending">Pending</option>
+            <option value="receipts">Receipts</option>
+            <option value="vendor">Vendor</option>
+            <option value="subsidy">Subsidy</option>
+            <option value="expenses">Expenses</option>
+          </select>
+        </div>
+        <TabsList className="hidden md:flex">
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="pending">Pending</TabsTrigger>
           <TabsTrigger value="receipts">Receipts</TabsTrigger>
@@ -116,6 +131,7 @@ export default function FinancePage() {
         </TabsList>
         <TabsContent value={tab}>
           <div className="bg-surface-container-lowest rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-surface-container-low text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">
@@ -178,6 +194,7 @@ export default function FinancePage() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </TabsContent>
       </Tabs>

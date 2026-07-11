@@ -44,7 +44,7 @@ export function ProtectedLayout() {
         }`}
       >
         <Header onMobileToggle={() => setMobileOpen((v) => !v)} />
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-4 md:p-8">
           <Outlet />
         </main>
       </div>

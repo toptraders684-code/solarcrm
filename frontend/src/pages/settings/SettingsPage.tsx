@@ -201,6 +201,7 @@ export default function SettingsPage() {
             <span className="w-2 h-2 rounded-full bg-on-tertiary-container animate-pulse" />
             <h3 className="text-sm font-bold text-on-tertiary-container">Pending Approval ({pendingUsers.length})</h3>
           </div>
+          <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-surface-container-low text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">
@@ -238,6 +239,7 @@ export default function SettingsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -247,6 +249,7 @@ export default function SettingsPage() {
           <Users size={20} className="text-primary" />
           <h3 className="text-lg font-bold text-on-surface font-headline">All Users</h3>
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
             <tr className="bg-surface-container-low text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60">
@@ -297,6 +300,7 @@ export default function SettingsPage() {
             }
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* ── Add User Sheet ── */}

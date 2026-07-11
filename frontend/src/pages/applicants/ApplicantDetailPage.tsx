@@ -222,7 +222,26 @@ export default function ApplicantDetailPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        {/* Mobile: dropdown picker */}
+        <div className="md:hidden">
+          <select
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value)}
+            className="w-full rounded-xl border border-outline-variant/20 bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="details">Details</option>
+            <option value="discom">DISCOM Application</option>
+            <option value="procurement">Procurement</option>
+            <option value="documents">Documents</option>
+            <option value="checklist">Checklist</option>
+            <option value="finance">Finance</option>
+            <option value="invoice">Invoice</option>
+            <option value="status-history">Status History</option>
+          </select>
+        </div>
+
+        {/* Desktop: tab bar */}
+        <TabsList className="hidden md:flex">
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="discom">DISCOM Application</TabsTrigger>
           <TabsTrigger value="procurement">Procurement</TabsTrigger>
