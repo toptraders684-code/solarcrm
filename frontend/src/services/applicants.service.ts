@@ -21,6 +21,10 @@ export const applicantsService = {
     return data;
   },
 
+  requestReupload: async (docId: string, reason: string): Promise<void> => {
+    await api.patch(`/applicants/documents/${docId}/request-reupload`, { reason });
+  },
+
   getApplicant: async (id: string): Promise<{ data: Applicant }> => {
     const { data } = await api.get(`/applicants/${id}`);
     return data;

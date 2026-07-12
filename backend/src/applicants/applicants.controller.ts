@@ -49,6 +49,17 @@ export class ApplicantsController {
     return this.applicantsService.listVendorUploads(user.companyId, query);
   }
 
+  @Patch('documents/:docId/request-reupload')
+  @Roles('admin', 'operations_staff')
+  @HttpCode(HttpStatus.OK)
+  requestReupload(
+    @Param('docId') docId: string,
+    @Body() body: { reason: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.applicantsService.requestReupload(docId, body.reason, user.companyId, user.id);
+  }
+
   @Get(':id')
   @Roles('admin', 'operations_staff', 'finance_manager', 'field_technician', 'vendor')
   async findOne(@Param('id') id: string, @CurrentUser() user: any) {

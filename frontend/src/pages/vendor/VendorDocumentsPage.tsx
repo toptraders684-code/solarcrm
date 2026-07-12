@@ -5,6 +5,7 @@ import { Camera, Upload, FileText, X, Eye, Download, Search, FolderOpen } from '
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CameraCapture } from '@/components/shared/CameraCapture';
 import { applicantsService } from '@/services/applicants.service';
+import { compressImage } from '@/utils/imageCompressor';
 import { documentMasterService } from '@/services/document-master.service';
 import type { Document, DocumentMaster, Applicant } from '@/types';
 
@@ -76,21 +77,36 @@ export default function VendorDocumentsPage() {
     setCameraOpen(true);
   };
 
-  const handleCameraCapture = (file: File) => {
+  const handleCameraCapture = async (file: File) => {
     if (!cameraTargetId) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error('Photo exceeds 5MB limit'); return; }
-    setPendingFiles((prev) => ({ ...prev, [cameraTargetId]: file }));
+    const targetId = cameraTargetId;
     setCameraTargetId(null);
+    try {
+      const compressed = await compressImage(file);
+      setPendingFiles((prev) => ({ ...prev, [targetId]: compressed }));
+    } catch {
+      toast.error('Failed to process photo');
+    }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !activeItemId) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error('File exceeds 5MB limit'); return; }
+    const targetId = activeItemId;
     if (!['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)) {
       toast.error('Only JPG, PNG, PDF allowed'); return;
     }
-    setPendingFiles((prev) => ({ ...prev, [activeItemId]: file }));
+    if (file.type === 'application/pdf') {
+      if (file.size > 2 * 1024 * 1024) { toast.error('PDF exceeds 2MB limit'); return; }
+      setPendingFiles((prev) => ({ ...prev, [targetId]: file }));
+    } else {
+      try {
+        const compressed = await compressImage(file);
+        setPendingFiles((prev) => ({ ...prev, [targetId]: compressed }));
+      } catch {
+        toast.error('Failed to process image');
+      }
+    }
   };
 
   const clearPending = (id: string) =>
@@ -127,7 +143,9 @@ export default function VendorDocumentsPage() {
 
   const closeView = () => { if (viewFile?.url) URL.revokeObjectURL(viewFile.url); setViewFile(null); };
 
-  const uploadableCount = masters.filter((m) => m.docType === 'upload' && !docByMasterId[m.id]).length;
+  const uploadableCount = masters.filter(
+    (m) => m.docType === 'upload' && (!docByMasterId[m.id] || docByMasterId[m.id].status === 'needs_reupload'),
+  ).length;
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
@@ -246,7 +264,7 @@ export default function VendorDocumentsPage() {
                         </td>
 
                         <td className="px-4 py-3">
-                          {uploaded ? (
+                          {uploaded && uploaded.status === 'uploaded' ? (
                             <button
                               onClick={() => handleView(uploaded, master.title)}
                               disabled={loadingViewId === uploaded.id}
@@ -290,7 +308,18 @@ export default function VendorDocumentsPage() {
                         </td>
 
                         <td className="px-4 py-3">
-                          {uploaded ? (
+                          {uploaded?.status === 'needs_reupload' ? (
+                            <div>
+                              <span className="px-2 py-0.5 rounded-full bg-warning/15 text-warning text-[10px] font-bold uppercase tracking-wide">
+                                Re-upload Required
+                              </span>
+                              {uploaded.rejectionReason && (
+                                <p className="mt-1 text-[10px] text-on-surface-variant/70 leading-snug max-w-[160px]">
+                                  {uploaded.rejectionReason}
+                                </p>
+                              )}
+                            </div>
+                          ) : uploaded ? (
                             <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wide">
                               Uploaded
                             </span>

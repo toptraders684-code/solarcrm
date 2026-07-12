@@ -439,7 +439,8 @@ export interface Document {
   fileName?: string;
   fileSizeBytes?: number;
   mimeType?: string;
-  status: 'pending' | 'uploaded';
+  status: 'pending' | 'uploaded' | 'needs_reupload';
+  rejectionReason?: string;
   uploadedById?: string;
   uploadedBy?: { id: string; name: string };
   uploadedAt?: string;

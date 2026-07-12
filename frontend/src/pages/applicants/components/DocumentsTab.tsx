@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { GeneratePreviewModal } from '@/components/shared/GeneratePreviewModal';
 import { applicantsService } from '@/services/applicants.service';
+import { compressImage } from '@/utils/imageCompressor';
 import { documentMasterService } from '@/services/document-master.service';
 import type { Document, DocumentMaster, Applicant } from '@/types';
 
@@ -67,21 +68,36 @@ export function DocumentsTab({ applicantId, discom, applicant }: DocumentsTabPro
     setCameraOpen(true);
   };
 
-  const handleCameraCapture = (file: File) => {
+  const handleCameraCapture = async (file: File) => {
     if (!cameraTargetId) return;
-    if (file.size > 2 * 1024 * 1024) { toast.error('Photo exceeds 2MB limit'); return; }
-    setPendingFiles((prev) => ({ ...prev, [cameraTargetId]: file }));
+    const targetId = cameraTargetId;
     setCameraTargetId(null);
+    try {
+      const compressed = await compressImage(file);
+      setPendingFiles((prev) => ({ ...prev, [targetId]: compressed }));
+    } catch {
+      toast.error('Failed to process photo');
+    }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !activeItemId) return;
-    if (file.size > 2 * 1024 * 1024) { toast.error('File exceeds 2MB limit'); return; }
+    const targetId = activeItemId;
     if (!['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)) {
       toast.error('Only JPG, PNG, PDF allowed'); return;
     }
-    setPendingFiles((prev) => ({ ...prev, [activeItemId]: file }));
+    if (file.type === 'application/pdf') {
+      if (file.size > 2 * 1024 * 1024) { toast.error('PDF exceeds 2MB limit'); return; }
+      setPendingFiles((prev) => ({ ...prev, [targetId]: file }));
+    } else {
+      try {
+        const compressed = await compressImage(file);
+        setPendingFiles((prev) => ({ ...prev, [targetId]: compressed }));
+      } catch {
+        toast.error('Failed to process image');
+      }
+    }
   };
 
   const clearPending = (masterItemId: string) => {

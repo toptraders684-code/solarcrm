@@ -111,12 +111,24 @@ export class UsersService {
     return { id: user.id, name: user.name, email: user.email, role: user.role };
   }
 
-  async update(id: string, dto: UpdateUserDto, companyId: string, updatedBy: string, ipAddress: string) {
-    const user = await this.findOne(id, companyId);
+  async update(id: string, dto: UpdateUserDto, companyId: string | null, updatedBy: string, ipAddress: string) {
+    const where: any = { id, deletedAt: null };
+    if (companyId) where.companyId = companyId;
+    const user = await this.prisma.user.findFirst({
+      where,
+      select: { id: true, status: true, email: true, name: true, companyId: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const { password, ...rest } = dto;
+    const data: any = { ...rest };
+    if (password) {
+      data.passwordHash = await bcrypt.hash(password, 12);
+    }
 
     const updated = await this.prisma.user.update({
       where: { id },
-      data: dto,
+      data,
     });
 
     if (dto.status === 'active' && user['status'] !== 'active' && updated.email) {
@@ -130,7 +142,7 @@ export class UsersService {
       beforeJson: user as any,
       afterJson: dto as any,
       userId: updatedBy,
-      companyId,
+      companyId: companyId ?? user.companyId,
       ipAddress,
     });
 

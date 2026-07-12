@@ -74,6 +74,7 @@ enum DocumentCategory {
 enum DocumentStatus {
   pending
   uploaded
+  needs_reupload
 }
 
 enum TransactionType {
@@ -733,7 +734,8 @@ model Document {
   fileName      String?          @map("file_name") @db.VarChar(200)
   fileSizeBytes Int?             @map("file_size_bytes")
   mimeType      String?          @map("mime_type") @db.VarChar(50)
-  status        DocumentStatus   @default(pending)
+  status          DocumentStatus   @default(pending)
+  rejectionReason String?          @map("rejection_reason") @db.Text
   uploadedById  String?          @map("uploaded_by")
   uploadedBy    User?            @relation(fields: [uploadedById], references: [id])
   uploadedAt    DateTime?        @map("uploaded_at")

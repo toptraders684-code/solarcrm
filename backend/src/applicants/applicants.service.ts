@@ -475,6 +475,30 @@ export class ApplicantsService {
     return document;
   }
 
+  async requestReupload(docId: string, reason: string, companyId: string, userId: string) {
+    const doc = await this.prisma.document.findFirst({
+      where: { id: docId, applicant: { companyId, deletedAt: null } },
+    });
+    if (!doc) throw new NotFoundException('Document not found');
+
+    const updated = await this.prisma.document.update({
+      where: { id: docId },
+      data: { status: 'needs_reupload', rejectionReason: reason },
+    });
+
+    await this.audit.log({
+      entityType: 'Document',
+      entityId: docId,
+      action: 'UPDATE',
+      beforeJson: { status: doc.status },
+      afterJson: { status: 'needs_reupload', rejectionReason: reason },
+      userId,
+      companyId,
+    });
+
+    return { data: updated };
+  }
+
   // ── Signature ──
 
   async uploadSignature(applicantId: string, file: Express.Multer.File, companyId: string) {

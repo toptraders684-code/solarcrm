@@ -1,17 +1,44 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Eye, FileText, Users, Download } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Eye, FileText, Users, Download, RefreshCw } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { applicantsService } from '@/services/applicants.service';
 import { formatDate } from '@/utils/formatters';
 
+function StatusBadge({ status, reason }: { status: string; reason?: string }) {
+  if (status === 'needs_reupload') {
+    return (
+      <div>
+        <span className="px-2 py-0.5 rounded-full bg-warning/15 text-warning text-[10px] font-bold uppercase tracking-wide">
+          Re-upload Requested
+        </span>
+        {reason && (
+          <p className="mt-0.5 text-[10px] text-on-surface-variant/60 max-w-[160px] leading-snug">{reason}</p>
+        )}
+      </div>
+    );
+  }
+  return (
+    <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wide">
+      Uploaded
+    </span>
+  );
+}
+
 export default function VendorUploadsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
   const [filterVendor, setFilterVendor] = useState('');
   const [viewFile, setViewFile] = useState<{ url: string; mimeType: string; title: string } | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  const [reuploadDoc, setReuploadDoc] = useState<any | null>(null);
+  const [reuploadReason, setReuploadReason] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['vendor-uploads'],
@@ -20,7 +47,6 @@ export default function VendorUploadsPage() {
 
   const uploads: any[] = data?.data ?? [];
 
-  // Collect unique vendors for filter dropdown
   const vendorMap: Record<string, any> = {};
   uploads.forEach((d) => { if (d.uploadedBy?.id) vendorMap[d.uploadedBy.id] = d.uploadedBy; });
   const vendors = Object.values(vendorMap);
@@ -28,6 +54,17 @@ export default function VendorUploadsPage() {
   const filtered = filterVendor
     ? uploads.filter((d) => d.uploadedBy?.id === filterVendor)
     : uploads;
+
+  const reuploadMutation = useMutation({
+    mutationFn: () => applicantsService.requestReupload(reuploadDoc!.id, reuploadReason.trim()),
+    onSuccess: () => {
+      toast.success('Re-upload requested');
+      queryClient.invalidateQueries({ queryKey: ['vendor-uploads'] });
+      setReuploadDoc(null);
+      setReuploadReason('');
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to request re-upload'),
+  });
 
   const handleView = async (doc: any) => {
     setLoadingId(doc.id);
@@ -45,6 +82,11 @@ export default function VendorUploadsPage() {
   const closeView = () => {
     if (viewFile?.url) URL.revokeObjectURL(viewFile.url);
     setViewFile(null);
+  };
+
+  const openReupload = (doc: any) => {
+    setReuploadDoc(doc);
+    setReuploadReason('');
   };
 
   return (
@@ -99,7 +141,8 @@ export default function VendorUploadsPage() {
                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50">Document</th>
                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50">Uploaded By</th>
                 <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50 w-28">Date</th>
-                <th className="px-4 py-3 w-20"></th>
+                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50 w-36">Status</th>
+                <th className="px-4 py-3 w-36"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/5">
@@ -139,13 +182,27 @@ export default function VendorUploadsPage() {
                   </td>
 
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => handleView(doc)}
-                      disabled={loadingId === doc.id}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/5 disabled:opacity-60 transition-colors"
-                    >
-                      <Eye size={12} />{loadingId === doc.id ? '…' : 'View'}
-                    </button>
+                    <StatusBadge status={doc.status} reason={doc.rejectionReason} />
+                  </td>
+
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => handleView(doc)}
+                        disabled={loadingId === doc.id}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/5 disabled:opacity-60 transition-colors"
+                      >
+                        <Eye size={12} />{loadingId === doc.id ? '…' : 'View'}
+                      </button>
+                      {doc.status !== 'needs_reupload' && (
+                        <button
+                          onClick={() => openReupload(doc)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-warning/30 text-warning text-xs font-semibold hover:bg-warning/5 transition-colors"
+                        >
+                          <RefreshCw size={12} />Re-upload
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -153,6 +210,44 @@ export default function VendorUploadsPage() {
           </table>
         </div>
       )}
+
+      {/* Request Re-upload dialog */}
+      <Dialog open={!!reuploadDoc} onOpenChange={(open) => { if (!open) { setReuploadDoc(null); setReuploadReason(''); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Re-upload</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-on-surface-variant">
+              Tell the vendor what's wrong with <span className="font-semibold text-on-surface">{reuploadDoc?.docName}</span> so they can upload a better version.
+            </p>
+            <div>
+              <label className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">
+                Reason <span className="text-error">*</span>
+              </label>
+              <Textarea
+                className="mt-1"
+                placeholder="e.g. Image is blurry, document is incomplete…"
+                value={reuploadReason}
+                onChange={(e) => setReuploadReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => { setReuploadDoc(null); setReuploadReason(''); }}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!reuploadReason.trim() || reuploadMutation.isPending}
+              loading={reuploadMutation.isPending}
+              onClick={() => reuploadMutation.mutate()}
+            >
+              Send Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* View modal */}
       <Dialog open={!!viewFile} onOpenChange={(open) => { if (!open) closeView(); }}>
